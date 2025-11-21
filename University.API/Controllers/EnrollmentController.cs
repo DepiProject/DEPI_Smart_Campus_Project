@@ -23,8 +23,6 @@ namespace University.API.Controllers
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
-
-        [Authorize(Roles = "Student")]
         public async Task<ActionResult<CreateEnrollmentDTO>> EnrollStudent([FromBody] CreateEnrollmentDTO dto)
         {
             if (!ModelState.IsValid)
@@ -88,7 +86,6 @@ namespace University.API.Controllers
         /// Remove a student enrollment
         /// </summary>
         [HttpDelete("{enrollmentId}")]
-        [Authorize(Roles = "Student")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult> RemoveEnrollment(int enrollmentId)
@@ -133,7 +130,6 @@ namespace University.API.Controllers
         /// Get all enrollments for a specific student
         /// </summary>
         [HttpGet("student/{studentId}")]
-        
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<StudentEnrollmentDTO>>> GetEnrollmentsByStudentId(int studentId)
         {
@@ -171,7 +167,6 @@ namespace University.API.Controllers
         /// Get all students enrolled in a specific course
         /// </summary>
         [HttpGet("course/{courseId}")]
-        [Authorize(Roles = "Admin,Instructor")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<StudentEnrollmentDTO>>> GetEnrollmentsByCourseId(int courseId)
         {
@@ -202,6 +197,47 @@ namespace University.API.Controllers
                     Message = "An error occurred while retrieving course enrollments",
                     Error = ex.Message
                 });
+            }
+        }
+        [HttpGet("completion/{studentId}/{courseId}")]
+        public async Task<IActionResult> CheckCourseCompletion(int studentId, int courseId)
+        {
+            try
+            {
+                var result = await _enrollmentService.CheckCourseCompletion(studentId, courseId);
+
+                if (result.IsCompleted)
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        message = $"Congratulations! Student has successfully completed the course with an average of {result.AverageScore}% (Grade: {result.GradeLetter})",
+                        data = result
+                    });
+                }
+                else
+                {
+                    return Ok(new
+                    {
+                        success = false,
+                        message = result.Status == "Failed"
+                            ? $"Student has not passed the course. Average score: {result.AverageScore}%"
+                            : $"Course in progress. {result.SubmittedExams} of {result.TotalExams} exams completed.",
+                        data = result
+                    });
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "An error occurred", details = ex.Message });
             }
         }
     }

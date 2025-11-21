@@ -8,5 +8,8 @@ namespace University.App.Services.IServices
         Task<bool> RemoveEnrollCourse(int enrollmentId);
         Task<IEnumerable<StudentEnrollmentDTO>> GetEnrollmentsByStudentId(int studentId);
         Task<IEnumerable<StudentEnrollmentDTO>> GetEnrollmentStudentsByCourseID(int courseId);
+        // NEW METHOD
+        Task<CourseCompletionStatusDTO> CheckCourseCompletion(int studentId, int courseId);
+
     }
 }
