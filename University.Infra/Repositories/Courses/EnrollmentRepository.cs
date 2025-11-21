@@ -47,51 +47,58 @@ namespace University.Infra.Repositories.Courses
 
         public async Task<IEnumerable<Enrollment>> GetEnrollmentsByStudentId(int studentId)
         {
+            // FIXED: Added IsDeleted filter to exclude soft-deleted enrollments by default
             return await _context.Enrollments
                 .Include(e => e.Course)
                     .ThenInclude(c => c.Department)
                 .Include(e => e.Student)
-                .Where(e => e.StudentId == studentId)
-                 .IgnoreQueryFilters() // ADD THIS LINE - includes soft-deleted courses
+                .Where(e => e.StudentId == studentId && !e.IsDeleted)
+                .IgnoreQueryFilters() // includes soft-deleted courses
                 .AsNoTracking()
                 .ToListAsync();
         }
 
         public async Task<Enrollment?> GetEnrollmentByStudentAndCourse(int studentId, int courseId)
         {
+            // FIXED: Added IsDeleted filter
             return await _context.Enrollments
                 .Include(e => e.Course)
                 .Include(e => e.Student)
-                .IgnoreQueryFilters() // ADD THIS LINE - includes soft-deleted courses
+                .Where(e => !e.IsDeleted)
+                .IgnoreQueryFilters() // includes soft-deleted courses
                 .AsNoTracking()
                 .FirstOrDefaultAsync(e => e.StudentId == studentId && e.CourseId == courseId);
         }
 
         public async Task<bool> IsStudentEnrolled(int studentId, int courseId)
         {
+            // FIXED: Added IsDeleted filter
             return await _context.Enrollments
-             .IgnoreQueryFilters()
-             .AnyAsync(e => e.StudentId == studentId && e.CourseId == courseId && e.Status == "Enrolled");
+                .IgnoreQueryFilters()
+                .AnyAsync(e => e.StudentId == studentId && e.CourseId == courseId && e.Status == "Enrolled" && !e.IsDeleted);
         }
-        // NEW METHOD: Get enrollment with course details
+        // Get enrollment with course details
         public async Task<Enrollment?> GetEnrollmentWithCourseDetails(int studentId, int courseId)
         {
+            // FIXED: Added IsDeleted filter
             return await _context.Enrollments
                 .Include(e => e.Course)
                     .ThenInclude(c => c.Exams)
                 .Include(e => e.Student)
+                .Where(e => !e.IsDeleted)
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(e => e.StudentId == studentId && e.CourseId == courseId);
         }
 
-        // NEW METHOD: Update enrollment completion status
-        public async Task<bool> UpdateEnrollmentCompletion( int enrollmentId,string status,decimal? finalGrade,string? gradeLetter)
+        // Update enrollment completion status
+        // FIXED: Uses DateTime.UtcNow
+        public async Task<bool> UpdateEnrollmentCompletion(int enrollmentId, string status, decimal? finalGrade, string? gradeLetter)
         {
             var enrollment = await _context.Enrollments.FindAsync(enrollmentId);
             if (enrollment == null)
                 return false;
 
-            // Validation (can be moved to service layer)
+            // Validation
             var validStatuses = new[] { "Enrolled", "Completed", "Dropped", "Withdrawn" };
             if (!validStatuses.Contains(status))
                 throw new ArgumentException($"Invalid status: {status}");
@@ -107,17 +114,78 @@ namespace University.Infra.Repositories.Courses
             await _context.SaveChangesAsync();
             return true;
         }
-        // ADDITIONAL METHOD: Get enrollments with course details (including deleted)
+        // Get enrollments with course details (including deleted courses)
+        // FIXED: Added IsDeleted filter for enrollments
         public async Task<IEnumerable<Enrollment>> GetEnrollmentsWithCoursesByStudentId(int studentId)
         {
             return await _context.Enrollments
                 .Include(e => e.Course)
                     .ThenInclude(c => c.Department)
                 .Include(e => e.Student)
-                .Where(e => e.StudentId == studentId)
+                .Where(e => e.StudentId == studentId && !e.IsDeleted)
                 .IgnoreQueryFilters() // This ensures soft-deleted courses are included
                 .AsNoTracking()
                 .ToListAsync();
+        }
+
+        // NEW: Soft delete enrollment
+        public async Task<bool> DeleteEnrollmentAsync(int enrollmentId)
+        {
+            var enrollment = await _context.Enrollments
+                .FirstOrDefaultAsync(e => e.EnrollmentId == enrollmentId && !e.IsDeleted);
+
+            if (enrollment == null)
+                return false;
+
+            enrollment.IsDeleted = true;
+            enrollment.DeletedAt = DateTime.UtcNow;
+            enrollment.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        // NEW: Restore soft-deleted enrollment
+        public async Task<bool> RestoreEnrollmentAsync(int enrollmentId)
+        {
+            var enrollment = await _context.Enrollments
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(e => e.EnrollmentId == enrollmentId);
+
+            if (enrollment == null)
+                return false;
+
+            if (!enrollment.IsDeleted)
+                throw new InvalidOperationException("Enrollment is not deleted.");
+
+            enrollment.IsDeleted = false;
+            enrollment.DeletedAt = null;
+            enrollment.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        // NEW: Get all enrollments including deleted
+        public async Task<IEnumerable<Enrollment>> GetAllEnrollmentsIncludingDeletedAsync()
+        {
+            return await _context.Enrollments
+                .IgnoreQueryFilters()
+                .Include(e => e.Course)
+                    .ThenInclude(c => c.Department)
+                .Include(e => e.Student)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        // NEW: Get enrollment by ID (without IsDeleted filter)
+        public async Task<Enrollment?> GetEnrollmentByIdAsync(int enrollmentId)
+        {
+            return await _context.Enrollments
+                .Include(e => e.Course)
+                .Include(e => e.Student)
+                .Where(e => !e.IsDeleted)
+                .FirstOrDefaultAsync(e => e.EnrollmentId == enrollmentId);
         }
     }
 }

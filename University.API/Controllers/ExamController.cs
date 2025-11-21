@@ -24,51 +24,76 @@ namespace University.API.Controllers
                 var exams = await _examService.GetAllExams();
                 return Ok(new { success = true, data = exams });
             }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = ex.Message });
+                return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
             }
         }
 
         [HttpGet("course/{courseId}")]
         public async Task<IActionResult> GetCourseExams(int courseId)
         {
+            if (courseId <= 0)
+                return BadRequest(new { success = false, message = "Invalid course ID" });
+
             try
             {
                 var exams = await _examService.GetAllExamsForCourse(courseId);
                 return Ok(new { success = true, data = exams });
             }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = ex.Message });
+                return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
             }
         }
 
         [HttpGet("{id}/course/{courseId}")]
         public async Task<IActionResult> GetExamById(int id, int courseId)
         {
+            if (id <= 0 || courseId <= 0)
+                return BadRequest(new { success = false, message = "Invalid exam or course ID" });
+
             try
             {
                 var exam = await _examService.GetExamById(id, courseId);
                 return Ok(new { success = true, data = exam });
             }
-            catch (Exception ex)
+            catch (KeyNotFoundException ex)
             {
                 return NotFound(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
             }
         }
 
         [HttpGet("{id}/course/{courseId}/with-questions")]
         public async Task<IActionResult> GetExamWithQuestions(int id, int courseId)
         {
+            if (id <= 0 || courseId <= 0)
+                return BadRequest(new { success = false, message = "Invalid exam or course ID" });
+
             try
             {
                 var exam = await _examService.GetExamWithQuestions(id, courseId);
                 return Ok(new { success = true, data = exam });
             }
-            catch (Exception ex)
+            catch (KeyNotFoundException ex)
             {
                 return NotFound(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
             }
         }
 
@@ -77,11 +102,11 @@ namespace University.API.Controllers
         [Authorize(Roles = "Admin,Instructor")]
         public async Task<IActionResult> CreateExam([FromBody] CreateExamDto dto)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(new { success = false, errors = ModelState });
+
             try
             {
-                if (!ModelState.IsValid)
-                    return BadRequest(new { success = false, errors = ModelState });
-
                 var exam = await _examService.AddExam(dto);
                 return CreatedAtAction(
                     nameof(GetExamById),
@@ -89,9 +114,17 @@ namespace University.API.Controllers
                     new { success = true, message = "Exam created successfully", data = exam }
                 );
             }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { success = false, message = "Validation error", error = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { success = false, message = "Operation failed", error = ex.Message });
+            }
             catch (Exception ex)
             {
-                return BadRequest(new { success = false, message = ex.Message });
+                return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
             }
         }
 
@@ -99,17 +132,28 @@ namespace University.API.Controllers
         [Authorize(Roles = "Admin,Instructor")]
         public async Task<IActionResult> UpdateExam(int id, int courseId, [FromBody] UpdateExamDto dto)
         {
+            if (id <= 0 || courseId <= 0)
+                return BadRequest(new { success = false, message = "Invalid exam or course ID" });
+
+            if (!ModelState.IsValid)
+                return BadRequest(new { success = false, errors = ModelState });
+
             try
             {
-                if (!ModelState.IsValid)
-                    return BadRequest(new { success = false, errors = ModelState });
-
                 var exam = await _examService.UpdateExam(id, courseId, dto);
                 return Ok(new { success = true, message = "Exam updated successfully", data = exam });
             }
-            catch (Exception ex)
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { success = false, message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
             {
                 return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
             }
         }
 
@@ -117,6 +161,9 @@ namespace University.API.Controllers
         [Authorize(Roles = "Admin,Instructor")]
         public async Task<IActionResult> DeleteExam(int id, int courseId)
         {
+            if (id <= 0 || courseId <= 0)
+                return BadRequest(new { success = false, message = "Invalid exam or course ID" });
+
             try
             {
                 var deleted = await _examService.DeleteExam(id, courseId);
@@ -125,9 +172,17 @@ namespace University.API.Controllers
 
                 return Ok(new { success = true, message = "Exam deleted successfully" });
             }
-            catch (Exception ex)
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { success = false, message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
             {
                 return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
             }
         }
 
@@ -136,14 +191,21 @@ namespace University.API.Controllers
         [Authorize(Roles = "Admin,Instructor")]
         public async Task<IActionResult> GetExamQuestions(int examId)
         {
+            if (examId <= 0)
+                return BadRequest(new { success = false, message = "Invalid exam ID" });
+
             try
             {
                 var questions = await _examService.GetQuestionsByExamId(examId);
                 return Ok(new { success = true, data = questions });
             }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = ex.Message });
+                return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
             }
         }
 

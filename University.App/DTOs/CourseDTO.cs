@@ -77,16 +77,24 @@ namespace University.App.DTOs
     }
 
     // Student enrollment view DTO
+    // UPDATED: Added database fields - Status, FinalGrade, GradeLetter, EnrollmentDate
     public class StudentEnrollmentDTO
     {
+        public int EnrollmentId { get; set; }
         public string StudentName { get; set; } = string.Empty;
         public string CourseName { get; set; } = string.Empty;
         public int CreditHours { get; set; }
         public string CourseCode { get; set; } = string.Empty;
         public string DepartmentName { get; set; } = string.Empty;
-        public string EnrollmentStatus { get; set; } = "Enrolled";
-        public String CourseStatus { get; set; } = "Active";
-        public int EnrollmentId { get; set; }
+
+        // Enrollment status fields (from database)
+        public string Status { get; set; } = "Enrolled"; // Enrolled, Dropped, Completed
+        public decimal? FinalGrade { get; set; } // 0-100
+        public string? GradeLetter { get; set; } // A+, A, B+, etc.
+        public DateTime EnrollmentDate { get; set; }
+
+        // Calculated field
+        public bool IsCourseActive { get; set; } = true; // Based on Course.IsDeleted
     }
     // Courses taught by Instructor
     public class InstructorCoursesDTO

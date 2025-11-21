@@ -61,7 +61,8 @@ namespace University.App.Services.Implementations
             }
 
             // منع اسجله متأخر ولسه السيشن مبدأتش اصلا منطقى يعنى 
-            if (dto.Status == "Late" && dto.Date > DateTime.Now)
+            // FIXED: Changed DateTime.Now to DateTime.UtcNow for consistency
+            if (dto.Status == "Late" && dto.Date > DateTime.UtcNow)
             {
                 throw new InvalidOperationException("Cannot mark a student as Late before the session time.");
             }
@@ -111,7 +112,8 @@ namespace University.App.Services.Implementations
                 throw new InvalidOperationException($"Course with ID {courseId.Value} not found");
 
             // مش هعمل فلتر لفتره اكبر من 6 شهور
-            if (from.HasValue && (DateTime.Now - from.Value).TotalDays > 180)
+            // FIXED: Changed DateTime.Now to DateTime.UtcNow
+            if (from.HasValue && (DateTime.UtcNow - from.Value).TotalDays > 180)
                 throw new InvalidOperationException("Cannot filter data older than 6 monthes");
 
             //  السطر ده هو اللى هيعمل الفلتر فعلا هو اللى بعمل الكويرى فى  الدتا بيز 
@@ -252,6 +254,6 @@ namespace University.App.Services.Implementations
             {
                 throw new InvalidOperationException("Delete failed");
             }
-        } 
+        }
     }
 }

@@ -14,6 +14,12 @@ namespace University.App.Interfaces.Courses
         // NEW METHODS
         Task<Enrollment?> GetEnrollmentWithCourseDetails(int studentId, int courseId);
         Task<bool> UpdateEnrollmentCompletion(int enrollmentId, string status, decimal? finalGrade, string? gradeLetter);
-        Task<IEnumerable<Enrollment>> GetEnrollmentsWithCoursesByStudentId(int studentId); // ← ADD THIS
+        Task<IEnumerable<Enrollment>> GetEnrollmentsWithCoursesByStudentId(int studentId);
+
+        // Soft delete and restore
+        Task<bool> DeleteEnrollmentAsync(int enrollmentId);
+        Task<bool> RestoreEnrollmentAsync(int enrollmentId);
+        Task<IEnumerable<Enrollment>> GetAllEnrollmentsIncludingDeletedAsync();
+        Task<Enrollment?> GetEnrollmentByIdAsync(int enrollmentId);
     }
 }
