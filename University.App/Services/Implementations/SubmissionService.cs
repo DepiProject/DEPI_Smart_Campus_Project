@@ -18,10 +18,10 @@ namespace SmartCampus.App.Services.Implementations
         public async Task<ExamSubmissionDto> StartExamAsync(int examId, int studentId)
         {
             if (examId <= 0)
-                throw new Exception("Invalid exam id.");
+                throw new ArgumentException("Invalid exam id.");
 
             if (studentId <= 0)
-                throw new Exception("Invalid student id.");
+                throw new ArgumentException("Invalid student id.");
 
             var existingSubmission = await _submissionRepository.GetSubmissionAsync(examId, studentId);
             if (existingSubmission != null)
@@ -31,15 +31,13 @@ namespace SmartCampus.App.Services.Implementations
             if (exam == null)
                 throw new InvalidOperationException("Exam not found.");
 
-            // close exam if time ended
+            // Check if exam is available
             if (exam.ExamDate > DateTime.UtcNow)
                 throw new InvalidOperationException("This exam is not available yet.");
 
-
-
             // Check exam has questions
             if (exam.ExamQuestions == null || exam.ExamQuestions.Count == 0)
-                throw new Exception("This exam has no questions.");
+                throw new InvalidOperationException("This exam has no questions.");
 
             var submission = new ExamSubmission
             {
@@ -71,17 +69,15 @@ namespace SmartCampus.App.Services.Implementations
         public async Task<ExamResultDto> SubmitExamAsync(SubmitExamDto dto)
         {
             if (dto == null)
-                throw new Exception("Invalid submit request.");
+                throw new ArgumentNullException(nameof(dto), "Invalid submit request.");
 
             if (dto.ExamId <= 0 || dto.StudentId <= 0)
-                throw new Exception("Invalid exam or student id.");
-
+                throw new ArgumentException("Invalid exam or student id.");
 
             // validate submission exists
-
             var submission = await _submissionRepository.GetSubmissionAsync(dto.ExamId, dto.StudentId);
             if (submission == null)
-                throw new InvalidOperationException("Exam not started ,  start the exam first.");
+                throw new InvalidOperationException("Exam not started, start the exam first.");
 
             if (submission.SubmittedAt.HasValue)
                 throw new InvalidOperationException("Exam already submitted.");
@@ -90,17 +86,12 @@ namespace SmartCampus.App.Services.Implementations
             if (exam == null)
                 throw new InvalidOperationException("Exam not found.");
 
-
-            // check time 
-
+            // check time
             var examEndTime = submission.StartedAt.AddMinutes(exam.Duration);
             if (DateTime.UtcNow > examEndTime)
-                throw new Exception("Time is over. You cannot submit this exam.");
-
-
+                throw new InvalidOperationException("Time is over. You cannot submit this exam.");
 
             // grade answers
-
             decimal totalScore = 0;
             int correctAnswers = 0;
             var questionResults = new List<QuestionResultDto>();
@@ -117,52 +108,46 @@ namespace SmartCampus.App.Services.Implementations
                 bool isCorrect = false;
                 decimal pointsAwarded = 0;
 
-                    var selectedOption = question.Options
-                        .FirstOrDefault(o => o.OptionId == answerDto.SelectedOptionId);
+                var selectedOption = question.Options
+                    .FirstOrDefault(o => o.OptionId == answerDto.SelectedOptionId);
 
-                    var correctOption = question.Options.FirstOrDefault(o => o.IsCorrect);
+                var correctOption = question.Options.FirstOrDefault(o => o.IsCorrect);
 
-                    if (selectedOption != null && selectedOption.IsCorrect)
-                    {
-                        isCorrect = true;
-                        pointsAwarded = question.Score;
-                        correctAnswers++;
-                    }
+                if (selectedOption != null && selectedOption.IsCorrect)
+                {
+                    isCorrect = true;
+                    pointsAwarded = question.Score;
+                    correctAnswers++;
+                }
 
-                    questionResults.Add(new QuestionResultDto
-                    {
-                        QuestionId = question.QuestionId,
-                        QuestionText = question.QuestionText,
-                        
-                        MaxScore = question.Score,
-                        PointsAwarded = pointsAwarded,
-                        IsCorrect = isCorrect,
-                        StudentSelectedOptionId = answerDto.SelectedOptionId,
-                        StudentSelectedOptionText = selectedOption?.OptionText,
-                        CorrectOptionId = correctOption?.OptionId,
-                        CorrectOptionText = correctOption?.OptionText
-                    });
+                questionResults.Add(new QuestionResultDto
+                {
+                    QuestionId = question.QuestionId,
+                    QuestionText = question.QuestionText,
+                    MaxScore = question.Score,
+                    PointsAwarded = pointsAwarded,
+                    IsCorrect = isCorrect,
+                    StudentSelectedOptionId = answerDto.SelectedOptionId,
+                    StudentSelectedOptionText = selectedOption?.OptionText,
+                    CorrectOptionId = correctOption?.OptionId,
+                    CorrectOptionText = correctOption?.OptionText
+                });
 
-                    var examAnswer = new ExamAnswer
-                    {
-                        SubmissionId = submission.SubmissionId,
-                        QuestionId = question.QuestionId,
-                        SelectedOptionId = answerDto.SelectedOptionId,
-                        IsCorrect = isCorrect,
-                        PointsAwarded = pointsAwarded
-                    };
+                var examAnswer = new ExamAnswer
+                {
+                    SubmissionId = submission.SubmissionId,
+                    QuestionId = question.QuestionId,
+                    SelectedOptionId = answerDto.SelectedOptionId,
+                    IsCorrect = isCorrect,
+                    PointsAwarded = pointsAwarded
+                };
 
-                    await _submissionRepository.AddAnswerAsync(examAnswer);
-                
-
-               
+                await _submissionRepository.AddAnswerAsync(examAnswer);
 
                 totalScore += pointsAwarded;
             }
 
-
             // update submission
-
             submission.SubmittedAt = DateTime.UtcNow;
             submission.Score = totalScore;
             await _submissionRepository.UpdateSubmissionAsync(submission);
@@ -196,7 +181,7 @@ namespace SmartCampus.App.Services.Implementations
         public async Task<ExamResultDto?> GetExamResultAsync(int examId, int studentId)
         {
             if (examId <= 0 || studentId <= 0)
-                throw new Exception("Invalid request.");
+                throw new ArgumentException("Invalid request.");
 
             var submission = await _submissionRepository.GetSubmissionWithDetailsAsync(examId, studentId);
             if (submission == null || !submission.SubmittedAt.HasValue)
@@ -213,21 +198,18 @@ namespace SmartCampus.App.Services.Implementations
                 {
                     QuestionId = question.QuestionId,
                     QuestionText = question.QuestionText,
-                    
                     MaxScore = question.Score,
                     PointsAwarded = answer.PointsAwarded ?? 0,
                     IsCorrect = answer.IsCorrect ?? false
                 };
 
-               
-                    q.StudentSelectedOptionId = answer.SelectedOptionId;
-                    var selectedOption = question.Options.FirstOrDefault(o => o.OptionId == answer.SelectedOptionId);
-                    q.StudentSelectedOptionText = selectedOption?.OptionText;
+                q.StudentSelectedOptionId = answer.SelectedOptionId;
+                var selectedOption = question.Options.FirstOrDefault(o => o.OptionId == answer.SelectedOptionId);
+                q.StudentSelectedOptionText = selectedOption?.OptionText;
 
-                    var correctOption = question.Options.FirstOrDefault(o => o.IsCorrect);
-                    q.CorrectOptionId = correctOption?.OptionId;
-                    q.CorrectOptionText = correctOption?.OptionText;
-                
+                var correctOption = question.Options.FirstOrDefault(o => o.IsCorrect);
+                q.CorrectOptionId = correctOption?.OptionId;
+                q.CorrectOptionText = correctOption?.OptionText;
 
                 questionResults.Add(q);
             }
@@ -262,7 +244,7 @@ namespace SmartCampus.App.Services.Implementations
         public async Task<ExamSubmissionDto?> GetSubmissionStatusAsync(int examId, int studentId)
         {
             if (examId <= 0 || studentId <= 0)
-                throw new Exception("Invalid request.");
+                throw new ArgumentException("Invalid request.");
 
             var submission = await _submissionRepository.GetSubmissionWithDetailsAsync(examId, studentId);
             if (submission == null)
@@ -288,7 +270,7 @@ namespace SmartCampus.App.Services.Implementations
         public async Task<IEnumerable<ExamSubmissionDto>> GetStudentSubmissionsAsync(int studentId)
         {
             if (studentId <= 0)
-                throw new Exception("Invalid student id.");
+                throw new ArgumentException("Invalid student id.");
 
             var submissions = await _submissionRepository.GetStudentSubmissionsAsync(studentId);
 
@@ -311,7 +293,7 @@ namespace SmartCampus.App.Services.Implementations
         public async Task<IEnumerable<ExamResultDto>> GetExamSubmissionsAsync(int examId)
         {
             if (examId <= 0)
-                throw new Exception("Invalid exam id.");
+                throw new ArgumentException("Invalid exam id.");
 
             var submissions = await _submissionRepository.GetExamSubmissionsAsync(examId);
             var exam = await _submissionRepository.GetExamWithQuestionsAsync(examId);
@@ -344,6 +326,45 @@ namespace SmartCampus.App.Services.Implementations
                         GradedByName = s.Instructor?.FullName
                     };
                 });
+        }
+
+        // Soft delete submission
+        public async Task<bool> DeleteSubmissionAsync(int submissionId)
+        {
+            if (submissionId <= 0)
+                throw new ArgumentException("Invalid submission ID.");
+
+            return await _submissionRepository.DeleteSubmissionAsync(submissionId);
+        }
+
+        // Restore submission
+        public async Task<bool> RestoreSubmissionAsync(int submissionId)
+        {
+            if (submissionId <= 0)
+                throw new ArgumentException("Invalid submission ID.");
+
+            return await _submissionRepository.RestoreSubmissionAsync(submissionId);
+        }
+
+        // Get all submissions including deleted
+        public async Task<IEnumerable<ExamSubmissionDto>> GetAllSubmissionsIncludingDeletedAsync()
+        {
+            var submissions = await _submissionRepository.GetAllSubmissionsIncludingDeletedAsync();
+
+            return submissions.Select(s => new ExamSubmissionDto
+            {
+                SubmissionId = s.SubmissionId,
+                ExamId = s.ExamId ?? 0,
+                ExamTitle = s.Exam?.Title ?? "",
+                StudentId = s.StudentId ?? 0,
+                StudentName = s.Student?.FullName ?? "",
+                StartedAt = s.StartedAt,
+                SubmittedAt = s.SubmittedAt,
+                Score = s.Score,
+                IsSubmitted = s.SubmittedAt.HasValue,
+                IsGraded = s.InstructorId.HasValue,
+                GradedBy = s.InstructorId
+            });
         }
     }
 }

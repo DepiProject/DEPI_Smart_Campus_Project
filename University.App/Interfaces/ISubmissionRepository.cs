@@ -25,7 +25,12 @@ namespace University.App.Interfaces
         // Save changes
         Task SaveChangesAsync();
 
-        // ADD THIS METHOD - Check if exam has any submissions
+        // Check if exam has any submissions
         Task<bool> HasSubmissionsAsync(int examId);
+
+        // Soft delete and restore
+        Task<bool> DeleteSubmissionAsync(int submissionId);
+        Task<bool> RestoreSubmissionAsync(int submissionId);
+        Task<IEnumerable<ExamSubmission>> GetAllSubmissionsIncludingDeletedAsync();
     }
 }

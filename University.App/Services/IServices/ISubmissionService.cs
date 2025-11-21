@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using University.App.DTOs;
 namespace University.App.Services.IServices
 {
@@ -18,12 +17,9 @@ namespace University.App.Services.IServices
         // Get exam submissions (for instructors)
         Task<IEnumerable<ExamResultDto>> GetExamSubmissionsAsync(int examId);
 
-        //// Soft delete and restore
-
-        //Task<bool> DeleteSubmissionAsync(int submissionId);
-
-        //Task<bool> RestoreSubmissionAsync(int submissionId);
-
-        //Task<IEnumerable<ExamSubmissionDto>> GetAllSubmissionsIncludingDeleteAsync();
+        // Soft delete and restore
+        Task<bool> DeleteSubmissionAsync(int submissionId);
+        Task<bool> RestoreSubmissionAsync(int submissionId);
+        Task<IEnumerable<ExamSubmissionDto>> GetAllSubmissionsIncludingDeletedAsync();
     }
 }

@@ -20,6 +20,7 @@ namespace University.Infra.Repositories
         {
             return await _context.ExamSubmissions
                 .Include(s => s.Answers)
+                .Where(s => !s.IsDeleted)
                 .FirstOrDefaultAsync(s => s.ExamId == examId && s.StudentId == studentId);
         }
 
@@ -30,6 +31,7 @@ namespace University.Infra.Repositories
                 .Include(s => s.Exam)
                 .Include(s => s.Student)
                 .Include(s => s.Instructor)
+                .Where(s => !s.IsDeleted)
                 .FirstOrDefaultAsync(s => s.SubmissionId == submissionId);
         }
 
@@ -45,6 +47,7 @@ namespace University.Infra.Repositories
                     .ThenInclude(e => e.ExamQuestions)
                 .Include(s => s.Student)
                 .Include(s => s.Instructor)
+                .Where(s => !s.IsDeleted)
                 .FirstOrDefaultAsync(s => s.ExamId == examId && s.StudentId == studentId);
         }
 
@@ -54,8 +57,7 @@ namespace University.Infra.Repositories
                 .Include(s => s.Exam)
                     .ThenInclude(e => e.Course)
                 .Include(s => s.Instructor)
-                .Where(s => s.StudentId == studentId)
-                .Where(s=>s.)
+                .Where(s => s.StudentId == studentId && !s.IsDeleted)
                 .OrderByDescending(s => s.StartedAt)
                 .ToListAsync();
         }
@@ -66,7 +68,7 @@ namespace University.Infra.Repositories
                 .Include(s => s.Student)
                 .Include(s => s.Instructor)
                 .Include(s => s.Answers)
-                .Where(s => s.ExamId == examId)
+                .Where(s => s.ExamId == examId && !s.IsDeleted)
                 .OrderByDescending(s => s.StartedAt)
                 .ToListAsync();
         }
@@ -126,7 +128,55 @@ namespace University.Infra.Repositories
         public async Task<bool> HasSubmissionsAsync(int examId)
         {
             return await _context.ExamSubmissions
-                .AnyAsync(s => s.ExamId == examId);
+                .AnyAsync(s => s.ExamId == examId && !s.IsDeleted);
+        }
+
+        // ========== SOFT DELETE & RESTORE ==========
+
+        public async Task<bool> DeleteSubmissionAsync(int submissionId)
+        {
+            var submission = await _context.ExamSubmissions
+                .FirstOrDefaultAsync(s => s.SubmissionId == submissionId && !s.IsDeleted);
+
+            if (submission == null)
+                return false;
+
+            submission.IsDeleted = true;
+            submission.DeletedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> RestoreSubmissionAsync(int submissionId)
+        {
+            var submission = await _context.ExamSubmissions
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(s => s.SubmissionId == submissionId);
+
+            if (submission == null)
+                return false;
+
+            if (!submission.IsDeleted)
+                throw new InvalidOperationException("Submission is not deleted.");
+
+            submission.IsDeleted = false;
+            submission.DeletedAt = null;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<IEnumerable<ExamSubmission>> GetAllSubmissionsIncludingDeletedAsync()
+        {
+            return await _context.ExamSubmissions
+                .IgnoreQueryFilters()
+                .Include(s => s.Exam)
+                    .ThenInclude(e => e.Course)
+                .Include(s => s.Student)
+                .Include(s => s.Instructor)
+                .OrderByDescending(s => s.StartedAt)
+                .ToListAsync();
         }
 
         // ========== SAVE CHANGES ==========

@@ -16,6 +16,7 @@ using University.Infra.Repositories.Users;
 using University.App.Interfaces.Courses;
 using University.Infra.Repositories.Courses;
 using University.App.Validators;
+using SmartCampus.App.Services.Implementations;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -87,6 +88,7 @@ builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<ICourseService, CourseService>();
 builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
 builder.Services.AddScoped<IExamService, ExamService>();
+builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 
 // 8. Add Controllers

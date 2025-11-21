@@ -132,5 +132,83 @@ namespace University.API.Controllers
                 return StatusCode(500, new { success = false, message = ex.Message });
             }
         }
+
+        [HttpGet("all-including-deleted")]
+        [Authorize(Roles = "Admin,Instructor")]
+        public async Task<IActionResult> GetAllSubmissionsIncludingDeleted()
+        {
+            try
+            {
+                var submissions = await _submissionService.GetAllSubmissionsIncludingDeletedAsync();
+                return Ok(new
+                {
+                    success = true,
+                    message = "All submissions (including deleted) retrieved successfully",
+                    data = submissions
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpDelete("{submissionId}")]
+        [Authorize(Roles = "Admin,Instructor")]
+        public async Task<IActionResult> DeleteSubmission(int submissionId)
+        {
+            if (submissionId <= 0)
+                return BadRequest(new { success = false, message = "Invalid submission ID" });
+
+            try
+            {
+                var deleted = await _submissionService.DeleteSubmissionAsync(submissionId);
+                if (!deleted)
+                    return NotFound(new { success = false, message = "Submission not found" });
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Submission deleted successfully (soft delete)"
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("{submissionId}/restore")]
+        [Authorize(Roles = "Admin,Instructor")]
+        public async Task<IActionResult> RestoreSubmission(int submissionId)
+        {
+            if (submissionId <= 0)
+                return BadRequest(new { success = false, message = "Invalid submission ID" });
+
+            try
+            {
+                var restored = await _submissionService.RestoreSubmissionAsync(submissionId);
+                if (!restored)
+                    return NotFound(new { success = false, message = "Submission not found" });
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Submission restored successfully"
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
     }
 }
