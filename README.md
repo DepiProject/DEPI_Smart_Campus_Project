@@ -650,21 +650,12 @@ The API returns standard HTTP status codes:
 - ✅ Input validation using Data Annotations
 - ✅ Business rule validation
 - ✅ SQL injection protection via Entity Framework
-
----
-
-## 📝 License
-
-This project is licensed under the MIT License.
-
 ---
 
 ## 👥 Contributors
 
-- Your Name - Initial work
+- Alyaa Gamal Ahmed - Authentication, Users Management, Department, and Exam
+- Youssef Mohamed - Submission, and base of Exam
+- Menna Mahmoud - Course and Enrollment
+- Mahmoud Alaa - Attendance
 
----
-
-## 📧 Support
-
-For support, email support@university.com or create an issue in the repository.
