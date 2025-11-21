@@ -24,6 +24,7 @@ namespace University.App.Interfaces
 
         // Save changes
         Task SaveChangesAsync();
+         
 
         // Check if exam has any submissions
         Task<bool> HasSubmissionsAsync(int examId);
