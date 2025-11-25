@@ -1,6 +1,8 @@
 # University Management System API Documentation
 
-A comprehensive REST API for managing university operations including students, instructors, courses, enrollments, exams, attendance, and more.
+[Swagger Link](https://smartcampus-university.runasp.net/swagger/index.html)
+
+A comprehensive REST API for managing university operations, including students, instructors, courses, enrollments, exams, attendance, and more.
 
 ## 📋 Table of Contents
 
