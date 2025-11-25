@@ -7,7 +7,6 @@ namespace University.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] // All endpoints require authentication
     public class DepartmentController : ControllerBase
     {
         private readonly IDepartmentService _departmentService;

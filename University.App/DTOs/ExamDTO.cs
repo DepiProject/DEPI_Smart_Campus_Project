@@ -86,6 +86,10 @@ namespace University.App.DTOs
         [Required(ErrorMessage = "Exam ID is required")]
         public int ExamId { get; set; }
 
+        
+        [Required(ErrorMessage = "Exam ID is required")]
+        public int CourseId { get; set; }
+
         [Required(ErrorMessage = "Options are required")]
         [MinLength(2, ErrorMessage = "Question must have at least 2 options")]
         public List<CreateMCQOptionDto> MCQOptions { get; set; } = new();

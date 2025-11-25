@@ -79,6 +79,8 @@ builder.Services.AddScoped<IAttendanceRepository, AttendanceRepository>();
 // 6. Register Validators
 builder.Services.AddScoped<ExamValidator>();
 builder.Services.AddScoped<ExamQuestionValidator>();
+builder.Services.AddScoped<ValidStudentCodeAttribute>();
+builder.Services.AddScoped<ValidNameAttribute>();
 
 // 7. Register Application Services
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -90,6 +92,17 @@ builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
 builder.Services.AddScoped<IExamService, ExamService>();
 builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
+
+//  CORS (Allow local development)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.AllowAnyOrigin()     // frontend dev
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
 
 // 8. Add Controllers
 builder.Services.AddControllers();
@@ -134,13 +147,16 @@ var app = builder.Build();
 // =======================
 // Configure Middleware
 // =======================
-if (app.Environment.IsDevelopment())
+
+if (app.Environment.IsDevelopment() || true)
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+
 app.UseHttpsRedirection();
+app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();

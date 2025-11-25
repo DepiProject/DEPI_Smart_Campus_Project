@@ -230,6 +230,7 @@ namespace University.API.Controllers
         [Authorize(Roles = "Admin,Instructor")]
         public async Task<IActionResult> AddQuestion([FromBody] CreateQuestionDto dto)
         {
+       
             try
             {
                 if (!ModelState.IsValid)
@@ -238,7 +239,7 @@ namespace University.API.Controllers
                 var question = await _examService.AddExamQuestion(dto);
                 return CreatedAtAction(
                     nameof(GetQuestionById),
-                    new { examId = dto.ExamId, questionId = question?.QuestionId },
+                    new { examId = dto.ExamId, courseId = dto.CourseId, questionId = question?.QuestionId },
                     new { success = true, message = "Question added successfully", data = question }
                 );
             }

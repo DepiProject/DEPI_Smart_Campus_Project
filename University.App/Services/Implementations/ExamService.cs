@@ -76,6 +76,7 @@ namespace University.App.Services.Implementations
 
         public async Task<CreateExamDto?> AddExam(CreateExamDto dto)
         {
+            
             if (dto == null)
                 throw new ArgumentNullException(nameof(dto));
 
@@ -151,6 +152,7 @@ namespace University.App.Services.Implementations
 
         public async Task<ExamQuestionDTO?> AddExamQuestion(CreateQuestionDto dto)
         {
+            
             if (dto == null)
                 throw new ArgumentNullException(nameof(dto));
 
@@ -161,7 +163,7 @@ namespace University.App.Services.Implementations
             _questionValidator.ValidateCreateOrUpdateQuestion(dto);
 
             // Check if exam exists
-            var exam = await _examRepository.GetExamById(dto.ExamId, 0);
+            var exam = await _examRepository.GetExamById(dto.ExamId, dto.CourseId);
             if (exam == null)
                 throw new KeyNotFoundException($"Exam with ID {dto.ExamId} not found");
 
