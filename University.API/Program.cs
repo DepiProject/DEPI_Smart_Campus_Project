@@ -162,4 +162,11 @@ using (var scope = app.Services.CreateScope())
 // =======================
 // Run App
 // =======================
+
+app.UseStaticFiles(); // ده المهم عشان يقدر يقرأ ملفات HTML
+
+app.UseCors(policy => policy
+    .AllowAnyOrigin()
+    .AllowAnyMethod()
+    .AllowAnyHeader());
 app.Run();

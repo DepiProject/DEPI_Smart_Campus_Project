@@ -5,9 +5,11 @@ namespace University.App.DTOs
     public class ExamAnswerDto
     {
         [Required(ErrorMessage = "Question ID is required")]
+        [Range(1, int.MaxValue, ErrorMessage = "Question ID must be greater than 0")]
         public int QuestionId { get; set; }
 
         [Required(ErrorMessage = "Selected option ID is required")]
+        [Range(1, int.MaxValue, ErrorMessage = "Selected option ID must be greater than 0")]
         public int SelectedOptionId { get; set; }
     }
 
@@ -70,17 +72,25 @@ namespace University.App.DTOs
     public class StartExamDto
     {
         [Required(ErrorMessage = "Exam ID is required")]
+        [Range(1, int.MaxValue, ErrorMessage = "Exam ID must be greater than 0")]
         public int ExamId { get; set; }
 
         [Required(ErrorMessage = "Student ID is required")]
+        [Range(1, int.MaxValue, ErrorMessage = "Student ID must be greater than 0")]
         public int StudentId { get; set; }
     }
 
     public class ExamSubmissionDto
     {
         public int SubmissionId { get; set; }
+
+        [Required(ErrorMessage = "Exam ID is required")]
+        [Range(1, int.MaxValue, ErrorMessage = "Exam ID must be greater than 0")]
         public int ExamId { get; set; }
         public string ExamTitle { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Student ID is required")]
+        [Range(1, int.MaxValue, ErrorMessage = "Student ID must be greater than 0")]
         public int StudentId { get; set; }
         public string StudentName { get; set; } = string.Empty;
         public DateTime StartedAt { get; set; }

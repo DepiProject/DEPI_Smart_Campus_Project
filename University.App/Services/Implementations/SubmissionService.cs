@@ -86,20 +86,32 @@ namespace SmartCampus.App.Services.Implementations
             if (exam == null)
                 throw new InvalidOperationException("Exam not found.");
 
+
+
+
+
             // check time
             var examEndTime = submission.StartedAt.AddMinutes(exam.Duration);
             if (DateTime.UtcNow > examEndTime)
                 throw new InvalidOperationException("Time is over. You cannot submit this exam.");
 
+            
             // grade answers
             decimal totalScore = 0;
             int correctAnswers = 0;
             var questionResults = new List<QuestionResultDto>();
 
+            // HashSet to track answered question IDs
+            var answeredQuestions = new HashSet<int>();
+
             foreach (var answerDto in dto.Answers)
             {
                 if (answerDto.QuestionId <= 0)
                     continue;
+
+                // check for duplicate answers
+                if (!answeredQuestions.Add(answerDto.QuestionId))
+                    throw new InvalidOperationException($"Duplicate answer detected for QuestionId {answerDto.QuestionId}.");
 
                 var question = await _submissionRepository.GetQuestionByIdAsync(answerDto.QuestionId);
                 if (question == null || question.ExamId != dto.ExamId)
@@ -146,6 +158,7 @@ namespace SmartCampus.App.Services.Implementations
 
                 totalScore += pointsAwarded;
             }
+
 
             // update submission
             submission.SubmittedAt = DateTime.UtcNow;

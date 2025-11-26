@@ -1,0 +1,671 @@
+﻿<!doctype html>
+<html lang="ar">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>SmartCampus — Exam</title>
+    <style>
+        :root {
+            --bg: #f6f8fb;
+            --card: #fff;
+            --muted: #6b7280;
+            --primary: #7c3aed;
+            --accent: #06b6d4;
+            --radius: 12px;
+            --shadow: 0 8px 30px rgba(2,6,23,0.06);
+            --maxW: 1100px;
+            font-family: Inter, system-ui, "Segoe UI", Roboto, Arial;
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0
+        }
+
+        body {
+            background: linear-gradient(180deg,#f8fafc 0%,var(--bg) 100%);
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 20px;
+            color: #0f172a;
+        }
+
+        .container {
+            width: 100%;
+            max-width: var(--maxW);
+        }
+
+        /* header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px
+        }
+
+        .brand {
+            display: flex;
+            gap: 12px;
+            align-items: center
+        }
+
+        .logo {
+            width: 52px;
+            height: 52px;
+            border-radius: 10px;
+            background: linear-gradient(90deg,var(--primary),var(--accent));
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 20px;
+            box-shadow: var(--shadow)
+        }
+
+        .title {
+            font-size: 20px;
+            font-weight: 700
+        }
+
+        .note {
+            color: var(--muted);
+            font-size: 13px
+        }
+
+        /* card */
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 16px;
+            border: 1px solid rgba(2,6,23,0.04)
+        }
+
+        /* login */
+        .login-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px
+        }
+
+        @media(min-width:720px) {
+            .login-grid {
+                grid-template-columns: 1fr 320px
+            }
+        }
+
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px
+        }
+
+        input[type=text], input[type=password], input[type=number], select {
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(2,6,23,0.06);
+            outline: none;
+            font-size: 15px
+        }
+
+        .btn {
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 0;
+            cursor: pointer;
+            font-weight: 700
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg,var(--primary),var(--accent));
+            color: white
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid rgba(2,6,23,0.06)
+        }
+
+        /* exam start area */
+        .controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap
+        }
+
+        .small {
+            font-size: 13px;
+            color: var(--muted)
+        }
+
+        /* questions */
+        .questions-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-top: 14px
+        }
+
+        .sections {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px
+        }
+
+        @media(min-width:900px) {
+            .sections {
+                grid-template-columns: 1fr 1fr
+            }
+        }
+
+        .section {
+            background: #fbfdff;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(2,6,23,0.03)
+        }
+
+            .section h4 {
+                margin: 0 0 8px 0;
+                font-size: 16px
+            }
+
+        .q {
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(2,6,23,0.03);
+            background: white;
+            margin-bottom: 8px
+        }
+
+            .q .qtxt {
+                font-weight: 600;
+                margin-bottom: 8px
+            }
+
+        .opts {
+            display: flex;
+            flex-direction: column;
+            gap: 8px
+        }
+
+        .opt {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(2,6,23,0.03)
+        }
+
+            .opt input {
+                accent-color: var(--primary)
+            }
+
+        .timer {
+            font-weight: 800;
+            color: #dc2626;
+            background: rgba(220,38,38,0.06);
+            padding: 8px 12px;
+            border-radius: 999px
+        }
+
+        /* footer actions */
+        .actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            align-items: center
+        }
+
+        .result-box {
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 10px;
+            background: linear-gradient(180deg,#eef2ff, #ffffff);
+            border: 1px solid rgba(59,130,246,0.06)
+        }
+
+        /* tiny helpers */
+        .hidden {
+            display: none
+        }
+
+        .center {
+            display: flex;
+            align-items: center;
+            justify-content: center
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <div class="header">
+            <div class="brand">
+                <div class="logo">U</div>
+                <div>
+                    <div class="title">SmartCampus</div>
+                    <div class="note">Exam & Submission</div>
+                </div>
+            </div>
+
+            <div id="userArea" class="center">
+                <div id="loggedOutArea" class="card" style="display:flex;gap:8px;align-items:center">
+                    <button id="openLogin" class="btn btn-ghost">Login</button>
+                </div>
+
+                <div id="loggedInArea" class="card" style="display:none;gap:12px;align-items:center">
+                    <div id="who" class="small"></div>
+                    <button id="logoutBtn" class="btn btn-ghost">Logout</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- main card -->
+        <div class="card">
+
+            <!-- LOGIN area (collapsible) -->
+            <div id="loginPanel" class="hidden">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                    <div style="font-weight:700">Login (Student)</div>
+                    <div class="small">Use seeded user: mona@gmail.com / Password@123</div>
+                </div>
+
+                <div class="login-grid">
+                    <div>
+                        <div class="form-field">
+                            <label class="small">Email</label>
+                            <input id="email" type="text" placeholder="email" value="mona@gmail.com" />
+                        </div>
+                        <div class="form-field">
+                            <label class="small">Password</label>
+                            <input id="password" type="password" placeholder="password" value="Password@123" />
+                        </div>
+                        <div style="display:flex;gap:8px;margin-top:10px">
+                            <button id="btnLogin" class="btn btn-primary">Login</button>
+                            <button id="btnFillDemo" class="btn btn-ghost">Fill Demo</button>
+                        </div>
+                        <div id="loginErr" class="small" style="color:#b91c1c;margin-top:8px"></div>
+                    </div>
+
+                    <!-- quick student selection / token area -->
+                    <div>
+                        <div class="form-field">
+                            <label class="small">Or paste token (optional)</label>
+                            <textarea id="tokenArea" rows="4" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(2,6,23,0.06)"></textarea>
+                        </div>
+                        <div style="display:flex;gap:8px;margin-top:8px">
+                            <button id="btnUseToken" class="btn btn-primary">Use Token</button>
+                            <button id="btnClearToken" class="btn btn-ghost">Clear</button>
+                        </div>
+                    </div>
+                </div>
+                <hr style="margin:12px 0;border:none;border-top:1px dashed rgba(2,6,23,0.06)">
+            </div>
+
+            <!-- START / COURSE input -->
+            <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div>
+                        <div style="font-weight:800;font-size:18px">Start Exam</div>
+                        <div class="small">ادخل courseId واضغط Start Exam لعرض الاسئلة والبدء</div>
+                    </div>
+                    <div id="examMeta" class="small"></div>
+                </div>
+
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+                    <div style="flex:1;min-width:180px">
+                        <label class="small">Course ID</label>
+                        <input id="courseId" type="number" placeholder="Enter course id" />
+                    </div>
+
+                    <div style="min-width:160px">
+                        <label class="small">Student ID (optional)</label>
+                        <input id="studentId" type="number" placeholder="1 or 2" />
+                    </div>
+
+                    <div style="display:flex;gap:8px;align-items:end">
+                        <button id="btnStart" class="btn btn-primary">Start Exam</button>
+                        <button id="btnFetchExams" class="btn btn-ghost">Fetch Exams</button>
+                    </div>
+                </div>
+
+                <div id="startMsg" class="small" style="color:var(--muted);margin-top:8px"></div>
+            </div>
+
+            <!-- QUESTIONS area -->
+            <div id="questionsArea" class="hidden">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+                    <div style="font-weight:800">Questions</div>
+                    <div style="display:flex;gap:12px;align-items:center">
+                        <div id="timer" class="timer">--:--</div>
+                        <div class="small">Time left</div>
+                    </div>
+                </div>
+
+                <div class="questions-wrap">
+                    <div class="sections">
+                        <div class="section" id="mcqSection">
+                            <h4>MCQ Questions</h4>
+                            <div id="mcqList"></div>
+                        </div>
+
+                        <div class="section" id="tfSection">
+                            <h4>True / False Questions</h4>
+                            <div id="tfList"></div>
+                        </div>
+                    </div>
+
+                    <div class="actions">
+                        <button id="btnSubmit" class="btn btn-primary">Submit Answers</button>
+                        <div id="submitNote" class="small">بعد الإرسال لن تتمكن من الإرسال مرة أخرى</div>
+                    </div>
+
+                    <div id="resultArea" class="result-box hidden"></div>
+                </div>
+            </div>
+
+        </div> <!-- end main card -->
+
+    </div>
+
+    <script>
+// ========== CONFIG ==========
+const API_BASE = "https://smartcampus-university.runasp.net/api";
+
+// ========== HELPERS ==========
+function saveToken(t){ localStorage.setItem("ums_token", t); }
+function getToken(){ return localStorage.getItem("ums_token"); }
+function removeToken(){ localStorage.removeItem("ums_token"); }
+function authHeaders(){ const t = getToken(); return t ? { "Authorization": "Bearer " + t } : {}; }
+
+function decodeJwt(token){
+  try{
+    const p = token.split('.')[1];
+    const json = decodeURIComponent(escape(atob(p.replace(/-/g,'+').replace(/_/g,'/'))));
+    return JSON.parse(json);
+  }catch(e){ return null; }
+}
+function getStudentIdFromToken(){
+  const t = getToken(); if(!t) return null;
+  const p = decodeJwt(t);
+  if(!p) return null;
+  return p?.studentId || p?.sub || p?.nameid || p?.userId || null;
+}
+
+async function apiFetch(path, method='GET', body=null){
+  const headers = { ...authHeaders() };
+  if(body && !(body instanceof FormData)) headers["Content-Type"] = "application/json";
+  const res = await fetch(API_BASE + path, { method, headers, body: body && !(body instanceof FormData) ? JSON.stringify(body) : body });
+  const text = await res.text();
+  let data = null;
+  try{ data = text ? JSON.parse(text) : null; } catch(e){ data = text; }
+  if(!res.ok) throw { status: res.status, data };
+  return data;
+}
+
+// ========== ELEMENTS ==========
+const openLoginBtn = document.getElementById("openLogin");
+const loginPanel = document.getElementById("loginPanel");
+const btnLogin = document.getElementById("btnLogin");
+const btnFillDemo = document.getElementById("btnFillDemo");
+const btnUseToken = document.getElementById("btnUseToken");
+const btnClearToken = document.getElementById("btnClearToken");
+const tokenArea = document.getElementById("tokenArea");
+const emailInput = document.getElementById("email");
+const passInput = document.getElementById("password");
+const loginErr = document.getElementById("loginErr");
+const loggedOutArea = document.getElementById("loggedOutArea");
+const loggedInArea = document.getElementById("loggedInArea");
+const who = document.getElementById("who");
+const logoutBtn = document.getElementById("logoutBtn");
+
+const courseIdInput = document.getElementById("courseId");
+const studentIdInput = document.getElementById("studentId");
+const btnStart = document.getElementById("btnStart");
+const btnFetchExams = document.getElementById("btnFetchExams");
+const startMsg = document.getElementById("startMsg");
+
+const questionsArea = document.getElementById("questionsArea");
+const mcqList = document.getElementById("mcqList");
+const tfList = document.getElementById("tfList");
+const timerEl = document.getElementById("timer");
+const btnSubmit = document.getElementById("btnSubmit");
+const resultArea = document.getElementById("resultArea");
+const submitNote = document.getElementById("submitNote");
+const examMeta = document.getElementById("examMeta");
+
+// ====== AUTH ======
+openLoginBtn.addEventListener("click", ()=> loginPanel.classList.toggle("hidden"));
+btnFillDemo.addEventListener("click", ()=>{
+  emailInput.value = "mona@gmail.com"; passInput.value = "Password@123";
+});
+btnUseToken.addEventListener("click", ()=>{
+  const t = tokenArea.value.trim();
+  if(!t){ alert("Please paste a token"); return; }
+  saveToken(t); applyLoggedInState(); alert("Token saved");
+});
+btnClearToken.addEventListener("click", ()=>{ tokenArea.value = ""; removeToken(); applyLoggedOutState(); });
+
+btnLogin.addEventListener("click", async ()=>{
+  loginErr.innerText = "";
+  const email = emailInput.value.trim(), password = passInput.value.trim();
+  if(!email || !password){ loginErr.innerText = "يرجى ادخال الايميل والرقم السرى"; return; }
+  try{
+    const res = await apiFetch("/Auth/login","POST",{ email, password });
+    if(res?.token) saveToken(res.token);
+    applyLoggedInState();
+  }catch(err){
+    console.error(err);
+    loginErr.innerText = err?.data?.message || "Login failed";
+  }
+});
+
+logoutBtn.addEventListener("click", ()=>{ removeToken(); applyLoggedOutState(); });
+
+function applyLoggedInState(){
+  const t = getToken();
+  if(!t) return applyLoggedOutState();
+  loggedOutArea.style.display = "none";
+  loggedInArea.style.display = "flex";
+  const p = decodeJwt(t);
+  who.innerText = p?.unique_name || p?.name || p?.email || ("User");
+  // fill student id if present
+  const sid = getStudentIdFromToken();
+  if(sid) studentIdInput.value = sid;
+}
+function applyLoggedOutState(){
+  loggedOutArea.style.display = "flex";
+  loggedInArea.style.display = "none";
+  who.innerText = "";
+}
+
+// init logged state
+if(getToken()) applyLoggedInState();
+
+// ====== EXAM FLOW ======
+let currentExam = null;
+let currentQuestions = []; // all questions
+let timerInterval = null;
+let endTime = null;
+let submissionStarted = false;
+
+// helper render
+function clearQuestions(){ mcqList.innerHTML = ""; tfList.innerHTML = ""; }
+
+function renderQuestions(examDto){
+  clearQuestions();
+  currentExam = examDto;
+  examMeta.innerText = `${examDto.title} — ${examDto.totalPoints} pts`;
+  // examDto.Questions is list of ExamQuestionDTO { QuestionId, QuestionText, Score, OrderNumber, MCQOptions }
+  const questions = examDto.questions || examDto.Questions || [];
+  // classify
+  const mcqs = [], tfs = [];
+  questions.forEach(q=>{
+    const hasTF = (q.mcqOptions || q.MCQOptions || []).length === 2 &&
+                  ( (q.mcqOptions||q.MCQOptions)[0].optionText.toLowerCase().includes("true")
+                    || (q.mcqOptions||q.MCQOptions)[0].optionText.toLowerCase().includes("false") );
+    if(hasTF) tfs.push(q); else mcqs.push(q);
+  });
+
+  // render MCQs
+  mcqs.forEach((q,idx)=>{
+    const qid = q.questionId ?? q.QuestionId;
+    const opts = q.mcqOptions ?? q.MCQOptions ?? [];
+    const wrapper = document.createElement("div"); wrapper.className = "q";
+    wrapper.innerHTML = `<div class="qtxt">${(q.orderNumber ?? q.OrderNumber) || (idx+1)}. ${q.questionText ?? q.QuestionText}</div>
+      <div class="small">Score: ${q.score ?? q.Score}</div>
+      <div class="opts" data-qid="${qid}"></div>`;
+    const optsEl = wrapper.querySelector(".opts");
+    opts.forEach(opt=>{
+      const oid = opt.optionId ?? opt.OptionId;
+      const optText = opt.optionText ?? opt.OptionText;
+      const div = document.createElement("label"); div.className = "opt";
+      div.innerHTML = `<input type="radio" name="q_${qid}" value="${oid}" /> <div>${optText}</div>`;
+      optsEl.appendChild(div);
+    });
+    mcqList.appendChild(wrapper);
+  });
+
+  // render T/F
+  tfs.forEach((q,idx)=>{
+    const qid = q.questionId ?? q.QuestionId;
+    const opts = q.mcqOptions ?? q.MCQOptions ?? [];
+    const wrapper = document.createElement("div"); wrapper.className = "q";
+    wrapper.innerHTML = `<div class="qtxt">${(q.orderNumber ?? q.OrderNumber) || (idx+1)}. ${q.questionText ?? q.QuestionText}</div>
+      <div class="small">Score: ${q.score ?? q.Score}</div>
+      <div class="opts" data-qid="${qid}"></div>`;
+    const optsEl = wrapper.querySelector(".opts");
+    opts.forEach(opt=>{
+      const oid = opt.optionId ?? opt.OptionId;
+      const optText = opt.optionText ?? opt.OptionText;
+      const div = document.createElement("label"); div.className = "opt";
+      div.innerHTML = `<input type="radio" name="q_${qid}" value="${oid}" /> <div>${optText}</div>`;
+      optsEl.appendChild(div);
+    });
+    tfList.appendChild(wrapper);
+  });
+
+  // show area
+  questionsArea.classList.remove("hidden");
+}
+
+function startTimer(durationMinutes){
+  clearInterval(timerInterval);
+  const now = Date.now();
+  endTime = now + (durationMinutes * 60 * 1000);
+  tick();
+  timerInterval = setInterval(tick, 1000);
+}
+function tick(){
+  const left = Math.max(0, Math.floor((endTime - Date.now())/1000));
+  const mm = String(Math.floor(left/60)).padStart(2,'0');
+  const ss = String(left%60).padStart(2,'0');
+  timerEl.innerText = `${mm}:${ss}`;
+  if(left <= 0){
+    clearInterval(timerInterval);
+    timerEl.innerText = "00:00";
+    if(submissionStarted) autoSubmit();
+  }
+}
+
+// START EXAM flow
+btnStart.addEventListener("click", async ()=>{
+  const courseId = courseIdInput.value.trim();
+  if(!courseId){ startMsg.innerText = "ادخل رقم الcourseId"; return; }
+  startMsg.innerText = "جاري تحميل الامتحان...";
+  // find exams for this course
+  try{
+    // GET /api/Exam/course/{courseId}
+    const res = await apiFetch(`/Exam/course/${courseId}`,"GET");
+    const exams = res?.data || res || [];
+    if(!exams || exams.length === 0){ startMsg.innerText = "لا يوجد امتحانات لهذا الكورس"; return; }
+    // choose first exam (or you can implement selection)
+    const exam = exams[0];
+    // fetch exam with questions
+    const resp = await apiFetch(`/Exam/${exam.examId ?? exam.ExamId}/course/${courseId}/with-questions`,"GET");
+    const examWithQuestions = resp?.data || resp;
+    if(!examWithQuestions){ startMsg.innerText = "خطأ في جلب بيانات الامتحان"; return; }
+    // render questions
+    renderQuestions(examWithQuestions);
+    // start submission on backend
+    const sid = studentIdInput.value || getStudentIdFromToken();
+    if(!sid){ startMsg.innerText = "ادخل studentId أو ضع التوكن"; return; }
+    // call /api/Submission/start
+    await apiFetch("/Submission/start","POST",{ examId: examWithQuestions.examId ?? examWithQuestions.ExamId, studentId: parseInt(sid) });
+    submissionStarted = true;
+    startMsg.innerText = "الامتحان بدأ — حظ سعيد!";
+    startTimer(examWithQuestions.duration ?? examWithQuestions.Duration ?? 60);
+  }catch(err){
+    console.error(err);
+    startMsg.innerText = err?.data?.message || "حدث خطأ أثناء البدء";
+  }
+});
+
+// fetch exams button (debug)
+btnFetchExams.addEventListener("click", async ()=>{
+  try{
+    const res = await apiFetch("/Exam","GET");
+    const exams = res?.data || res;
+    alert("Fetched " + (exams?.length || 0) + " exams. See console for details.");
+    console.log(exams);
+  }catch(e){ alert("Error fetching exams"); console.error(e); }
+});
+
+// collect answers helper
+function collectAnswers(){
+  const answers = [];
+  document.querySelectorAll(".opts").forEach(opts=>{
+    const qid = parseInt(opts.dataset.qid);
+    const checked = opts.querySelector("input[type=radio]:checked");
+    if(checked){
+      answers.push({ questionId: qid, selectedOptionId: parseInt(checked.value) });
+    }
+  });
+  return answers;
+}
+
+async function autoSubmit(){
+  if(!submissionStarted) return;
+  // gather and submit
+  await submitAnswers(true);
+}
+
+btnSubmit.addEventListener("click", async ()=>{
+  if(!confirm("هل أنت متأكد من إرسال الإجابات؟ بعد الإرسال لا يمكنك الإرسال مرة أخرى.")) return;
+  await submitAnswers(false);
+});
+
+async function submitAnswers(isAuto=false){
+  if(!submissionStarted){ alert("امتحان لم يبدأ بعد"); return; }
+  btnSubmit.disabled = true;
+  const answers = collectAnswers();
+  const sid = studentIdInput.value || getStudentIdFromToken();
+  if(!sid){ alert("StudentId missing"); btnSubmit.disabled=false; return; }
+  const examId = currentExam?.examId ?? currentExam?.ExamId;
+  const payload = { examId: examId, studentId: parseInt(sid), answers };
+  try{
+    const res = await apiFetch("/Submission/submit","POST",payload);
+    resultArea.classList.remove("hidden");
+    resultArea.innerHTML = `<div style="font-weight:700">${res?.message || 'Submitted'}</div>
+      <div class="small" style="margin-top:8px">Response: ${JSON.stringify(res?.data || res)}</div>`;
+    submissionStarted = false;
+    submitNote.innerText = "تم الإرسال.";
+  }catch(err){
+    console.error(err);
+    alert("Error submitting: " + (err?.data?.message || err.status || "unknown"));
+    btnSubmit.disabled = false;
+  }
+}
+    </script>
+</body>
+</html>
