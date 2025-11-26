@@ -1,7 +1,4 @@
-﻿using System.Linq.Expressions;
-using University.Core.Entities;
-
-
+﻿using University.Core.Entities;
 namespace University.App.Interfaces.Users
 {
     public interface IStudentRepository 

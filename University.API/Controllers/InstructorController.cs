@@ -49,6 +49,13 @@ namespace University.API.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] CreateInstructorDto dto)
         {
+            // VALIDATION ENHANCED: Check ModelState validity
+            // Validates all data annotations from CreateInstructorDto:
+            // - Email format and uniqueness
+            // - Password strength requirements (uppercase, lowercase, digits, special chars)
+            // - Name length and format constraints
+            // - Phone number format (11 digits)
+            // - Cross-field validation (FullName contains FirstName and LastName)
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
             try
@@ -58,6 +65,7 @@ namespace University.API.Controllers
             }
             catch (InvalidOperationException ex)
             {
+                // Catches duplicate email or invalid department ID scenarios
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -66,6 +74,11 @@ namespace University.API.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateInstructorDto dto)
         {
+            // VALIDATION ENHANCED: Check ModelState validity for update operations
+            // Validates UpdateInstructorDto constraints:
+            // - FullName is required and meets length requirements
+            // - ContactNumber (if provided) must be exactly 11 characters
+            // - DepartmentId (if provided) must be a positive integer
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
@@ -76,7 +89,13 @@ namespace University.API.Controllers
             }
             catch (KeyNotFoundException ex)
             {
+                // Instructor with provided ID not found
                 return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Invalid DepartmentId provided
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -86,6 +105,12 @@ namespace University.API.Controllers
         {
             try
             {
+                // VALIDATION ENHANCED: Delete operation enforces business rules
+                // The service validates:
+                // - Instructor exists
+                // - Instructor is not a department head
+                // - Instructor has no active courses with enrollments
+                // Uses soft delete to preserve data integrity and audit trail
                 var result = await _instructorService.DeleteAsync(id);
                 if (!result)
                     return NotFound(new { message = "Instructor not found" });
@@ -94,6 +119,7 @@ namespace University.API.Controllers
             }
             catch (InvalidOperationException ex)
             {
+                // Business rule violations (head of dept, active courses, etc.)
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -116,6 +142,11 @@ namespace University.API.Controllers
         [Authorize(Roles = "Instructor")]
         public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateInstructorProfileDto dto)
         {
+            // VALIDATION ENHANCED: Check ModelState validity for instructor self-updates
+            // Validates UpdateInstructorProfileDto constraints:
+            // - FullName is required and meets length requirements (5-150 chars)
+            // - ContactNumber (if provided) must be exactly 11 characters
+            // - Limited fields available for instructor self-update (security policy)
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
             try

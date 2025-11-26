@@ -55,7 +55,10 @@ namespace University.Infra.Repositories.Users
 
         public async Task<IEnumerable<Student?>> GetAllStudentsAsync()
         {
-            return await _context.Students.ToListAsync();
+            return await _context.Students
+                .Include(s => s.User)
+                .Include(s => s.Department)
+                .ToListAsync();
         }
 
         public async Task<Student?> AddStudentAsync(Student student)

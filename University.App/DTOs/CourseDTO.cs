@@ -2,7 +2,9 @@
 
 namespace University.App.DTOs
 {
-    // Basic Course DTO
+    /// <summary>
+    /// Basic Course DTO - Used for reading course information in API responses
+    /// </summary>
     public class CourseDTO
     {
         public int Id { get; set; }
@@ -11,41 +13,109 @@ namespace University.App.DTOs
         public int InstructorId { get; set; }
         public string CourseCode { get; set; } = string.Empty;
         public string DepartmentName { get; set; } = string.Empty;
+        public DateTime? DeletedAt { get; set; }
     }
 
+    /// <summary>
+    /// Course Update DTO - Enforces validation rules for updating existing courses
+    /// </summary>
     public class UpdateCourseDTO
     {
+        /// <summary>
+        /// VALIDATION ENHANCED: Course name validation for updates
+        /// - Required: Course must always have a meaningful name
+        /// - StringLength(80): Prevents excessively long course names
+        /// - Service-level: Validates new instructor exists (if changed)
+        /// - Service-level: Validates instructor workload (if instructor changes)
+        /// </summary>
         [Required(ErrorMessage = "Course name is required")]
-        [StringLength(80, ErrorMessage = "Course name cannot exceed 80 characters")]
+        [StringLength(80, MinimumLength = 3, ErrorMessage = "Course name must be between 3 and 80 characters")]
         public string CourseName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// VALIDATION ENHANCED: Credit hours validation for updates
+        /// - Required: Every course must have assigned credit hours
+        /// - Range(1, 6): Standard academic credit range (1-6 credits per course)
+        /// - Service-level: Validates total instructor credit hours doesn't exceed 12 (if instructor changes)
+        /// </summary>
         [Required(ErrorMessage = "Credit hours are required")]
         [Range(1, 6, ErrorMessage = "Credit hours must be between 1 and 6")]
         public int CreditHours { get; set; }
-        [Required(ErrorMessage = "Instructor ID is required")]
-        public int InstructorId { get; set; }
 
+        /// <summary>
+        /// VALIDATION ENHANCED: Instructor assignment validation for updates
+        /// - Required: Course must have an assigned instructor
+        /// - Service-level: Validates instructor exists in system
+        /// - Service-level: Validates instructor doesn't exceed max courses (2 courses)
+        /// - Service-level: Validates instructor doesn't exceed max credit hours (12 hours)
+        /// - Service-level: Allows same instructor (self-assignment)
+        /// </summary>
+        [Required(ErrorMessage = "Instructor ID is required")]
+        [Range(1, int.MaxValue, ErrorMessage = "Instructor ID must be a valid positive number")]
+        public int InstructorId { get; set; }
     }
-    // Create Course DTO
+
+    /// <summary>
+    /// Course Creation DTO - Enforces comprehensive validation rules for new course creation
+    /// </summary>
     public class CreateCourseDTO
     {
+        /// <summary>
+        /// VALIDATION ENHANCED: Course code validation
+        /// - Required: Every course must have a unique course code
+        /// - StringLength(10): Standard course code length constraint
+        /// - Service-level: Uniqueness check (no duplicate course codes allowed)
+        /// - Service-level: Validates format (typically alphanumeric like "CS101")
+        /// </summary>
         [Required(ErrorMessage = "Course code is required")]
-        [StringLength(10, ErrorMessage = "Course code cannot exceed 10 characters")]
+        [StringLength(10, MinimumLength = 2, ErrorMessage = "Course code must be between 2 and 10 characters")]
         public string CourseCode { get; set; } = string.Empty;
 
+        /// <summary>
+        /// VALIDATION ENHANCED: Course name validation
+        /// - Required: Course must have a meaningful name
+        /// - StringLength(80): Prevents excessively long course names
+        /// - Service-level: Used with course code for comprehensive identification
+        /// </summary>
         [Required(ErrorMessage = "Course name is required")]
-        [StringLength(80, ErrorMessage = "Course name cannot exceed 80 characters")]
+        [StringLength(80, MinimumLength = 3, ErrorMessage = "Course name must be between 3 and 80 characters")]
         public string Name { get; set; } = string.Empty;
 
+        /// <summary>
+        /// VALIDATION ENHANCED: Credit hours validation
+        /// - Required: Every course must have assigned credit hours
+        /// - Range(1, 6): Standard academic credit range
+        /// - Service-level: Validates instructor workload after assignment
+        ///   * Max 2 courses per instructor
+        ///   * Max 12 total credit hours per instructor
+        /// </summary>
         [Required(ErrorMessage = "Credit hours is required")]
         [Range(1, 6, ErrorMessage = "Credit hours must be between 1 and 6")]
         public int CreditHours { get; set; }
 
+        /// <summary>
+        /// VALIDATION ENHANCED: Instructor assignment validation
+        /// - Required: Every course must have an assigned instructor
+        /// - Service-level: Validates instructor exists in system
+        /// - Service-level: Validates instructor doesn't exceed:
+        ///   * Maximum 2 courses per instructor
+        ///   * Maximum 12 credit hours per instructor
+        /// - Service-level: Ensures workload rules compliance
+        /// </summary>
         [Required(ErrorMessage = "Instructor ID is required")]
+        [Range(1, int.MaxValue, ErrorMessage = "Instructor ID must be a valid positive number")]
         public int InstructorId { get; set; }
 
+        /// <summary>
+        /// VALIDATION ENHANCED: Department assignment validation
+        /// - Required: Every course must belong to a department
+        /// - Service-level: Validates department exists in system
+        /// - Service-level: Enforces department restriction (ENFORCE_DEPARTMENT_RESTRICTION = true)
+        /// - Purpose: Ensures students can only access courses in their department
+        /// </summary>
         [Required(ErrorMessage = "Department ID is required")]
+        [Range(1, int.MaxValue, ErrorMessage = "Department ID must be a valid positive number")]
         public int DepartmentId { get; set; }
-
     }
 
     // DTO for showing course info in enrollment list

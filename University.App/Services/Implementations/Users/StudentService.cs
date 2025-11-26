@@ -19,26 +19,26 @@ namespace University.App.Services.Implementations.Users
 
         public async Task<StudentDTO> CreateAsync(CreateStudentDto dto)
         {
-            // 1. Validate student code uniqueness
+            // Validate student code uniqueness
             if (!await _studentRepository.IsStudentCodeUniqueAsync(dto.StudentCode))
             {
                 throw new InvalidOperationException($"Student code '{dto.StudentCode}' already exists.");
             }
 
-            // 2. Validate email uniqueness
+            // Validate email uniqueness
             var existingUser = await _userManager.FindByEmailAsync(dto.Email);
             if (existingUser != null)
             {
                 throw new InvalidOperationException($"Email '{dto.Email}' is already registered.");
             }
 
-            // 3. Validate student code format (additional server-side check)
+            // Validate student code format (additional server-side check)
             if (!System.Text.RegularExpressions.Regex.IsMatch(dto.StudentCode, @"^[A-Za-z][A-Za-z0-9]*$"))
             {
                 throw new InvalidOperationException("Student code must start with a letter and contain only alphanumeric characters.");
             }
 
-            // 4. Validate level is within acceptable range
+            // Validate level is within acceptable range
             if (!new[] { "1", "2", "3", "4" }.Contains(dto.Level))
             {
                 throw new InvalidOperationException("Level must be 1, 2, 3, or 4.");
@@ -78,6 +78,7 @@ namespace University.App.Services.Implementations.Users
                     FullName = dto.FullName.Trim(),
                     StudentCode = dto.StudentCode.ToUpper(), // Standardize to uppercase
                     ContactNumber = dto.ContactNumber?.Trim(),
+                    
                     Level = dto.Level,
                     DepartmentId = dto.DepartmentId
                 };
@@ -213,9 +214,7 @@ namespace University.App.Services.Implementations.Users
             student.FullName = dto.FullName.Trim();
             student.ContactNumber = dto.ContactNumber?.Trim();
             student.UpdatedAt = DateTime.UtcNow;
-
             await _studentRepository.UpdateStudent(student);
-
             var updatedStudent = await _studentRepository.GetByIdWithDetailsAsync(student.StudentId);
             return MapToDto(updatedStudent!);
         }

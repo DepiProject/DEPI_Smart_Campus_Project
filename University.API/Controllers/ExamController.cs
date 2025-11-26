@@ -108,12 +108,21 @@ namespace University.API.Controllers
             try
             {
                 var exam = await _examService.AddExam(dto);
+
+                if (exam == null)
+                    return BadRequest(new { success = false, message = "Failed to create exam" });
+
                 return CreatedAtAction(
                     nameof(GetExamById),
-                    new { id = exam.CourseId, courseId = exam.CourseId },
-                    new { success = true, message = "Exam created successfully", data = exam }
+                    new
+                    {
+                        success = true,
+                        message = "Exam created successfully",
+                        data = exam
+                    }
                 );
             }
+
             catch (ArgumentException ex)
             {
                 return BadRequest(new { success = false, message = "Validation error", error = ex.Message });
