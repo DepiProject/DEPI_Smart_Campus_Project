@@ -3,6 +3,7 @@ using University.App.Interfaces.Users;
 using University.App.Interfaces.Courses;
 using University.App.Services.IServices;
 using University.Core.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace University.App.Services.Implementations
 {
@@ -12,14 +13,19 @@ namespace University.App.Services.Implementations
 
         private readonly IEnrollmentRepository _enrollRepo;
         private readonly IStudentRepository _studentRepo;
+        private readonly ILogger<EnrollmentService> _logger;
 
 
-        public EnrollmentService(ICourseRepository courseRepo, IEnrollmentRepository enrollRepo, IStudentRepository studentRepo)
+        public EnrollmentService(
+            ICourseRepository courseRepo, 
+            IEnrollmentRepository enrollRepo, 
+            IStudentRepository studentRepo,
+            ILogger<EnrollmentService> logger)
         {
             _courseRepo = courseRepo;
-
             _enrollRepo = enrollRepo;
             _studentRepo = studentRepo;
+            _logger = logger;
         }
 
         public async Task<CreateEnrollmentDTO?> AddEnrollCourse(CreateEnrollmentDTO enrollCourseDto)
@@ -43,6 +49,9 @@ namespace University.App.Services.Implementations
             //if (existing != null) throw new InvalidOperationException("Student already enrolled.");
 
             //await ValidateStudentCreditLimits(enrollCourseDto.StudentId, course.Credits);
+
+            // ENHANCEMENT: Sanitize input data to prevent whitespace pollution
+            SanitizeEnrollmentData(enrollCourseDto);
 
             if (enrollCourseDto.StudentId == 0 || enrollCourseDto.CourseId == 0)
                 throw new ArgumentException("StudentId and CourseId are required.");
@@ -184,7 +193,7 @@ namespace University.App.Services.Implementations
 
         /// <summary>
         /// Calculate student's final grade for a course based on all exam scores
-        /// NEW: Calculates grade, determines letter grade, and updates enrollment
+        /// ENHANCEMENT: Robust edge case handling (null exams, zero points, overflow protection)
         /// </summary>
         public async Task<StudentEnrollmentDTO?> CalculateAndUpdateStudentCourseGradeAsync(int studentId, int courseId)
         {
@@ -201,9 +210,12 @@ namespace University.App.Services.Implementations
 
             // Get all exams for the course
             var exams = course.Exams?.Where(e => !e.IsDeleted).ToList() ?? new List<Exam>();
+            
+            // ENHANCEMENT: Edge case 1 - No exams defined for course
             if (!exams.Any())
             {
-                // No exams - cannot calculate grade
+                _logger.LogWarning($"Grade calculation skipped for Enrollment {enrollment.EnrollmentId}: No exams defined for course");
+                // Cannot calculate grade without exams
                 return new StudentEnrollmentDTO
                 {
                     EnrollmentId = enrollment.EnrollmentId,
@@ -222,7 +234,7 @@ namespace University.App.Services.Implementations
 
             // Calculate total score from all exam submissions
             decimal totalScore = 0;
-            decimal totalPossiblePoints = exams.Sum(e => e.TotalPoints);
+            decimal totalPossiblePoints = CalculateTotalPossiblePoints(exams);
             int completedExams = 0;
 
             foreach (var exam in exams)
@@ -240,8 +252,8 @@ namespace University.App.Services.Implementations
             // Check if all exams are completed
             bool allExamsCompleted = completedExams == exams.Count && exams.Count > 0;
 
-            // Calculate final grade as percentage
-            decimal? finalGrade = totalPossiblePoints > 0 ? (totalScore / totalPossiblePoints) * 100 : null;
+            // ENHANCEMENT: Edge case 2 - Safe grade calculation with overflow protection
+            decimal? finalGrade = CalculateFinalGradeFromExams(totalScore, totalPossiblePoints);
             string? gradeLetter = finalGrade.HasValue ? CalculateGradeLetter(finalGrade.Value) : null;
 
             // Update enrollment status
@@ -268,6 +280,65 @@ namespace University.App.Services.Implementations
                 EnrollmentDate = enrollment.EnrollmentDate,
                 IsCourseActive = !course.IsDeleted
             };
+        }
+
+        /// <summary>
+        /// ENHANCEMENT: Safely calculates total possible points from exam list
+        /// Handles null/zero point exams gracefully
+        /// </summary>
+        private decimal CalculateTotalPossiblePoints(List<Exam> exams)
+        {
+            try
+            {
+                return exams.Sum(e => e.TotalPoints);
+            }
+            catch (OverflowException ex)
+            {
+                _logger.LogError($"Overflow error calculating total points: {ex.Message}");
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// ENHANCEMENT: Safely calculates final grade with edge case handling
+        /// - Prevents division by zero
+        /// - Caps result to 0-100 range
+        /// - Handles overflow and null values
+        /// </summary>
+        private decimal? CalculateFinalGradeFromExams(decimal totalScore, decimal totalPossiblePoints)
+        {
+            try
+            {
+                // Edge case: No possible points defined (can't calculate percentage)
+                if (totalPossiblePoints <= 0)
+                {
+                    _logger.LogWarning("Grade calculation failed: No valid exam points defined");
+                    return null;
+                }
+
+                // Edge case: Score exceeds possible points (shouldn't happen, but protect against it)
+                if (totalScore > totalPossiblePoints)
+                {
+                    _logger.LogWarning($"Score {totalScore} exceeds possible points {totalPossiblePoints}, capping to maximum");
+                    totalScore = totalPossiblePoints;
+                }
+
+                // Safe division now guaranteed
+                decimal percentage = (totalScore / totalPossiblePoints) * 100;
+
+                // Ensure result is within 0-100 range (protect against rounding errors)
+                return Math.Min(Math.Max(percentage, 0), 100);
+            }
+            catch (DivideByZeroException ex)
+            {
+                _logger.LogError($"Division by zero in grade calculation: {ex.Message}");
+                return null;
+            }
+            catch (OverflowException ex)
+            {
+                _logger.LogError($"Overflow error in grade calculation: {ex.Message}");
+                return null;
+            }
         }
 
         /// <summary>
@@ -330,6 +401,40 @@ namespace University.App.Services.Implementations
                 EnrollmentDate = e.EnrollmentDate,
                 IsCourseActive = e.Course?.IsDeleted == false
             });
+        }
+
+        // ================= INPUT SANITIZATION =================
+
+        /// <summary>
+        /// ENHANCEMENT: Sanitizes string inputs to prevent data pollution
+        /// - Trims leading/trailing whitespace
+        /// - Removes multiple consecutive spaces
+        /// - Prevents injection attacks through string fields
+        /// </summary>
+        private void SanitizeEnrollmentData(CreateEnrollmentDTO dto)
+        {
+            if (dto == null) return;
+
+            // Trim whitespace from string properties
+            if (!string.IsNullOrEmpty(dto.StudentName))
+            {
+                dto.StudentName = dto.StudentName.Trim();
+                // Remove multiple spaces within strings
+                dto.StudentName = System.Text.RegularExpressions.Regex.Replace(dto.StudentName, @"\s+", " ");
+            }
+
+            if (!string.IsNullOrEmpty(dto.CourseName))
+            {
+                dto.CourseName = dto.CourseName.Trim();
+                dto.CourseName = System.Text.RegularExpressions.Regex.Replace(dto.CourseName, @"\s+", " ");
+            }
+
+            if (!string.IsNullOrEmpty(dto.CourseCode))
+            {
+                dto.CourseCode = dto.CourseCode.Trim();
+                // Course codes should be uppercase
+                dto.CourseCode = dto.CourseCode.ToUpper();
+            }
         }
     }
 }

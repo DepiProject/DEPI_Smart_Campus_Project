@@ -12,6 +12,7 @@ namespace University.App.DTOs
         public string Name { get; set; } = string.Empty;
         public string Building { get; set; } = string.Empty;
         public int? HeadId { get; set; }
+        public string? HeadFullName { get; set; }
     }
 
     /// <summary>
@@ -34,12 +35,13 @@ namespace University.App.DTOs
         /// <summary>
         /// VALIDATION ENHANCED: Building/Location validation
         /// - Required: Physical location must be specified
-        /// - MaxLength(50): Prevents unreasonable length inputs
-        /// - Purpose: Identifies the physical location of the department
+        /// - MaxLength(1): Limited to single letter (A-E) for building designation
+        /// - MinLength(1): Allows single letter building codes
+        /// - Purpose: Identifies the physical location of the department (Buildings A, B, C, D, E)
         /// </summary>
         [Required(ErrorMessage = "Building is required")]
-        [MaxLength(50, ErrorMessage = "Building cannot exceed 50 characters")]
-        [MinLength(2, ErrorMessage = "Building name must be at least 2 characters")]
+        [MaxLength(1, ErrorMessage = "Building must be a single letter (A-E)")]
+        [MinLength(1, ErrorMessage = "Building is required")]
         public string Building { get; set; } = string.Empty;
 
         /// <summary>
@@ -74,12 +76,12 @@ namespace University.App.DTOs
         /// <summary>
         /// VALIDATION ENHANCED: Building/Location validation for updates
         /// - Required: Physical location must always be specified
-        /// - MaxLength(50): Maintains consistency with creation DTO
-        /// - MinLength(2): Prevents single-character building names
+        /// - MaxLength(1): Limited to single letter (A-E) for building designation
+        /// - MinLength(1): Allows single letter building codes
         /// </summary>
         [Required(ErrorMessage = "Building is required")]
-        [MaxLength(50, ErrorMessage = "Building cannot exceed 50 characters")]
-        [MinLength(2, ErrorMessage = "Building name must be at least 2 characters")]
+        [MaxLength(1, ErrorMessage = "Building must be a single letter (A-E)")]
+        [MinLength(1, ErrorMessage = "Building is required")]
         public string Building { get; set; } = string.Empty;
 
         /// <summary>

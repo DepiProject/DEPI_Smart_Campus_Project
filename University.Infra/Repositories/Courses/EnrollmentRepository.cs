@@ -25,22 +25,27 @@ namespace University.Infra.Repositories.Courses
         {
             var enrollment = await _context.Enrollments
         .Include(e => e.Course)
-        .FirstOrDefaultAsync(e => e.EnrollmentId == enrollmentId);
+        .FirstOrDefaultAsync(e => e.EnrollmentId == enrollmentId && !e.IsDeleted);
 
-            if (enrollment == null) return false;
+            if (enrollment == null)
+                throw new InvalidOperationException("Enrollment not found or already deleted");
 
-            // Prevent deletion if course is completed
+            // ENHANCEMENT: Prevent deletion of completed enrollments (preserve academic records)
             if (enrollment.Status == "Completed")
-                throw new InvalidOperationException("Cannot delete completed enrollment");
+                throw new InvalidOperationException("Cannot delete completed enrollment. Completed enrollments are permanent academic records.");
 
-            // Check for related data
-            var hasAttendance = await _context.Attendances
-                .AnyAsync(a => a.StudentId == enrollment.StudentId && a.CourseId == enrollment.CourseId);
+            // Check for related data (soft delete checks)
+            var hasActiveAttendance = await _context.Attendances
+                .AnyAsync(a => a.StudentId == enrollment.StudentId && a.CourseId == enrollment.CourseId && !a.IsDeleted);
 
-            if (hasAttendance)
-                throw new InvalidOperationException("Cannot delete enrollment with attendance records");
+            if (hasActiveAttendance)
+                throw new InvalidOperationException("Cannot delete enrollment with active attendance records. Remove attendance first.");
 
-            _context.Enrollments.Remove(enrollment);
+            // ENHANCEMENT: Use soft delete instead of hard delete (preserves data for audit/compliance)
+            enrollment.IsDeleted = true;
+            enrollment.DeletedAt = DateTime.UtcNow;
+            enrollment.UpdatedAt = DateTime.UtcNow;
+
             await _context.SaveChangesAsync();
             return true;
         }

@@ -2,20 +2,28 @@
 using University.App.Interfaces;
 using University.App.Services.IServices;
 using University.Core.Entities;
+using Microsoft.Extensions.Logging;
+
 namespace University.App.Services.Implementations
 {
     public class AttendanceService : IAttendanceService
     {
         private readonly IAttendanceRepository _attendanceRepo;
+        private readonly ILogger<AttendanceService> _logger;
         private readonly List<string> _validStatuses = new() { "Present", "Absent", "Late", "Excused" };
 
-        public AttendanceService(IAttendanceRepository attendanceRepo)
+        public AttendanceService(
+            IAttendanceRepository attendanceRepo,
+            ILogger<AttendanceService> logger)
         {
             _attendanceRepo = attendanceRepo;
+            _logger = logger;
         }
 
         public async Task MarkAttendanceAsync(MarkAttendanceDto dto)
         {
+            // ENHANCEMENT: Sanitize input data
+            SanitizeMarkAttendanceDto(dto);
 
             if (!_validStatuses.Contains(dto.Status)) throw new ArgumentException($"Invalid status. Must be one of: {string.Join(", ", _validStatuses)}");
             if (!await _attendanceRepo.StudentExists(dto.StudentId)) throw new InvalidOperationException($"Student with ID {dto.StudentId} not found.");
@@ -75,6 +83,9 @@ namespace University.App.Services.Implementations
                 Status = dto.Status
             };
             await _attendanceRepo.AddAttendance(attendance);
+            
+            // ENHANCEMENT: Log successful attendance marking
+            _logger.LogInformation($"Attendance marked: StudentId={dto.StudentId}, CourseId={dto.CourseId}, Date={dto.Date:yyyy-MM-dd}, Status={dto.Status}");
         }
 
         public async Task<List<AttendanceDto>> GetStudentHistoryAsync(int studentId)
@@ -254,6 +265,45 @@ namespace University.App.Services.Implementations
             {
                 throw new InvalidOperationException("Delete failed");
             }
+        }
+
+        // ================= INPUT SANITIZATION =================
+
+        /// <summary>
+        /// ENHANCEMENT: Sanitizes string inputs to prevent data pollution
+        /// </summary>
+        private void SanitizeMarkAttendanceDto(MarkAttendanceDto dto)
+        {
+            if (dto == null) return;
+
+            // Trim whitespace from status
+            if (!string.IsNullOrEmpty(dto.Status))
+            {
+                dto.Status = dto.Status.Trim();
+            }
+        }
+
+        // ================= HELPER METHODS =================
+
+        /// <summary>
+        /// ENHANCEMENT: Safely calculates attendance percentage with bounds protection
+        /// </summary>
+        private double SafeCalculatePercentage(int count, int total)
+        {
+            // Protection against data corruption
+            if (total <= 0) return 0;
+
+            // Prevent count from exceeding total
+            if (count > total)
+            {
+                _logger.LogWarning($"Count {count} exceeds total {total}, capping to total");
+                count = total;
+            }
+
+            double percentage = (count * 100.0 / total);
+
+            // Ensure result is within 0-100 range
+            return Math.Min(Math.Max(percentage, 0), 100);
         }
     }
 }

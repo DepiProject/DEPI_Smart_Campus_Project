@@ -25,6 +25,7 @@ namespace University.Infra.Repositories
         public async Task<IEnumerable<Attendance>> GetAllAttendances()
         {
             return await _context.Attendances
+                .Where(a => !a.IsDeleted)  // ENHANCEMENT: Filter soft-deleted
                 .Include(a => a.Student)
                 .Include(a => a.Course)
                 .OrderByDescending(a => a.Date)
@@ -34,7 +35,7 @@ namespace University.Infra.Repositories
         public async Task<IEnumerable<Attendance>> GetAttendancesByStudentId(int studentId)
         {
             return await _context.Attendances
-                .Where(a => a.StudentId == studentId)
+                .Where(a => a.StudentId == studentId && !a.IsDeleted)  // ENHANCEMENT: Filter soft-deleted
                 .Include(a => a.Student)
                 .Include(a => a.Course)
                 .OrderByDescending(a => a.Date)
@@ -48,6 +49,7 @@ namespace University.Infra.Repositories
             DateTime? to)
         {
             var query = _context.Attendances
+                .Where(a => !a.IsDeleted)  // ENHANCEMENT: Filter soft-deleted
                 .Include(a => a.Student)
                 .Include(a => a.Course)
                 .AsQueryable();
@@ -89,11 +91,24 @@ namespace University.Infra.Repositories
 
         public async Task<bool> DeleteAttendance(int id)
         {
-            var attendance = await _context.Attendances.FindAsync(id);
+            var attendance = await _context.Attendances
+                .FirstOrDefaultAsync(a => a.AttendanceId == id && !a.IsDeleted);
+            
             if (attendance == null)
-                return false;
+                throw new InvalidOperationException("Attendance record not found or already deleted");
 
-            _context.Attendances.Remove(attendance);
+            // Cannot delete records older than 7 days
+            if (attendance.Date.Date < DateTime.Today.AddDays(-7))
+                throw new InvalidOperationException("You cannot delete attendance older than 7 days");
+
+            // Cannot delete attendance from the future
+            if (attendance.Date.Date > DateTime.Today)
+                throw new InvalidOperationException("You cannot delete attendance for a future date");
+
+            // ENHANCEMENT: Use soft delete instead of hard delete
+            attendance.IsDeleted = true;
+            attendance.DeletedAt = DateTime.UtcNow;
+
             await _context.SaveChangesAsync();
             return true;
         }

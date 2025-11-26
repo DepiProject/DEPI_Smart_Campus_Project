@@ -34,6 +34,7 @@ namespace University.Infra.Repositories.Users
         {
             return await _context.Instructors
                 .Include(i => i.User)
+                .Include(i => i.Department)
                 .Where(i => i.DepartmentId == departmentId)
                 .ToListAsync();
         }
@@ -60,7 +61,10 @@ namespace University.Infra.Repositories.Users
 
         public async Task<IEnumerable<Instructor?>> GetAllInstructorsAsync()
         {
-            return await _context.Instructors.ToListAsync();
+            return await _context.Instructors
+                .Include(i => i.User)
+                .Include(i => i.Department)
+                .ToListAsync();
         }
 
         public async Task<Instructor?> AddInstructorAsync(Instructor instructor)

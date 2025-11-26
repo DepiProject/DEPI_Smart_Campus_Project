@@ -256,7 +256,9 @@ namespace University.App.Services.Implementations
                 Id = c.CourseId,
                 Name = c.Name,
                 CreditHours = c.Credits,
-                InstructorId = c.InstructorId ?? 0
+                CourseCode = c.CourseCode,
+                InstructorId = c.InstructorId ?? 0,
+                DepartmentName = c.Department?.Name ?? "Unknown"
             });
         }
 
@@ -302,18 +304,17 @@ namespace University.App.Services.Implementations
             // Throws InvalidOperationException if limits exceeded
             await ValidateInstructorTeachingLoad(courseDto.InstructorId, courseDto.CreditHours);
 
-            // VALIDATION ENHANCED: Course code uniqueness check
-            // Prevents duplicate course codes in the system
-            // Course codes are case-sensitive unique identifiers
-            if ((await _courseRepo.GetAllCourses()).Any(c => c.CourseCode == courseDto.CourseCode))
-                throw new InvalidOperationException($"Course code '{courseDto.CourseCode}' already exists.");
+            // VALIDATION ENHANCED: Auto-generate course code based on department
+            // Format: First 3 chars of single-word dept OR first char of each word (multi-word)
+            // Plus incrementing 2-digit number for each course in that department
+            var generatedCourseCode = await GenerateCourseCodeAsync(courseDto.DepartmentId);
 
             // VALIDATION ENHANCED: Create new course entity with valid data
             // IsDeleted set to false for new courses (soft delete pattern)
             // DepartmentId used for enrollment filtering and restriction enforcement
             var course = new Course
             {
-                CourseCode = courseDto.CourseCode,
+                CourseCode = generatedCourseCode,
                 Name = courseDto.Name,
                 Credits = courseDto.CreditHours,
                 InstructorId = courseDto.InstructorId,
@@ -577,6 +578,85 @@ namespace University.App.Services.Implementations
             // Prevents excessive workload and maintains quality of instruction
             if (totalHours + newCourseCredits > MAX_CREDIT_HOURS_PER_INSTRUCTOR)
                 throw new InvalidOperationException($"Instructor exceeds max teaching hours. Current: {totalHours} hours, New course: {newCourseCredits} hours, Max: {MAX_CREDIT_HOURS_PER_INSTRUCTOR} hours.");
+        }
+
+        /// <summary>
+        /// Generate course code automatically based on department name
+        /// Format Logic:
+        /// - Single-word department: First 3 characters (uppercase)
+        /// - Multi-word department: First character of each word (uppercase)
+        /// - Plus incrementing 2-digit number for each new course in that department
+        /// Example: "Computer Science" -> "CS01", "CS02", "CS03"...
+        /// Example: "Mathematics" -> "MAT01", "MAT02"...
+        /// </summary>
+        private async Task<string> GenerateCourseCodeAsync(int departmentId)
+        {
+            // Get all courses to find the department name
+            var allCourses = await _courseRepo.GetAllCourses();
+            var departmentCourse = allCourses.FirstOrDefault(c => c.DepartmentId == departmentId);
+            
+            string departmentName = departmentCourse?.Department?.Name ?? $"Dept{departmentId}";
+
+            // Generate prefix based on department name
+            string prefix = GenerateCourseCodePrefix(departmentName);
+
+            // Get all courses for this department and find the next number
+            var departmentCourses = await _courseRepo.GetAllCoursesByDepartmentId(departmentId);
+            var existingCodesForDept = departmentCourses
+                .Where(c => c.CourseCode.StartsWith(prefix))
+                .Select(c => c.CourseCode)
+                .ToList();
+
+            // Extract the numeric suffix from existing codes and find the highest number
+            int nextNumber = 1;
+            if (existingCodesForDept.Any())
+            {
+                var numbers = existingCodesForDept
+                    .Select(code => 
+                    {
+                        // Extract digits from the end of the course code
+                        var digitsOnly = new string(code.Where(char.IsDigit).ToArray());
+                        return string.IsNullOrEmpty(digitsOnly) ? 0 : int.Parse(digitsOnly);
+                    })
+                    .Where(n => n > 0)
+                    .OrderByDescending(n => n);
+
+                if (numbers.Any())
+                {
+                    nextNumber = numbers.First() + 1;
+                }
+            }
+
+            // Combine prefix with number (formatted as 2 digits: 01, 02, etc.)
+            return $"{prefix}{nextNumber:D2}";
+        }
+
+        /// <summary>
+        /// Generate the prefix part of course code from department name
+        /// Single word: First 3 letters (e.g., "Math" -> "MAT")
+        /// Multi-word: First letter of each word (e.g., "Computer Science" -> "CS")
+        /// </summary>
+        private string GenerateCourseCodePrefix(string departmentName)
+        {
+            if (string.IsNullOrWhiteSpace(departmentName))
+                return "DEP";
+
+            // Split department name into words
+            var words = departmentName.Trim().Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries);
+
+            if (words.Length == 1)
+            {
+                // Single word: take first 3 characters
+                return words[0].Length >= 3 
+                    ? words[0].Substring(0, 3).ToUpper()
+                    : words[0].PadRight(3, 'X').ToUpper(); // Pad with X if less than 3 chars
+            }
+            else
+            {
+                // Multi-word: take first character of each word
+                var prefix = string.Concat(words.Select(w => w[0])).ToUpper();
+                return prefix;
+            }
         }
     }
 }

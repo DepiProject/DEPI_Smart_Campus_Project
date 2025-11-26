@@ -42,6 +42,46 @@ namespace University.App.Services.Implementations
             return await GenerateJwtToken(user);
         }
 
+        public async Task<string?> UpdateAdminProfileAsync(int userId, UpdateAdminProfileDTO dto)
+        {
+            // VALIDATION: Get the admin user
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null || user.IsDeleted)
+                throw new KeyNotFoundException("Admin user not found.");
+
+            // VALIDATION: Verify current password for security
+            var passwordCheck = await _signInManager.CheckPasswordSignInAsync(user, dto.CurrentPassword, lockoutOnFailure: false);
+            if (!passwordCheck.Succeeded)
+                throw new UnauthorizedAccessException("Current password is incorrect.");
+
+            // VALIDATION: Update allowed fields (FirstName, LastName)
+            user.FirstName = dto.FirstName.Trim();
+            user.LastName = dto.LastName.Trim();
+
+            // VALIDATION: If new password provided, update it
+            if (!string.IsNullOrWhiteSpace(dto.NewPassword))
+            {
+                var removePasswordResult = await _userManager.RemovePasswordAsync(user);
+                if (!removePasswordResult.Succeeded)
+                    throw new InvalidOperationException("Failed to remove old password.");
+
+                var addPasswordResult = await _userManager.AddPasswordAsync(user, dto.NewPassword);
+                if (!addPasswordResult.Succeeded)
+                    throw new InvalidOperationException("Failed to set new password.");
+            }
+
+            // Update timestamp
+            user.UpdatedAt = DateTime.UtcNow;
+
+            // Save changes
+            var updateResult = await _userManager.UpdateAsync(user);
+            if (!updateResult.Succeeded)
+                throw new InvalidOperationException("Failed to update admin profile.");
+
+            // Generate and return new JWT token with updated claims
+            return await GenerateJwtToken(user);
+        }
+
         private async Task<string> GenerateJwtToken(AppUser user)
         {
             // Get user roles

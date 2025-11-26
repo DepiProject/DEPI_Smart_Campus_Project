@@ -25,7 +25,8 @@ namespace University.App.Services.Implementations
                 Id = d.DepartmentId,
                 Name = d.Name,
                 Building = d.Building,
-                HeadId = d.HeadId
+                HeadId = d.HeadId,
+                HeadFullName = d.Instructor?.FullName
             });
         }
 
@@ -39,7 +40,8 @@ namespace University.App.Services.Implementations
                 Id = department.DepartmentId,
                 Name = department.Name,
                 Building = department.Building,
-                HeadId = department.HeadId
+                HeadId = department.HeadId,
+                HeadFullName = department.Instructor?.FullName
             };
         }
 
@@ -86,13 +88,17 @@ namespace University.App.Services.Implementations
             if (addedDepartment == null) 
                 return null;
 
+            // Fetch the added department with instructor details
+            var deptWithInstructor = await _departmentRepo.GetDepartmentById(addedDepartment.DepartmentId);
+
             // Return newly created department as DTO
             return new DepartmentDTO
             {
-                Id = addedDepartment.DepartmentId,
-                Name = addedDepartment.Name,
-                Building = addedDepartment.Building,
-                HeadId = addedDepartment.HeadId
+                Id = deptWithInstructor.DepartmentId,
+                Name = deptWithInstructor.Name,
+                Building = deptWithInstructor.Building,
+                HeadId = deptWithInstructor.HeadId,
+                HeadFullName = deptWithInstructor.Instructor?.FullName
             };
         }
 
@@ -136,12 +142,16 @@ namespace University.App.Services.Implementations
             if (updatedDepartment == null) 
                 return null;
 
+            // Fetch the updated department with instructor details
+            var deptWithInstructor = await _departmentRepo.GetDepartmentById(updatedDepartment.DepartmentId);
+
             return new DepartmentDTO
             {
-                Id = updatedDepartment.DepartmentId,
-                Name = updatedDepartment.Name,
-                Building = updatedDepartment.Building,
-                HeadId = updatedDepartment.HeadId
+                Id = deptWithInstructor.DepartmentId,
+                Name = deptWithInstructor.Name,
+                Building = deptWithInstructor.Building,
+                HeadId = deptWithInstructor.HeadId,
+                HeadFullName = deptWithInstructor.Instructor?.FullName
             };
         }
 
