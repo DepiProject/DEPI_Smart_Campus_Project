@@ -30,6 +30,58 @@ namespace University.API.Controllers
             }
         }
 
+        [HttpGet("paginated")]
+        public async Task<ActionResult> GetAllDepartmentsPaginated([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                if (pageNumber < 1 || pageSize < 1)
+                    return BadRequest(new { message = "Page number and page size must be greater than 0" });
+
+                var (departments, totalCount) = await _departmentService.GetAllDepartmentsWithPaginationAsync(pageNumber, pageSize);
+                return Ok(new
+                {
+                    data = departments,
+                    totalCount,
+                    pageNumber,
+                    pageSize,
+                    totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving departments", error = ex.Message });
+            }
+        }
+
+        [HttpGet("search")]
+        public async Task<ActionResult> SearchDepartments(
+            [FromQuery] string? searchTerm,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                if (pageNumber < 1 || pageSize < 1)
+                    return BadRequest(new { message = "Page number and page size must be greater than 0" });
+
+                var (departments, totalCount) = await _departmentService.SearchDepartmentsAsync(searchTerm, pageNumber, pageSize);
+                return Ok(new
+                {
+                    data = departments,
+                    totalCount,
+                    pageNumber,
+                    pageSize,
+                    totalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                    searchTerm
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while searching departments", error = ex.Message });
+            }
+        }
+
         [HttpGet("{id}")]
         public async Task<ActionResult<DepartmentDTO>> GetDepartmentById(int id)
         {
@@ -148,15 +200,85 @@ namespace University.API.Controllers
                 // - Prevent deletion if department has active students
                 // - Prevent deletion if department has active courses
                 // - Prevent deletion if department has assigned instructors
-                var deleted = await _departmentService.DeleteDepartment(id);
+                var deleted = await _departmentService.SoftDeleteDepartment(id);
                 if (!deleted)
                     return NotFound(new { message = $"Department with ID {id} not found" });
 
-                return Ok(new { message = "Department deleted successfully", id });
+                return Ok(new { message = "Department archived successfully", id });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "An error occurred while deleting the department", error = ex.Message });
+            }
+        }
+
+        // ========== SOFT DELETE OPERATIONS ==========
+
+        [HttpGet("all-including-deleted")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult> GetAllIncludingDeleted()
+        {
+            var departments = await _departmentService.GetAllDepartmentsIncludingDeleted();
+            return Ok(departments);
+        }
+
+        [HttpPost("{id}/restore")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult> Restore(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new { Success = false, Message = "Invalid department ID" });
+
+            try
+            {
+                var restored = await _departmentService.RestoreDepartment(id);
+                if (!restored)
+                    return NotFound(new { Success = false, Message = "Department not found or is already active" });
+
+                return Ok(new { Success = true, Message = "Department restored successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = "An error occurred while restoring the department", Error = ex.Message });
+            }
+        }
+
+        [HttpDelete("{id}/permanent")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult> PermanentDelete(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new { Success = false, Message = "Invalid department ID" });
+
+            try
+            {
+                var deleted = await _departmentService.PermanentlyDeleteDepartment(id);
+                if (!deleted)
+                    return NotFound(new { Success = false, Message = "Department not found" });
+
+                return Ok(new { Success = true, Message = "Department permanently deleted" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = "An error occurred while deleting the department", Error = ex.Message });
+            }
+        }
+
+        [HttpGet("{id}/can-permanently-delete")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult> CanPermanentlyDelete(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new { Success = false, Message = "Invalid department ID" });
+
+            try
+            {
+                var result = await _departmentService.CanPermanentlyDeleteDepartment(id);
+                return Ok(new { Success = true, CanDelete = result.CanDelete, Reason = result.Reason, RelatedData = result.RelatedDataCount });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = "An error occurred while checking department", Error = ex.Message });
             }
         }
     }

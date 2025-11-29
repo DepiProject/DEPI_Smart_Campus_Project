@@ -6,6 +6,8 @@ namespace University.App.DTOs.Users
     {
         public int StudentId { get; set; }
         public string FullName { get; set; } = string.Empty;
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
         public string StudentCode { get; set; } = string.Empty;
         public string? ContactNumber { get; set; }
         public string Level { get; set; } = string.Empty;
@@ -16,8 +18,10 @@ namespace University.App.DTOs.Users
         // User info
         public int UserId { get; set; }
         public string Email { get; set; } = string.Empty;
- 
 
+        // Soft delete info
+        public bool IsDeleted { get; set; }
+        public DateTime? DeletedAt { get; set; }
     }
     // Create DTO
     public class CreateStudentDto
@@ -91,40 +95,24 @@ namespace University.App.DTOs.Users
 
     }
 
-    // Update DTO (For Admin)
+    // Update DTO (For Admin - Only Level and Department)
     public class UpdateStudentDto
     {
-        [Required(ErrorMessage = "Full name is required")]
-        [ValidName]
-        [MinLength(5, ErrorMessage = "Full name must be at least 5 characters")]
-        [MaxLength(150, ErrorMessage = "Full name cannot exceed 150 characters")]
-        public string FullName { get; set; } = string.Empty;
-
-
-        [MaxLength(11, ErrorMessage = "Contact number cannot exceed 11 characters")]
-        [MinLength(11, ErrorMessage = "Contact number cannot Less than 11 characters")]
-        public string? ContactNumber { get; set; }
-
         [Required(ErrorMessage = "Level is required")]
-        [RegularExpression("^[1-4]$", ErrorMessage = "Level must be 1, 2, 3,or 4")]
+        [RegularExpression("^[1-4]$", ErrorMessage = "Level must be 1, 2, 3, or 4")]
         public string Level { get; set; } = string.Empty;
 
+        [Required(ErrorMessage = "Department is required")]
         [Range(1, int.MaxValue, ErrorMessage = "Department ID must be a positive number")]
-        public int? DepartmentId { get; set; }
+        public int DepartmentId { get; set; }
     }
 
-    // Self-Update DTO (For Student - limited fields)
+    // Self-Update DTO (For Student - Only Contact Number)
     public class UpdateStudentProfileDto
     {
-        [Required(ErrorMessage = "Full name is required")]
-        [ValidName]
-        [MinLength(5, ErrorMessage = "Full name must be at least 5 characters")]
-        [MaxLength(150, ErrorMessage = "Full name cannot exceed 150 characters")]
-        public string FullName { get; set; } = string.Empty;
-
-
         [MaxLength(11, ErrorMessage = "Contact number cannot exceed 11 characters")]
-        [MinLength(11, ErrorMessage = "Contact number cannot Less than 11 characters")]
+        [MinLength(11, ErrorMessage = "Contact number must be exactly 11 digits")]
+        [RegularExpression(@"^\d{11}$", ErrorMessage = "Contact number must be exactly 11 digits")]
         public string? ContactNumber { get; set; }
     }
 }

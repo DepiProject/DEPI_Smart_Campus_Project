@@ -7,6 +7,8 @@ namespace University.App.Services.IServices.Users
         // Admin operations
         Task<InstructorDTO?> GetByIdAsync(int id);
         Task<IEnumerable<InstructorDTO>> GetAllAsync();
+        Task<(IEnumerable<InstructorDTO> instructors, int totalCount)> GetAllWithPaginationAsync(int pageNumber, int pageSize);
+        Task<(IEnumerable<InstructorDTO> instructors, int totalCount)> SearchInstructorsAsync(string? searchTerm, int? departmentId, int pageNumber, int pageSize);
         Task<IEnumerable<InstructorDTO>> GetByDepartmentAsync(int departmentId);
         Task<InstructorDTO> CreateAsync(CreateInstructorDto dto);
         Task<InstructorDTO> UpdateAsync(int id, UpdateInstructorDto dto);
@@ -16,5 +18,14 @@ namespace University.App.Services.IServices.Users
         Task<InstructorDTO?> GetMyProfileAsync(int userId);
         Task<InstructorDTO> UpdateMyProfileAsync(int userId, UpdateInstructorProfileDto dto);
 
+        // Soft delete operations
+        Task<bool> SoftDeleteAsync(int id);
+        Task<bool> RestoreAsync(int id);
+        Task<bool> PermanentlyDeleteAsync(int id);
+        Task<(bool CanDelete, string Reason, int RelatedDataCount)> CanPermanentlyDeleteAsync(int id);
+        Task<IEnumerable<InstructorDTO>> GetAllIncludingDeletedAsync();
+        
+        // Reassignment operations
+        Task<int> ReassignCoursesToInstructorAsync(int fromInstructorId, int toInstructorId);
     }
 }

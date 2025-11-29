@@ -9,12 +9,18 @@ namespace University.App.Services.IServices
         Task<IEnumerable<StudentEnrollmentDTO>> GetEnrollmentsByStudentId(int studentId);
         Task<IEnumerable<StudentEnrollmentDTO>> GetEnrollmentStudentsByCourseID(int courseId);
 
-        // NEW: Grade calculation and course completion
+        // Grade calculation and course completion
         Task<StudentEnrollmentDTO?> CalculateAndUpdateStudentCourseGradeAsync(int studentId, int courseId);
 
-        // NEW: Soft delete and restore
+        // Soft delete and restore
         Task<bool> DeleteEnrollmentAsync(int enrollmentId);
         Task<bool> RestoreEnrollmentAsync(int enrollmentId);
+        Task<bool> HardDeleteEnrollmentAsync(int enrollmentId);
         Task<IEnumerable<StudentEnrollmentDTO>> GetAllEnrollmentsIncludingDeletedAsync();
+        Task<IEnumerable<StudentEnrollmentDTO>> GetAllActiveEnrollmentsAsync();
+
+        // Approval workflow
+        Task<bool> ApproveEnrollmentAsync(int enrollmentId);
+        Task<bool> RejectEnrollmentAsync(int enrollmentId);
     }
 }

@@ -13,6 +13,10 @@ namespace University.App.DTOs
         public string Building { get; set; } = string.Empty;
         public int? HeadId { get; set; }
         public string? HeadFullName { get; set; }
+
+        // Soft delete info
+        public bool IsDeleted { get; set; }
+        public DateTime? DeletedAt { get; set; }
     }
 
     /// <summary>
@@ -35,23 +39,27 @@ namespace University.App.DTOs
         /// <summary>
         /// VALIDATION ENHANCED: Building/Location validation
         /// - Required: Physical location must be specified
-        /// - MaxLength(1): Limited to single letter (A-E) for building designation
-        /// - MinLength(1): Allows single letter building codes
-        /// - Purpose: Identifies the physical location of the department (Buildings A, B, C, D, E)
+        /// - MaxLength(50): Allows full building names (e.g., "Building C", "Engineering Wing")
+        /// - MinLength(2): Ensures meaningful building designations
+        /// - Purpose: Identifies the physical location of the department
         /// </summary>
         [Required(ErrorMessage = "Building is required")]
-        [MaxLength(1, ErrorMessage = "Building must be a single letter (A-E)")]
-        [MinLength(1, ErrorMessage = "Building is required")]
+        [MaxLength(50, ErrorMessage = "Building cannot exceed 50 characters")]
+        [MinLength(2, ErrorMessage = "Building must be at least 2 characters")]
         public string Building { get; set; } = string.Empty;
 
         /// <summary>
-        /// VALIDATION ENHANCED: Head Instructor assignment validation
-        /// - Required: Every department must have a head instructor
-        /// - Service-level validation: Instructor must exist in system
-        /// - Service-level validation: Instructor cannot be head of multiple departments
-        /// - Service-level validation: Ensures unique department head assignment
+        /// VALIDATION ENHANCED: Head Instructor assignment validation (NOW OPTIONAL)
+        /// - Optional: Allows creating department without a head initially
+        /// - Business Rule Fix: Resolves circular dependency (instructor needs dept, dept needs head)
+        /// - Workflow: 
+        ///   1. Create instructor without department assignment
+        ///   2. Create department without head
+        ///   3. Assign instructor to department as head
+        /// - Service-level validation: If provided, instructor must exist in system
+        /// - Service-level validation: If provided, instructor cannot be head of multiple departments
+        /// - Purpose: Enables proper sequencing of entity creation
         /// </summary>
-        [Required(ErrorMessage = "Head instructor is required")]
         [Range(1, int.MaxValue, ErrorMessage = "Head instructor ID must be a valid positive number")]
         public int? HeadId { get; set; }
     }
@@ -76,22 +84,23 @@ namespace University.App.DTOs
         /// <summary>
         /// VALIDATION ENHANCED: Building/Location validation for updates
         /// - Required: Physical location must always be specified
-        /// - MaxLength(1): Limited to single letter (A-E) for building designation
-        /// - MinLength(1): Allows single letter building codes
+        /// - MaxLength(50): Allows full building names (e.g., "Building C", "Engineering Wing")
+        /// - MinLength(2): Ensures meaningful building designations
         /// </summary>
         [Required(ErrorMessage = "Building is required")]
-        [MaxLength(1, ErrorMessage = "Building must be a single letter (A-E)")]
-        [MinLength(1, ErrorMessage = "Building is required")]
+        [MaxLength(50, ErrorMessage = "Building cannot exceed 50 characters")]
+        [MinLength(2, ErrorMessage = "Building must be at least 2 characters")]
         public string Building { get; set; } = string.Empty;
 
         /// <summary>
-        /// VALIDATION ENHANCED: Head Instructor re-assignment validation
-        /// - Required: Department must always have a head
-        /// - Service-level validation: New head must exist as an instructor
+        /// VALIDATION ENHANCED: Head Instructor re-assignment validation (NOW OPTIONAL)
+        /// - Optional: Allows temporary department heads or no head
+        /// - Business Rule Fix: Can update department head independently of creation
+        /// - Service-level validation: If provided, new head must exist as an instructor
         /// - Service-level validation: Prevents assigning instructor as head of multiple departments
         /// - Service-level validation: Allows keeping same head (self-assignment)
+        /// - Workflow: Can now assign/reassign/unassign department heads flexibly
         /// </summary>
-        [Required(ErrorMessage = "Head instructor is required")]
         [Range(1, int.MaxValue, ErrorMessage = "Head instructor ID must be a valid positive number")]
         public int? HeadId { get; set; }
     }

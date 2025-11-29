@@ -25,6 +25,48 @@ namespace University.API.Controllers
             return Ok(students);
         }
 
+        [HttpGet("paginated")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllPaginated([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            if (pageNumber < 1 || pageSize < 1)
+                return BadRequest(new { message = "Page number and page size must be greater than 0" });
+
+            var (students, totalCount) = await _studentService.GetAllWithPaginationAsync(pageNumber, pageSize);
+            return Ok(new
+            {
+                data = students,
+                totalCount,
+                pageNumber,
+                pageSize,
+                totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+            });
+        }
+
+        [HttpGet("search")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> SearchStudents(
+            [FromQuery] string? searchTerm,
+            [FromQuery] int? departmentId,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            if (pageNumber < 1 || pageSize < 1)
+                return BadRequest(new { message = "Page number and page size must be greater than 0" });
+
+            var (students, totalCount) = await _studentService.SearchStudentsAsync(searchTerm, departmentId, pageNumber, pageSize);
+            return Ok(new
+            {
+                data = students,
+                totalCount,
+                pageNumber,
+                pageSize,
+                totalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                searchTerm,
+                departmentId
+            });
+        }
+
         [HttpGet("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetById(int id)
@@ -97,11 +139,11 @@ namespace University.API.Controllers
         {
             try
             {
-                var result = await _studentService.DeleteAsync(id);
+                var result = await _studentService.SoftDeleteAsync(id);
                 if (!result)
                     return NotFound(new { message = "Student not found" });
 
-                return Ok(new { message = "Student deleted successfully" });
+                return Ok(new { message = "Student archived successfully" });
             }
             catch (InvalidOperationException ex)
             {
@@ -140,6 +182,76 @@ namespace University.API.Controllers
             catch (KeyNotFoundException ex)
             {
                 return NotFound(new { message = ex.Message });
+            }
+        }
+
+        // ========== SOFT DELETE OPERATIONS ==========
+
+        [HttpGet("all-including-deleted")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllIncludingDeleted()
+        {
+            var students = await _studentService.GetAllIncludingDeletedAsync();
+            return Ok(students);
+        }
+
+        [HttpPost("{id}/restore")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Restore(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new { Success = false, Message = "Invalid student ID" });
+
+            try
+            {
+                var restored = await _studentService.RestoreAsync(id);
+                if (!restored)
+                    return NotFound(new { Success = false, Message = "Student not found or is already active" });
+
+                return Ok(new { Success = true, Message = "Student restored successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = "An error occurred while restoring the student", Error = ex.Message });
+            }
+        }
+
+        [HttpDelete("{id}/permanent")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PermanentDelete(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new { Success = false, Message = "Invalid student ID" });
+
+            try
+            {
+                var deleted = await _studentService.PermanentlyDeleteAsync(id);
+                if (!deleted)
+                    return NotFound(new { Success = false, Message = "Student not found" });
+
+                return Ok(new { Success = true, Message = "Student permanently deleted" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = "An error occurred while deleting the student", Error = ex.Message });
+            }
+        }
+
+        [HttpGet("{id}/can-permanently-delete")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> CanPermanentlyDelete(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new { Success = false, Message = "Invalid student ID" });
+
+            try
+            {
+                var result = await _studentService.CanPermanentlyDeleteAsync(id);
+                return Ok(new { Success = true, CanDelete = result.CanDelete, Reason = result.Reason, RelatedData = result.RelatedDataCount });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = "An error occurred while checking student", Error = ex.Message });
             }
         }
     }

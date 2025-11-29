@@ -78,17 +78,17 @@ namespace University.App.Services.Implementations
                     throw new InvalidOperationException("Course not available for student's department.");
             }
 
-            // 4️⃣ Already enrolled?
+            // 4️⃣ Already enrolled? (FIXED: Only check ACTIVE enrollments, allow re-enrollment if deleted)
             var existingEnrollment = await _enrollRepo.GetEnrollmentByStudentAndCourse(
                 enrollCourseDto.StudentId, enrollCourseDto.CourseId);
-            if (existingEnrollment != null)
-                throw new InvalidOperationException("Student already enrolled.");
+            if (existingEnrollment != null && existingEnrollment.Status != "Dropped" && existingEnrollment.Status != "Withdrawn")
+                throw new InvalidOperationException("Student already enrolled in this course.");
 
-            // 5️⃣ Credit limits
+            // 5️⃣ Credit limits (UPDATED: 18 credit hours per semester as per academic policy)
             var semesterStart = DateTime.UtcNow; // Replace with real semester logic
             var semesterCredits = await _courseRepo.GetStudentCurrentSemesterCredits(enrollCourseDto.StudentId, semesterStart);
-            if (semesterCredits + course.Credits > 21)
-                throw new InvalidOperationException("Semester credit limit exceeded.");
+            if (semesterCredits + course.Credits > 18)
+                throw new InvalidOperationException("Semester credit limit (18 hours) exceeded.");
 
             var yearStart = DateTime.UtcNow; // Replace with real academic year logic
             var yearCredits = await _courseRepo.GetStudentCurrentYearCredits(enrollCourseDto.StudentId, yearStart);
@@ -100,7 +100,7 @@ namespace University.App.Services.Implementations
                 StudentId = student.StudentId,
                 CourseId = course.CourseId,
                 EnrollmentDate = DateTime.UtcNow,
-                Status = "Enrolled",
+                Status = "Pending",  // Changed: enrollment starts as Pending until Admin approves
                 FinalGrade = 0
             };
 
@@ -133,6 +133,7 @@ namespace University.App.Services.Implementations
                 CourseCode = e.Course?.CourseCode ?? "Unknown",
                 CreditHours = e.Course?.Credits ?? 0,
                 DepartmentName = e.Course?.Department?.Name ?? "Unknown",
+                InstructorName = e.Course?.Instructor?.FullName ?? "Unknown",
                 Status = e.Status,
                 FinalGrade = e.FinalGrade,
                 GradeLetter = e.GradeLetter,
@@ -155,6 +156,7 @@ namespace University.App.Services.Implementations
                 CourseCode = e.Course?.CourseCode ?? course.CourseCode,
                 CreditHours = e.Course?.Credits ?? course.Credits,
                 DepartmentName = e.Course?.Department?.Name ?? course.Department?.Name ?? "Unknown",
+                InstructorName = e.Course?.Instructor?.FullName ?? course.Instructor?.FullName ?? "Unknown",
                 Status = e.Status,
                 FinalGrade = e.FinalGrade,
                 GradeLetter = e.GradeLetter,
@@ -383,6 +385,14 @@ namespace University.App.Services.Implementations
             return await _enrollRepo.RestoreEnrollmentAsync(enrollmentId);
         }
 
+        public async Task<bool> HardDeleteEnrollmentAsync(int enrollmentId)
+        {
+            if (enrollmentId <= 0)
+                throw new ArgumentException("Invalid enrollment ID.");
+
+            return await _enrollRepo.HardDeleteEnrollmentAsync(enrollmentId);
+        }
+
         public async Task<IEnumerable<StudentEnrollmentDTO>> GetAllEnrollmentsIncludingDeletedAsync()
         {
             var enrollments = await _enrollRepo.GetAllEnrollmentsIncludingDeletedAsync();
@@ -395,6 +405,28 @@ namespace University.App.Services.Implementations
                 CourseCode = e.Course?.CourseCode ?? "Unknown",
                 CreditHours = e.Course?.Credits ?? 0,
                 DepartmentName = e.Course?.Department?.Name ?? "Unknown",
+                InstructorName = e.Course?.Instructor?.FullName ?? "Unknown",
+                Status = e.Status,
+                FinalGrade = e.FinalGrade,
+                GradeLetter = e.GradeLetter,
+                EnrollmentDate = e.EnrollmentDate,
+                IsCourseActive = e.Course?.IsDeleted == false
+            });
+        }
+
+        public async Task<IEnumerable<StudentEnrollmentDTO>> GetAllActiveEnrollmentsAsync()
+        {
+            var enrollments = await _enrollRepo.GetAllActiveEnrollmentsAsync();
+
+            return enrollments.Select(e => new StudentEnrollmentDTO
+            {
+                EnrollmentId = e.EnrollmentId,
+                StudentName = e.Student?.FullName ?? "Unknown",
+                CourseName = e.Course?.Name ?? "Unknown",
+                CourseCode = e.Course?.CourseCode ?? "Unknown",
+                CreditHours = e.Course?.Credits ?? 0,
+                DepartmentName = e.Course?.Department?.Name ?? "Unknown",
+                InstructorName = e.Course?.Instructor?.FullName ?? "Unknown",
                 Status = e.Status,
                 FinalGrade = e.FinalGrade,
                 GradeLetter = e.GradeLetter,
@@ -435,6 +467,68 @@ namespace University.App.Services.Implementations
                 // Course codes should be uppercase
                 dto.CourseCode = dto.CourseCode.ToUpper();
             }
+        }
+
+        // ================= ENROLLMENT APPROVAL WORKFLOW =================
+
+        /// <summary>
+        /// Approves a pending enrollment (Admin only)
+        /// Changes status from "Pending" to "Enrolled"
+        /// </summary>
+        public async Task<bool> ApproveEnrollmentAsync(int enrollmentId)
+        {
+            var enrollment = await _enrollRepo.GetEnrollmentByIdAsync(enrollmentId);
+            
+            if (enrollment == null)
+            {
+                _logger.LogWarning("Enrollment {EnrollmentId} not found", enrollmentId);
+                throw new InvalidOperationException("Enrollment not found");
+            }
+
+            if (enrollment.Status != "Pending")
+            {
+                _logger.LogWarning("Cannot approve enrollment {EnrollmentId}. Current status is '{Status}'", 
+                    enrollmentId, enrollment.Status);
+                throw new InvalidOperationException(
+                    $"Cannot approve enrollment. Current status is '{enrollment.Status}'. Only 'Pending' enrollments can be approved.");
+            }
+
+            // Update enrollment status to Enrolled
+            return await _enrollRepo.UpdateEnrollmentCompletion(
+                enrollmentId, 
+                "Enrolled", 
+                enrollment.FinalGrade, 
+                enrollment.GradeLetter);
+        }
+
+        /// <summary>
+        /// Rejects a pending enrollment (Admin only)
+        /// Changes status from "Pending" to "Rejected"
+        /// </summary>
+        public async Task<bool> RejectEnrollmentAsync(int enrollmentId)
+        {
+            var enrollment = await _enrollRepo.GetEnrollmentByIdAsync(enrollmentId);
+            
+            if (enrollment == null)
+            {
+                _logger.LogWarning("Enrollment {EnrollmentId} not found", enrollmentId);
+                throw new InvalidOperationException("Enrollment not found");
+            }
+
+            if (enrollment.Status != "Pending")
+            {
+                _logger.LogWarning("Cannot reject enrollment {EnrollmentId}. Current status is '{Status}'", 
+                    enrollmentId, enrollment.Status);
+                throw new InvalidOperationException(
+                    $"Cannot reject enrollment. Current status is '{enrollment.Status}'. Only 'Pending' enrollments can be rejected.");
+            }
+
+            // Update enrollment status to Rejected
+            return await _enrollRepo.UpdateEnrollmentCompletion(
+                enrollmentId, 
+                "Rejected", 
+                enrollment.FinalGrade, 
+                enrollment.GradeLetter);
         }
     }
 }

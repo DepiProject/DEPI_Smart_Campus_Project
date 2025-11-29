@@ -66,11 +66,11 @@ namespace University.API.Controllers
             }
             catch (InvalidOperationException ex)
             {
+                // Return the specific business rule message so frontend can show exact reason
                 return Conflict(new
                 {
                     Success = false,
-                    Message = "Enrollment failed - Business rule violation",
-                    Error = ex.Message
+                    Message = ex.Message
                 });
             }
             catch (Exception ex)
@@ -269,6 +269,38 @@ namespace University.API.Controllers
         }
 
         /// <summary>
+        /// Get all active enrollments (Admin only)
+        /// Returns only non-deleted, non-rejected enrollments
+        /// </summary>
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<StudentEnrollmentDTO>>> GetAllActiveEnrollments()
+        {
+            try
+            {
+                var activeEnrollments = await _enrollmentService.GetAllActiveEnrollmentsAsync();
+                
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Active enrollments retrieved successfully",
+                    Count = activeEnrollments.Count(),
+                    Data = activeEnrollments
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "An error occurred while retrieving active enrollments",
+                    Error = ex.Message
+                });
+            }
+        }
+
+        /// <summary>
         /// Get all enrollments including soft-deleted ones (Admin only)
         /// NEW ENDPOINT: View all enrollments including those marked as deleted
         /// </summary>
@@ -348,6 +380,163 @@ namespace University.API.Controllers
                 {
                     Success = false,
                     Message = "An error occurred while deleting the enrollment",
+                    Error = ex.Message
+                });
+            }
+        }
+
+        /// <summary>
+        /// Hard delete an enrollment (Admin only)
+        /// Permanently removes enrollment from database
+        /// </summary>
+        [HttpDelete("hard-delete/{enrollmentId}")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult> HardDeleteEnrollment(int enrollmentId)
+        {
+            if (enrollmentId <= 0)
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Invalid enrollment ID"
+                });
+
+            try
+            {
+                var deleted = await _enrollmentService.HardDeleteEnrollmentAsync(enrollmentId);
+                if (!deleted)
+                    return NotFound(new
+                    {
+                        Success = false,
+                        Message = "Enrollment not found"
+                    });
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Enrollment permanently deleted"
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Validation error",
+                    Error = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "An error occurred while deleting the enrollment",
+                    Error = ex.Message
+                });
+            }
+        }
+
+        /// <summary>
+        /// Approve a pending enrollment (Admin only)
+        /// Changes status from "Pending" to "Enrolled"
+        /// </summary>
+        [HttpPost("{enrollmentId}/approve")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult> ApproveEnrollment(int enrollmentId)
+        {
+            if (enrollmentId <= 0)
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Invalid enrollment ID"
+                });
+
+            try
+            {
+                var approved = await _enrollmentService.ApproveEnrollmentAsync(enrollmentId);
+                if (!approved)
+                    return NotFound(new
+                    {
+                        Success = false,
+                        Message = "Enrollment not found or already approved"
+                    });
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Enrollment approved successfully"
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "An error occurred while approving the enrollment",
+                    Error = ex.Message
+                });
+            }
+        }
+
+        /// <summary>
+        /// Reject a pending enrollment (Admin only)
+        /// Changes status from "Pending" to "Rejected"
+        /// </summary>
+        [HttpPost("{enrollmentId}/reject")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult> RejectEnrollment(int enrollmentId)
+        {
+            if (enrollmentId <= 0)
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Invalid enrollment ID"
+                });
+
+            try
+            {
+                var rejected = await _enrollmentService.RejectEnrollmentAsync(enrollmentId);
+                if (!rejected)
+                    return NotFound(new
+                    {
+                        Success = false,
+                        Message = "Enrollment not found"
+                    });
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Enrollment rejected successfully"
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "An error occurred while rejecting the enrollment",
                     Error = ex.Message
                 });
             }

@@ -56,6 +56,8 @@ namespace University.Infra.Repositories.Courses
             return await _context.Enrollments
                 .Include(e => e.Course)
                     .ThenInclude(c => c.Department)
+                .Include(e => e.Course)
+                    .ThenInclude(c => c.Instructor)
                 .Include(e => e.Student)
                 .Where(e => e.StudentId == studentId && !e.IsDeleted)
                 .IgnoreQueryFilters() // includes soft-deleted courses
@@ -103,8 +105,8 @@ namespace University.Infra.Repositories.Courses
             if (enrollment == null)
                 return false;
 
-            // Validation
-            var validStatuses = new[] { "Enrolled", "Completed", "Dropped", "Withdrawn" };
+            // Validation - Updated to include Pending and Rejected statuses
+            var validStatuses = new[] { "Pending", "Enrolled", "Completed", "Dropped", "Withdrawn", "Rejected" };
             if (!validStatuses.Contains(status))
                 throw new ArgumentException($"Invalid status: {status}");
 
@@ -165,10 +167,88 @@ namespace University.Infra.Repositories.Courses
 
             enrollment.IsDeleted = false;
             enrollment.DeletedAt = null;
+            enrollment.Status = "Pending"; // Reset to Pending for review
             enrollment.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        // NEW: Hard delete enrollment (permanent removal)
+        public async Task<bool> HardDeleteEnrollmentAsync(int enrollmentId)
+        {
+            // Use explicit transaction to ensure all deletes commit together
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            
+            try
+            {
+                var enrollment = await _context.Enrollments
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(e => e.EnrollmentId == enrollmentId);
+
+                if (enrollment == null)
+                {
+                    Console.WriteLine($"❌ Enrollment {enrollmentId} not found");
+                    return false;
+                }
+
+                Console.WriteLine($"🔍 Found enrollment {enrollmentId}: Student {enrollment.StudentId}, Course {enrollment.CourseId}");
+
+                // 1. Delete attendance records for this student in this course
+                var attendanceRecords = await _context.Attendances
+                    .IgnoreQueryFilters()
+                    .Where(a => a.StudentId == enrollment.StudentId && a.CourseId == enrollment.CourseId)
+                    .ToListAsync();
+                
+                if (attendanceRecords.Any())
+                {
+                    Console.WriteLine($"📋 Deleting {attendanceRecords.Count} attendance records");
+                    _context.Attendances.RemoveRange(attendanceRecords);
+                }
+
+                // 2. Delete exam submissions for this student in this course's exams
+                var courseExamIds = await _context.Exams
+                    .Where(e => e.CourseId == enrollment.CourseId)
+                    .Select(e => e.ExamId)
+                    .ToListAsync();
+                
+                if (courseExamIds.Any())
+                {
+                    var submissions = await _context.ExamSubmissions
+                        .IgnoreQueryFilters()
+                        .Where(s => s.StudentId == enrollment.StudentId && 
+                                   s.ExamId.HasValue && 
+                                   courseExamIds.Contains(s.ExamId.Value))
+                        .ToListAsync();
+                    
+                    if (submissions.Any())
+                    {
+                        Console.WriteLine($"📝 Deleting {submissions.Count} exam submissions");
+                        _context.ExamSubmissions.RemoveRange(submissions);
+                    }
+                }
+
+                // 3. Now delete the enrollment itself
+                Console.WriteLine($"🗑️ Deleting enrollment {enrollmentId}");
+                _context.Enrollments.Remove(enrollment);
+                
+                // Save all changes
+                var result = await _context.SaveChangesAsync();
+                Console.WriteLine($"💾 SaveChanges completed. Rows affected: {result}");
+                
+                // Commit transaction
+                await transaction.CommitAsync();
+                Console.WriteLine($"✅ Transaction committed. Enrollment {enrollmentId} permanently deleted");
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Hard delete enrollment {enrollmentId} failed: {ex.Message}");
+                Console.WriteLine($"❌ Stack trace: {ex.StackTrace}");
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         // NEW: Get all enrollments including deleted
@@ -183,13 +263,25 @@ namespace University.Infra.Repositories.Courses
                 .ToListAsync();
         }
 
+        // Get all active enrollments (respects IsDeleted filter)
+        public async Task<IEnumerable<Enrollment>> GetAllActiveEnrollmentsAsync()
+        {
+            return await _context.Enrollments
+                // Don't use IgnoreQueryFilters - respect the global filter
+                .Include(e => e.Course)
+                    .ThenInclude(c => c.Department)
+                .Include(e => e.Student)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
         // NEW: Get enrollment by ID (without IsDeleted filter)
         public async Task<Enrollment?> GetEnrollmentByIdAsync(int enrollmentId)
         {
             return await _context.Enrollments
+                .IgnoreQueryFilters() // Ignore global query filter to find soft-deleted enrollments
                 .Include(e => e.Course)
                 .Include(e => e.Student)
-                .Where(e => !e.IsDeleted)
                 .FirstOrDefaultAsync(e => e.EnrollmentId == enrollmentId);
         }
     }

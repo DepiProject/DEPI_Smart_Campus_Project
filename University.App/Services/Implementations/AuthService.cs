@@ -38,8 +38,73 @@ namespace University.App.Services.Implementations
             if (!result.Succeeded)
                 return null;
 
-            // 3. Generate JWT token
+            // 3. Check if user must change password on first login
+            if (user.MustChangePassword == true)
+            {
+                // Return special token indicating password change required
+                // Frontend should detect this and redirect to change password page
+                throw new InvalidOperationException("PASSWORD_CHANGE_REQUIRED");
+            }
+
+            // 4. Generate JWT token
             return await GenerateJwtToken(user);
+        }
+
+        public async Task<string?> FirstLoginPasswordChangeAsync(string email, string currentPassword, string newPassword)
+        {
+            // 1. Find user by email
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null || user.IsDeleted)
+                throw new KeyNotFoundException("User not found.");
+
+            // 2. Verify current password
+            var passwordCheck = await _signInManager.CheckPasswordSignInAsync(user, currentPassword, lockoutOnFailure: false);
+            if (!passwordCheck.Succeeded)
+                throw new UnauthorizedAccessException("Current password is incorrect.");
+
+            // 3. Check if user must change password
+            if (user.MustChangePassword != true)
+                throw new InvalidOperationException("Password change not required.");
+
+            // 4. Change password using Identity
+            var removePasswordResult = await _userManager.RemovePasswordAsync(user);
+            if (!removePasswordResult.Succeeded)
+                throw new InvalidOperationException("Failed to remove old password.");
+
+            var addPasswordResult = await _userManager.AddPasswordAsync(user, newPassword);
+            if (!addPasswordResult.Succeeded)
+            {
+                var errors = string.Join(", ", addPasswordResult.Errors.Select(e => e.Description));
+                throw new InvalidOperationException($"Failed to set new password: {errors}");
+            }
+
+            // 5. Clear the MustChangePassword flag
+            user.MustChangePassword = false;
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userManager.UpdateAsync(user);
+
+            // 6. Generate and return JWT token
+            return await GenerateJwtToken(user);
+        }
+
+        public async Task<AdminProfileDTO?> GetAdminProfileAsync(int userId)
+        {
+            // Get the admin user
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null || user.IsDeleted)
+                return null;
+
+            // Map to AdminProfileDTO
+            return new AdminProfileDTO
+            {
+                Id = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email ?? string.Empty,
+                ContactNumber = user.PhoneNumber,
+                Role = "Admin",
+                CreatedDate = user.CreatedAt
+            };
         }
 
         public async Task<string?> UpdateAdminProfileAsync(int userId, UpdateAdminProfileDTO dto)
@@ -54,9 +119,19 @@ namespace University.App.Services.Implementations
             if (!passwordCheck.Succeeded)
                 throw new UnauthorizedAccessException("Current password is incorrect.");
 
-            // VALIDATION: Update allowed fields (FirstName, LastName)
+            // VALIDATION: Update allowed fields (FirstName, LastName, ContactNumber)
             user.FirstName = dto.FirstName.Trim();
             user.LastName = dto.LastName.Trim();
+            
+            // Update PhoneNumber (ContactNumber) if provided
+            if (!string.IsNullOrWhiteSpace(dto.ContactNumber))
+            {
+                user.PhoneNumber = dto.ContactNumber.Trim();
+            }
+            else
+            {
+                user.PhoneNumber = null; // Clear if empty
+            }
 
             // VALIDATION: If new password provided, update it
             if (!string.IsNullOrWhiteSpace(dto.NewPassword))

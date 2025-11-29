@@ -19,7 +19,9 @@ namespace University.App.Interfaces.Courses
         // Soft delete and restore
         Task<bool> DeleteEnrollmentAsync(int enrollmentId);
         Task<bool> RestoreEnrollmentAsync(int enrollmentId);
+        Task<bool> HardDeleteEnrollmentAsync(int enrollmentId);
         Task<IEnumerable<Enrollment>> GetAllEnrollmentsIncludingDeletedAsync();
+        Task<IEnumerable<Enrollment>> GetAllActiveEnrollmentsAsync();
         Task<Enrollment?> GetEnrollmentByIdAsync(int enrollmentId);
     }
 }

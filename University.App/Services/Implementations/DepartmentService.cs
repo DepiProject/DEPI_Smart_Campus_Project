@@ -26,8 +26,44 @@ namespace University.App.Services.Implementations
                 Name = d.Name,
                 Building = d.Building,
                 HeadId = d.HeadId,
-                HeadFullName = d.Instructor?.FullName
+                HeadFullName = d.Instructor?.FullName,
+                IsDeleted = d.IsDeleted,
+                DeletedAt = d.DeletedAt
             });
+        }
+
+        public async Task<(IEnumerable<DepartmentDTO> departments, int totalCount)> GetAllDepartmentsWithPaginationAsync(int pageNumber, int pageSize)
+        {
+            var (departments, totalCount) = await _departmentRepo.GetDepartmentsWithPaginationAsync(pageNumber, pageSize);
+            var departmentDtos = departments.Select(d => new DepartmentDTO
+            {
+                Id = d.DepartmentId,
+                Name = d.Name,
+                Building = d.Building,
+                HeadId = d.HeadId,
+                HeadFullName = d.Instructor?.FullName,
+                IsDeleted = d.IsDeleted,
+                DeletedAt = d.DeletedAt
+            }).ToList();
+
+            return (departmentDtos, totalCount);
+        }
+
+        public async Task<(IEnumerable<DepartmentDTO> departments, int totalCount)> SearchDepartmentsAsync(string? searchTerm, int pageNumber, int pageSize)
+        {
+            var (departments, totalCount) = await _departmentRepo.SearchDepartmentsAsync(searchTerm, pageNumber, pageSize);
+            var departmentDtos = departments.Select(d => new DepartmentDTO
+            {
+                Id = d.DepartmentId,
+                Name = d.Name,
+                Building = d.Building,
+                HeadId = d.HeadId,
+                HeadFullName = d.Instructor?.FullName,
+                IsDeleted = d.IsDeleted,
+                DeletedAt = d.DeletedAt
+            }).ToList();
+
+            return (departmentDtos, totalCount);
         }
 
         public async Task<DepartmentDTO?> GetDepartmentById(int id)
@@ -41,7 +77,9 @@ namespace University.App.Services.Implementations
                 Name = department.Name,
                 Building = department.Building,
                 HeadId = department.HeadId,
-                HeadFullName = department.Instructor?.FullName
+                HeadFullName = department.Instructor?.FullName,
+                IsDeleted = department.IsDeleted,
+                DeletedAt = department.DeletedAt
             };
         }
 
@@ -61,7 +99,7 @@ namespace University.App.Services.Implementations
                 throw new InvalidOperationException("Department name already exists. Please use a unique department name.");
 
             // VALIDATION ENHANCED: Head instructor existence and uniqueness
-            // Validates the HeadId when provided
+            // Validates the HeadId when provided with comprehensive conflict detection
             if (departmentDto.HeadId.HasValue)
             {
                 // First check: Instructor exists in the system
@@ -69,7 +107,20 @@ namespace University.App.Services.Implementations
                 if (instructor == null)
                     throw new InvalidOperationException($"Head instructor with ID {departmentDto.HeadId.Value} does not exist");
 
-                // Second check: Ensure instructor is not already head of another department
+                // Second check: Ensure instructor is not already assigned to a different department
+                // Business rule: An instructor cannot be assigned to one department and be head of another
+                // This prevents conflicting department assignments
+                // Note: For department creation, any existing department assignment is a conflict
+                if (instructor.DepartmentId.HasValue)
+                {
+                    var currentDept = await _departmentRepo.GetDepartmentById(instructor.DepartmentId.Value);
+                    throw new InvalidOperationException(
+                        $"Instructor '{instructor.FullName}' is already assigned to department '{currentDept?.Name ?? "Unknown"}'. " +
+                        $"An instructor cannot be assigned to one department and be head of another. " +
+                        $"Please first remove the instructor from their current department.");
+                }
+
+                // Third check: Ensure instructor is not already head of another department
                 // Prevents one instructor being assigned as head to multiple departments
                 var existingHead = await _departmentRepo.GetDepartmentByHeadId(departmentDto.HeadId.Value);
                 if (existingHead != null)
@@ -98,7 +149,9 @@ namespace University.App.Services.Implementations
                 Name = deptWithInstructor.Name,
                 Building = deptWithInstructor.Building,
                 HeadId = deptWithInstructor.HeadId,
-                HeadFullName = deptWithInstructor.Instructor?.FullName
+                HeadFullName = deptWithInstructor.Instructor?.FullName,
+                IsDeleted = deptWithInstructor.IsDeleted,
+                DeletedAt = deptWithInstructor.DeletedAt
             };
         }
 
@@ -118,7 +171,7 @@ namespace University.App.Services.Implementations
                 throw new InvalidOperationException("Department name already exists. Please use a unique department name.");
 
             // VALIDATION ENHANCED: Head instructor existence and uniqueness validation
-            // Ensures new head assignment is valid before update
+            // Ensures new head assignment is valid before update with comprehensive conflict detection
             if (departmentDto.HeadId.HasValue)
             {
                 // First check: Instructor exists in system
@@ -126,7 +179,19 @@ namespace University.App.Services.Implementations
                 if (instructor == null)
                     throw new InvalidOperationException($"Head instructor with ID {departmentDto.HeadId.Value} does not exist");
 
-                // Second check: Prevent instructor from being head of multiple departments
+                // Second check: Ensure instructor is not assigned to a different department
+                // Business rule: An instructor cannot be assigned to one department and be head of another
+                // Exception: If the instructor is already in the SAME department as head, allow (no conflict)
+                if (instructor.DepartmentId.HasValue && instructor.DepartmentId.Value != id)
+                {
+                    var currentDept = await _departmentRepo.GetDepartmentById(instructor.DepartmentId.Value);
+                    throw new InvalidOperationException(
+                        $"Instructor '{instructor.FullName}' is already assigned to department '{currentDept?.Name ?? "Unknown"}'. " +
+                        $"An instructor cannot be assigned to one department and be head of another. " +
+                        $"Please first remove the instructor from their current department.");
+                }
+
+                // Third check: Prevent instructor from being head of multiple departments
                 // Logic: If another department has this head AND it's not current department, throw error
                 var anotherDept = await _departmentRepo.GetDepartmentByHeadId(departmentDto.HeadId.Value);
                 if (anotherDept != null && anotherDept.DepartmentId != id)
@@ -151,7 +216,9 @@ namespace University.App.Services.Implementations
                 Name = deptWithInstructor.Name,
                 Building = deptWithInstructor.Building,
                 HeadId = deptWithInstructor.HeadId,
-                HeadFullName = deptWithInstructor.Instructor?.FullName
+                HeadFullName = deptWithInstructor.Instructor?.FullName,
+                IsDeleted = deptWithInstructor.IsDeleted,
+                DeletedAt = deptWithInstructor.DeletedAt
             };
         }
 
@@ -171,6 +238,84 @@ namespace University.App.Services.Implementations
             // These would prevent deletion of departments with active data
 
             return await _departmentRepo.DeleteDepartment(id);
+        }
+
+        // ========== SOFT DELETE OPERATIONS ==========
+
+        public async Task<bool> SoftDeleteDepartment(int id)
+        {
+            // ENHANCED: Check for active users and courses before soft delete
+            var studentCount = await _departmentRepo.GetDepartmentStudentCount(id);
+            var instructorCount = await _departmentRepo.GetDepartmentInstructorCount(id);
+            var courseCount = await _departmentRepo.GetDepartmentCourseCount(id);
+            
+            var issues = new List<string>();
+            if (studentCount > 0) issues.Add($"{studentCount} active student(s)");
+            if (instructorCount > 0) issues.Add($"{instructorCount} active instructor(s)");
+            if (courseCount > 0) issues.Add($"{courseCount} active course(s)");
+            
+            if (issues.Any())
+            {
+                throw new InvalidOperationException(
+                    $"Cannot archive department with {string.Join(", ", issues)}. " +
+                    $"Please reassign all users and courses to another department first.");
+            }
+
+            return await _departmentRepo.SoftDeleteDepartment(id);
+        }
+
+        public async Task<bool> RestoreDepartment(int id)
+        {
+            return await _departmentRepo.RestoreDepartment(id);
+        }
+
+        public async Task<bool> PermanentlyDeleteDepartment(int id)
+        {
+            // ENHANCED: Strict validation for permanent delete
+            var (canDelete, reason, count) = await CanPermanentlyDeleteDepartment(id);
+            
+            if (!canDelete)
+            {
+                throw new InvalidOperationException(reason);
+            }
+
+            return await _departmentRepo.PermanentlyDeleteDepartment(id);
+        }
+
+        public async Task<(bool CanDelete, string Reason, int RelatedDataCount)> CanPermanentlyDeleteDepartment(int id)
+        {
+            var studentCount = await _departmentRepo.GetDepartmentStudentCount(id);
+            var instructorCount = await _departmentRepo.GetDepartmentInstructorCount(id);
+            var courseCount = await _departmentRepo.GetDepartmentCourseCount(id);
+            
+            var totalRelated = studentCount + instructorCount + courseCount;
+            
+            if (totalRelated > 0)
+            {
+                var reasons = new List<string>();
+                if (studentCount > 0) reasons.Add($"{studentCount} student(s)");
+                if (instructorCount > 0) reasons.Add($"{instructorCount} instructor(s)");
+                if (courseCount > 0) reasons.Add($"{courseCount} course(s)");
+                
+                return (false, $"Department has {string.Join(", ", reasons)}. Cannot permanently delete departments with related data to preserve academic records.", totalRelated);
+            }
+
+            return (true, "Department can be safely deleted - no related data found", 0);
+        }
+
+        public async Task<IEnumerable<DepartmentDTO>> GetAllDepartmentsIncludingDeleted()
+        {
+            var departments = await _departmentRepo.GetAllDepartmentsIncludingDeleted();
+            return departments.Select(d => new DepartmentDTO
+            {
+                Id = d.DepartmentId,
+                Name = d.Name,
+                Building = d.Building,
+                HeadId = d.HeadId,
+                HeadFullName = d.Instructor?.FullName,
+                IsDeleted = d.IsDeleted,
+                DeletedAt = d.DeletedAt
+            });
         }
     }
 }

@@ -11,7 +11,9 @@ namespace University.App.DTOs
         public string Name { get; set; } = string.Empty;
         public int CreditHours { get; set; }
         public int InstructorId { get; set; }
+        public string InstructorName { get; set; } = string.Empty;
         public string CourseCode { get; set; } = string.Empty;
+        public int? DepartmentId { get; set; }
         public string DepartmentName { get; set; } = string.Empty;
         public DateTime? DeletedAt { get; set; }
     }
@@ -25,12 +27,14 @@ namespace University.App.DTOs
         /// VALIDATION ENHANCED: Course name validation for updates
         /// - Required: Course must always have a meaningful name
         /// - StringLength(80): Prevents excessively long course names
+        /// - RegularExpression: Must contain at least one letter (prevents all-numeric names)
         /// - Service-level: Validates new instructor exists (if changed)
         /// - Service-level: Validates instructor workload (if instructor changes)
         /// </summary>
         [Required(ErrorMessage = "Course name is required")]
         [StringLength(80, MinimumLength = 3, ErrorMessage = "Course name must be between 3 and 80 characters")]
-        public string CourseName { get; set; } = string.Empty;
+        [RegularExpression(@".*[a-zA-Z]+.*", ErrorMessage = "Course name must contain at least one letter")]
+        public string Name { get; set; } = string.Empty;
 
         /// <summary>
         /// VALIDATION ENHANCED: Credit hours validation for updates
@@ -53,6 +57,16 @@ namespace University.App.DTOs
         [Required(ErrorMessage = "Instructor ID is required")]
         [Range(1, int.MaxValue, ErrorMessage = "Instructor ID must be a valid positive number")]
         public int InstructorId { get; set; }
+
+        /// <summary>
+        /// VALIDATION ENHANCED: Department assignment validation for updates
+        /// - Used to maintain course-department relationship
+        /// - Service-level: Validates department exists in system
+        /// - Purpose: Ensures course stays within correct department context
+        /// </summary>
+        [Required(ErrorMessage = "Department ID is required")]
+        [Range(1, int.MaxValue, ErrorMessage = "Department ID must be a valid positive number")]
+        public int DepartmentId { get; set; }
     }
 
     /// <summary>
@@ -66,18 +80,20 @@ namespace University.App.DTOs
         /// - Format: First 3 chars of single-word dept OR first char of each word (multi-word)
         /// - Plus incrementing 2-digit number (e.g., "CS01", "CS02", "MAT01")
         /// - Service-level: Uniqueness check (no duplicate course codes allowed)
+        /// - Note: Client should NOT provide this field, backend generates it
         /// </summary>
-        [StringLength(10, MinimumLength = 2, ErrorMessage = "Course code must be between 2 and 10 characters")]
-        public string CourseCode { get; set; } = string.Empty; // Auto-generated, not required from client
+        public string? CourseCode { get; set; } // Auto-generated, not required from client
 
         /// <summary>
         /// VALIDATION ENHANCED: Course name validation
         /// - Required: Course must have a meaningful name
         /// - StringLength(80): Prevents excessively long course names
+        /// - RegularExpression: Must contain at least one letter (prevents all-numeric names)
         /// - Service-level: Used with course code for comprehensive identification
         /// </summary>
         [Required(ErrorMessage = "Course name is required")]
         [StringLength(80, MinimumLength = 3, ErrorMessage = "Course name must be between 3 and 80 characters")]
+        [RegularExpression(@".*[a-zA-Z]+.*", ErrorMessage = "Course name must contain at least one letter")]
         public string Name { get; set; } = string.Empty;
 
         /// <summary>
@@ -159,34 +175,37 @@ namespace University.App.DTOs
         /// - StringLength: Max 150 chars (standard name field limit)
         /// - Service-level: Trimmed to prevent whitespace pollution
         /// - Display: Used in enrollment records and grade reports
+        /// - NOT REQUIRED on input - populated by service
         /// </summary>
         [StringLength(150, ErrorMessage = "Student name cannot exceed 150 characters")]
-        public string StudentName { get; set; } = string.Empty;
+        public string? StudentName { get; set; }
 
         /// <summary>
         /// Course name (populated by service, validated for display)
         /// - StringLength: Max 80 chars (matches Course creation constraint)
         /// - Service-level: Trimmed to prevent whitespace pollution
         /// - Display: Used in enrollment records and student transcripts
+        /// - NOT REQUIRED on input - populated by service
         /// </summary>
         [StringLength(80, ErrorMessage = "Course name cannot exceed 80 characters")]
-        public string CourseName { get; set; } = string.Empty;
+        public string? CourseName { get; set; }
 
         /// <summary>
-        /// Credit hours (populated by service)
+        /// Credit hours (populated by service from course data)
         /// - Range: 1-6 (standard academic credit range)
         /// - Service-level: Validated against semester/annual limits
+        /// - NOT REQUIRED on input - populated by service from Course entity
         /// </summary>
-        [Range(1, 6, ErrorMessage = "Credit hours must be between 1 and 6")]
-        public int CreditHours { get; set; }
+        public int? CreditHours { get; set; }
 
         /// <summary>
         /// Course code (populated by service)
         /// - StringLength: Max 10 chars (standard course code format)
         /// - Format: e.g., "CS01", "MAT02", "PHYS03"
+        /// - NOT REQUIRED on input - populated by service
         /// </summary>
         [StringLength(10, ErrorMessage = "Course code cannot exceed 10 characters")]
-        public string CourseCode { get; set; } = string.Empty;
+        public string? CourseCode { get; set; }
     }
 
     // Student enrollment view DTO
@@ -247,6 +266,15 @@ namespace University.App.DTOs
         [Required(ErrorMessage = "Department name is required")]
         [StringLength(100, ErrorMessage = "Department name cannot exceed 100 characters")]
         public string DepartmentName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Instructor name for display
+        /// - Optional: Shows who teaches the course
+        /// - StringLength: Max 150 chars
+        /// - Display: Used in student course listings
+        /// </summary>
+        [StringLength(150, ErrorMessage = "Instructor name cannot exceed 150 characters")]
+        public string? InstructorName { get; set; }
 
         /// <summary>
         /// Enrollment status field validation

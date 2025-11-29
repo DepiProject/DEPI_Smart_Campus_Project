@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instructor Dashboard - Smart Campus</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../css/modern-theme.css">
+    <link rel="stylesheet" href="../css/utilities.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <style>
+        body {
+            background: var(--cream-50);
+            padding-left: 80px;
+        }
+
+        .main-content {
+            margin-left: 0;
+            padding: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding-left: 0;
+            }
+
+            .icon-sidebar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Icon Sidebar Navigation -->
+    <div class="icon-sidebar">
+        <a href="#dashboard" data-section="dashboard" class="icon-sidebar-item active">
+            <i class="bi bi-speedometer2"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="#courses" data-section="courses" class="icon-sidebar-item">
+            <i class="bi bi-book"></i>
+            <span>Courses</span>
+        </a>
+        <a href="#attendance" data-section="attendance" class="icon-sidebar-item">
+            <i class="bi bi-calendar-check"></i>
+            <span>Attendance</span>
+        </a>
+        <a href="#grades" data-section="grades" class="icon-sidebar-item">
+            <i class="bi bi-clipboard-data"></i>
+            <span>Grades</span>
+        </a>
+        <a href="#profile" data-section="profile" class="icon-sidebar-item">
+            <i class="bi bi-person-circle"></i>
+            <span>Profile</span>
+        </a>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="modern-nav">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <span class="navbar-brand mb-0 h5 text-white fw-bold">
+                <i class="bi bi-mortarboard-fill"></i> Smart Campus Instructor
+            </span>
+            <div class="dropdown">
+                <button class="btn user-dropdown-btn dropdown-toggle" type="button" id="userDropdown"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-person-circle"></i> <span id="userName">Instructor</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end user-dropdown-menu" aria-labelledby="userDropdown">
+                    <li><a class="dropdown-item" href="#profile" data-section="profile"
+                            onclick="document.querySelector('.icon-sidebar-item[data-section=profile]').click()"><i
+                                class="bi bi-person-circle"></i> My Profile</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-gear"></i> Settings</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-question-circle"></i> Help</a></li>
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+                    <li><a class="dropdown-item text-danger" href="#" id="logoutBtn"><i
+                                class="bi bi-box-arrow-right"></i>
+                            Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center py-4">
+                <h1 class="h2">Instructor Dashboard</h1>
+            </div>
+
+            <!-- Dashboard Overview -->
+            <div id="dashboard" class="section">
+                <div class="row g-4 mb-4">
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100 hover-card hover-lift">
+                            <div class="card-body text-center position-relative">
+                                <div class="stat-icon stat-icon-primary mx-auto animate-float">
+                                    <i class="bi bi-book-fill"></i>
+                                </div>
+                                <h6 class="card-title text-muted text-uppercase small">My Courses</h6>
+                                <h2 class="card-text counter" data-stat="courses">-</h2>
+                                <small class="text-muted"><i class="bi bi-calendar3"></i> This semester</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100 hover-card">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="bi bi-people-fill text-info" style="font-size: 2.5rem;"></i>
+                                </div>
+                                <h6 class="card-title text-muted text-uppercase small">Total Students</h6>
+                                <h2 class="card-text text-info fw-bold" data-stat="students">-</h2>
+                                <small class="text-muted">Across all courses</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100 hover-card">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="bi bi-clipboard-check text-warning" style="font-size: 2.5rem;"></i>
+                                </div>
+                                <h6 class="card-title text-muted text-uppercase small">Pending Reviews</h6>
+                                <h2 class="card-text text-warning fw-bold" data-stat="pending">-</h2>
+                                <small class="text-danger"><i class="bi bi-exclamation-circle"></i> Review
+                                    needed</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100 hover-card">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="bi bi-graph-up text-success" style="font-size: 2.5rem;"></i>
+                                </div>
+                                <h6 class="card-title text-muted text-uppercase small">Average Grade</h6>
+                                <h2 class="card-text text-success fw-bold" data-stat="avgGrade">-</h2>
+                                <small class="text-muted">Class performance</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    <i class="bi bi-info-circle"></i> <strong>Welcome!</strong> You have access to manage your
+                    courses and student grades.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            </div>
+
+            <!-- My Courses Section -->
+            <div id="courses" class="section d-none">
+                <h2 class="mb-4">My Courses</h2>
+                <div class="row" id="coursesList">
+                    <div class="col-12">
+                        <div class="alert alert-info">Loading courses...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Students Section -->
+            <div id="students" class="section d-none">
+                <h2 class="mb-4">Students</h2>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Student Code</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Department</th>
+                                <th>Level</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Loading students...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Enrollments Section -->
+            <div id="enrollments" class="section d-none">
+                <h2 class="mb-4">Course Enrollments</h2>
+
+                <!-- Filter by Course -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="row align-items-end">
+                            <div class="col-md-8">
+                                <label class="form-label">Filter by Course</label>
+                                <select class="form-select" id="courseFilter">
+                                    <option value="">Select a course to view enrollments</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-primary" onclick="instructorDashboard.filterEnrollments()">
+                                    <i class="bi bi-search"></i> View Enrollments
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Enrollments Table -->
+                <div id="enrollmentsTableContainer" class="d-none">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">Students Enrolled in <span id="selectedCourseName">-</span></h5>
+                        <span class="badge bg-primary" id="enrollmentCount">0 students</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Student Code</th>
+                                    <th>Student Name</th>
+                                    <th>Email</th>
+                                    <th>Credits</th>
+                                    <th>Status</th>
+                                    <th>Grade</th>
+                                    <th>Enrollment Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="enrollmentsTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">Select a course to view
+                                        enrollments</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Exams Section -->
+            <div id="exams" class="section d-none">
+                <h2 class="mb-4">Exams & Grades</h2>
+                <button class="btn btn-primary mb-3"><i class="bi bi-plus-lg"></i> Create Exam</button>
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> Grades are automatically calculated from exam submissions
+                </div>
+                <div class="table-responsive mt-4">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Course</th>
+                                <th>Exam Title</th>
+                                <th>Submissions</th>
+                                <th>Average Score</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="examsTableBody">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">Loading exams...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Attendance Section -->
+            <div id="attendance" class="section d-none">
+                <h2 class="mb-4">Attendance Management</h2>
+
+                <!-- Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Total Records</h6>
+                                <h2 class="card-text text-primary" id="totalAttendanceRecords">-</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Present</h6>
+                                <h2 class="card-text text-success" id="totalPresent">-</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Absent</h6>
+                                <h2 class="card-text text-danger" id="totalAbsent">-</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Late</h6>
+                                <h2 class="card-text text-warning" id="totalLate">-</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Three Column Layout -->
+                <div class="row">
+                    <!-- Left: Mark Attendance Form -->
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Mark Attendance</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="markAttendanceForm">
+                                    <div class="mb-3">
+                                        <label for="attendanceStudent" class="form-label">Student Name</label>
+                                        <select class="form-select" id="attendanceStudent" required>
+                                            <option value="">Select Student...</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="attendanceCourse" class="form-label">Course</label>
+                                        <select class="form-select" id="attendanceCourse" required>
+                                            <option value="">Select Course...</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="attendanceDate" class="form-label">Date</label>
+                                        <input type="date" class="form-control" id="attendanceDate" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="attendanceStatus" class="form-label">Status</label>
+                                        <select class="form-select" id="attendanceStatus" required>
+                                            <option value="">Select Status...</option>
+                                            <option value="Present">Present</option>
+                                            <option value="Absent">Absent</option>
+                                            <option value="Late">Late</option>
+                                            <option value="Excused">Excused</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="bi bi-check-circle"></i> Mark
+                                    </button>
+                                    <button type="reset" class="btn btn-secondary w-100 mt-2">
+                                        <i class="bi bi-arrow-clockwise"></i> Clear
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Center: Attendance Records Table -->
+                    <div class="col-md-5">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="bi bi-table"></i> Attendance Records</h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- Filter Controls -->
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6">
+                                        <input type="date" class="form-control form-control-sm" id="filterFromDate"
+                                            placeholder="From Date">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="date" class="form-control form-control-sm" id="filterToDate"
+                                            placeholder="To Date">
+                                    </div>
+                                </div>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6">
+                                        <button class="btn btn-sm btn-outline-primary w-100"
+                                            onclick="instructorDashboard.loadAttendanceRecords()">
+                                            <i class="bi bi-funnel"></i> Filter
+                                        </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <button class="btn btn-sm btn-outline-secondary w-100"
+                                            onclick="instructorDashboard.refreshAttendance()">
+                                            <i class="bi bi-arrow-repeat"></i> Refresh
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Attendance Records Table -->
+                                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                    <table class="table table-striped table-sm">
+                                        <thead class="sticky-top">
+                                            <tr>
+                                                <th>Student</th>
+                                                <th>Course</th>
+                                                <th>Date</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="attendanceTableBody">
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted">Loading records...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Recent Activity & Summary -->
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="bi bi-activity"></i> Recent Activity</h5>
+                            </div>
+                            <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                                <div id="recentActivityList">
+                                    <p class="text-muted small text-center">No recent activity</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Attendance Modal -->
+            <div class="modal fade" id="editAttendanceModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Update Attendance Status</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p id="editAttendanceInfo"></p>
+                            <div class="mb-3">
+                                <label for="editAttendanceStatus" class="form-label">Status</label>
+                                <select class="form-select" id="editAttendanceStatus">
+                                    <option value="Present">Present</option>
+                                    <option value="Absent">Absent</option>
+                                    <option value="Late">Late</option>
+                                    <option value="Excused">Excused</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary"
+                                onclick="instructorDashboard.saveEditAttendance()">Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Section -->
+            <div id="profile" class="section d-none">
+                <h2 class="mb-4">My Profile</h2>
+
+                <!-- Profile Display View -->
+                <div id="profileDisplayView" class="card border-0 shadow-sm">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0" style="color: var(--sage-700);"><i class="bi bi-person-circle"></i> Profile
+                            Information</h5>
+                        <button class="btn btn-light btn-sm" onclick="instructorDashboard.showEditProfileForm()">
+                            <i class="bi bi-pencil"></i> Edit
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <h6 class="text-muted">First Name</h6>
+                                <p class="fs-6" id="displayFirstName">-</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <h6 class="text-muted">Last Name</h6>
+                                <p class="fs-6" id="displayLastName">-</p>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <h6 class="text-muted">Email</h6>
+                                <p class="fs-6" id="displayEmail">-</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <h6 class="text-muted">Contact Number</h6>
+                                <p class="fs-6" id="displayContactNumber">-</p>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <h6 class="text-muted">Department</h6>
+                                <p class="fs-6" id="displayDepartment">-</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <h6 class="text-muted">Role</h6>
+                                <p class="fs-6"><span class="badge bg-info">Instructor</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Edit View -->
+                <div id="profileEditView" class="card border-0 shadow-sm d-none mt-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="bi bi-pencil-square"></i> Edit Profile</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="editProfileForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="editFirstName" class="form-label">First Name</label>
+                                    <input type="text" class="form-control" id="editFirstName" readonly
+                                        style="background-color: #e9ecef; cursor: not-allowed;"
+                                        placeholder="First name (cannot be changed)">
+                                    <small class="text-muted">Names are fixed identity information</small>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="editLastName" class="form-label">Last Name</label>
+                                    <input type="text" class="form-control" id="editLastName" readonly
+                                        style="background-color: #e9ecef; cursor: not-allowed;"
+                                        placeholder="Last name (cannot be changed)">
+                                    <small class="text-muted">Names are fixed identity information</small>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="editEmail" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="editEmail" disabled
+                                        style="background-color: #e9ecef; cursor: not-allowed;"
+                                        placeholder="Email (read-only)">
+                                    <small class="text-muted">Email cannot be changed</small>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="editContactNumber" class="form-label">Contact Number</label>
+                                    <input type="tel" class="form-control" id="editContactNumber"
+                                        placeholder="Enter 11-digit contact number" maxlength="11">
+                                    <small class="text-muted">11 digits (optional) - ONLY editable field</small>
+                                    <div id="contactNumberError" class="text-danger small mt-1"></div>
+                                </div>
+                            </div>
+                            <div class="alert alert-warning small mt-3">
+                                <i class="bi bi-info-circle"></i> <strong>Note:</strong> Only contact number can be
+                                updated. Names are official identity information tied to academic records and cannot
+                                be changed.
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-check-lg"></i> Update Contact Number
+                                </button>
+                                <button type="button" class="btn btn-secondary"
+                                    onclick="instructorDashboard.showDisplayProfileView()">
+                                    <i class="bi bi-x-lg"></i> Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alertContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+        crossorigin="anonymous"></script>
+    <script src="../js/notifications.js"></script>
+    <script src="../js/cache.js"></script>
+    <script src="../js/pagination.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/dashboard.js"></script>
+    <script src="../js/instructor-dashboard.js"></script>
+
+    <!-- Mobile Navigation Toggle -->
+    <button class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Toggle Navigation">
+        <i class="bi bi-list"></i>
+    </button>
+    <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+
+    <script>
+        // Icon sidebar navigation
+        document.querySelectorAll('.icon-sidebar-item[data-section]').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.icon-sidebar-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+
+                // Close mobile menu after selection
+                if (window.innerWidth <= 768) {
+                    document.querySelector('.icon-sidebar').classList.remove('mobile-open');
+                    document.getElementById('mobileNavOverlay').classList.remove('active');
+                }
+            });
+        });
+
+        // Mobile navigation toggle
+        const mobileNavToggle = document.getElementById('mobileNavToggle');
+        const mobileNavOverlay = document.getElementById('mobileNavOverlay');
+        const iconSidebar = document.querySelector('.icon-sidebar');
+
+        mobileNavToggle.addEventListener('click', () => {
+            iconSidebar.classList.toggle('mobile-open');
+            mobileNavOverlay.classList.toggle('active');
+        });
+
+        mobileNavOverlay.addEventListener('click', () => {
+            iconSidebar.classList.remove('mobile-open');
+            mobileNavOverlay.classList.remove('active');
+        });
+    </script>
+</body>
+
+</html>

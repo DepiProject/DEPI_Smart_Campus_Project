@@ -26,6 +26,48 @@ namespace University.API.Controllers
             return Ok(instructors);
         }
 
+        [HttpGet("paginated")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllPaginated([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            if (pageNumber < 1 || pageSize < 1)
+                return BadRequest(new { message = "Page number and page size must be greater than 0" });
+
+            var (instructors, totalCount) = await _instructorService.GetAllWithPaginationAsync(pageNumber, pageSize);
+            return Ok(new
+            {
+                data = instructors,
+                totalCount,
+                pageNumber,
+                pageSize,
+                totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+            });
+        }
+
+        [HttpGet("search")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> SearchInstructors(
+            [FromQuery] string? searchTerm,
+            [FromQuery] int? departmentId,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            if (pageNumber < 1 || pageSize < 1)
+                return BadRequest(new { message = "Page number and page size must be greater than 0" });
+
+            var (instructors, totalCount) = await _instructorService.SearchInstructorsAsync(searchTerm, departmentId, pageNumber, pageSize);
+            return Ok(new
+            {
+                data = instructors,
+                totalCount,
+                pageNumber,
+                pageSize,
+                totalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                searchTerm,
+                departmentId
+            });
+        }
+
         [HttpGet("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetById(int id)
@@ -111,11 +153,11 @@ namespace University.API.Controllers
                 // - Instructor is not a department head
                 // - Instructor has no active courses with enrollments
                 // Uses soft delete to preserve data integrity and audit trail
-                var result = await _instructorService.DeleteAsync(id);
+                var result = await _instructorService.SoftDeleteAsync(id);
                 if (!result)
                     return NotFound(new { message = "Instructor not found" });
 
-                return Ok(new { message = "Instructor deleted successfully" });
+                return Ok(new { message = "Instructor archived successfully" });
             }
             catch (InvalidOperationException ex)
             {
@@ -158,6 +200,111 @@ namespace University.API.Controllers
             catch (KeyNotFoundException ex)
             {
                 return NotFound(new { message = ex.Message });
+            }
+        }
+
+        // ========== SOFT DELETE OPERATIONS ==========
+
+        [HttpGet("all-including-deleted")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllIncludingDeleted()
+        {
+            var instructors = await _instructorService.GetAllIncludingDeletedAsync();
+            return Ok(instructors);
+        }
+
+        [HttpPost("{id}/restore")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Restore(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new { Success = false, Message = "Invalid instructor ID" });
+
+            try
+            {
+                var restored = await _instructorService.RestoreAsync(id);
+                if (!restored)
+                    return NotFound(new { Success = false, Message = "Instructor not found or is already active" });
+
+                return Ok(new { Success = true, Message = "Instructor restored successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = "An error occurred while restoring the instructor", Error = ex.Message });
+            }
+        }
+
+        [HttpDelete("{id}/permanent")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PermanentDelete(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new { Success = false, Message = "Invalid instructor ID" });
+
+            try
+            {
+                var deleted = await _instructorService.PermanentlyDeleteAsync(id);
+                if (!deleted)
+                    return NotFound(new { Success = false, Message = "Instructor not found" });
+
+                return Ok(new { Success = true, Message = "Instructor permanently deleted" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = "An error occurred while deleting the instructor", Error = ex.Message });
+            }
+        }
+
+        [HttpGet("{id}/can-permanently-delete")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> CanPermanentlyDelete(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new { Success = false, Message = "Invalid instructor ID" });
+
+            try
+            {
+                var result = await _instructorService.CanPermanentlyDeleteAsync(id);
+                return Ok(new { Success = true, CanDelete = result.CanDelete, Reason = result.Reason, RelatedData = result.RelatedDataCount });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = "An error occurred while checking instructor", Error = ex.Message });
+            }
+        }
+
+        // ========== REASSIGNMENT OPERATIONS ==========
+
+        /// <summary>
+        /// Reassign all courses from one instructor to another before deletion
+        /// </summary>
+        [HttpPost("{fromId}/reassign-courses/{toId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ReassignCourses(int fromId, int toId)
+        {
+            if (fromId <= 0 || toId <= 0)
+                return BadRequest(new { Success = false, Message = "Invalid instructor IDs" });
+
+            if (fromId == toId)
+                return BadRequest(new { Success = false, Message = "Cannot reassign to the same instructor" });
+
+            try
+            {
+                var count = await _instructorService.ReassignCoursesToInstructorAsync(fromId, toId);
+                return Ok(new 
+                { 
+                    Success = true, 
+                    Message = $"{count} course(s) reassigned successfully",
+                    ReassignedCount = count 
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Success = false, Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = "An error occurred while reassigning courses", Error = ex.Message });
             }
         }
     }

@@ -67,6 +67,55 @@ namespace University.Infra.Repositories.Users
                 .ToListAsync();
         }
 
+        public async Task<(IEnumerable<Instructor> instructors, int totalCount)> GetInstructorsWithPaginationAsync(int pageNumber, int pageSize)
+        {
+            var query = _context.Instructors
+                .Include(i => i.User)
+                .Include(i => i.Department)
+                .AsQueryable();
+
+            var totalCount = await query.CountAsync();
+            var instructors = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (instructors, totalCount);
+        }
+
+        public async Task<(IEnumerable<Instructor> instructors, int totalCount)> SearchInstructorsAsync(string? searchTerm, int? departmentId, int pageNumber, int pageSize)
+        {
+            var query = _context.Instructors
+                .Include(i => i.User)
+                .Include(i => i.Department)
+                .AsQueryable();
+
+            // Apply search filter
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                searchTerm = searchTerm.ToLower();
+                query = query.Where(i => 
+                    (i.User.FirstName + " " + i.User.LastName).ToLower().Contains(searchTerm) ||
+                    i.User.Email.ToLower().Contains(searchTerm) ||
+                    (i.Department != null && i.Department.Name.ToLower().Contains(searchTerm))
+                );
+            }
+
+            // Apply department filter
+            if (departmentId.HasValue)
+            {
+                query = query.Where(i => i.DepartmentId == departmentId.Value);
+            }
+
+            var totalCount = await query.CountAsync();
+            var instructors = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (instructors, totalCount);
+        }
+
         public async Task<Instructor?> AddInstructorAsync(Instructor instructor)
         {
             _context.Instructors.Add(instructor);
@@ -119,6 +168,122 @@ namespace University.Infra.Repositories.Users
 
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        // ========== SOFT DELETE OPERATIONS ==========
+
+        public async Task<bool> SoftDeleteInstructor(int id)
+        {
+            var instructor = await _context.Instructors
+                .Include(i => i.User)
+                .FirstOrDefaultAsync(i => i.InstructorId == id);
+                
+            if (instructor == null || instructor.IsDeleted)
+                return false;
+
+            // Mark both Instructor and User as deleted
+            instructor.IsDeleted = true;
+            instructor.DeletedAt = DateTime.UtcNow;
+            
+            if (instructor.User != null)
+            {
+                instructor.User.IsDeleted = true;
+                instructor.User.DeletedAt = DateTime.UtcNow;
+            }
+            
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> RestoreInstructor(int id)
+        {
+            var instructor = await _context.Instructors
+                .IgnoreQueryFilters()
+                .Include(i => i.User)
+                .FirstOrDefaultAsync(i => i.InstructorId == id);
+
+            if (instructor == null || !instructor.IsDeleted)
+                return false;
+
+            // Restore both Instructor and User
+            instructor.IsDeleted = false;
+            instructor.DeletedAt = null;
+            
+            if (instructor.User != null)
+            {
+                instructor.User.IsDeleted = false;
+                instructor.User.DeletedAt = null;
+            }
+            
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> PermanentlyDeleteInstructor(int id)
+        {
+            var instructor = await _context.Instructors
+                .IgnoreQueryFilters()
+                .Include(i => i.User)
+                .FirstOrDefaultAsync(i => i.InstructorId == id);
+
+            if (instructor == null)
+                return false;
+
+            // Cascade delete related data
+            // 1. Delete exam submissions graded by this instructor
+            var submissions = await _context.ExamSubmissions
+                .IgnoreQueryFilters()
+                .Where(es => es.InstructorId == id)
+                .ToListAsync();
+            _context.ExamSubmissions.RemoveRange(submissions);
+
+            // 2. Set courses to null instructor (or delete if preferred)
+            var courses = await _context.Courses
+                .IgnoreQueryFilters()
+                .Where(c => c.InstructorId == id)
+                .ToListAsync();
+            foreach (var course in courses)
+            {
+                course.InstructorId = null;
+            }
+
+            // 3. Remove as department head
+            var departments = await _context.Departments
+                .IgnoreQueryFilters()
+                .Where(d => d.HeadId == id)
+                .ToListAsync();
+            foreach (var dept in departments)
+            {
+                dept.HeadId = null;
+            }
+
+            // 4. Delete instructor
+            _context.Instructors.Remove(instructor);
+
+            // 5. Delete associated user
+            if (instructor.User != null)
+            {
+                _context.Users.Remove(instructor.User);
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<IEnumerable<Instructor>> GetAllInstructorsIncludingDeleted()
+        {
+            return await _context.Instructors
+                .IgnoreQueryFilters()
+                .Include(i => i.User)
+                .Include(i => i.Department)
+                .ToListAsync();
+        }
+
+        public async Task<int> GetInstructorCourseCount(int instructorId)
+        {
+            return await _context.Courses
+                .IgnoreQueryFilters()
+                .CountAsync(c => c.InstructorId == instructorId);
         }
     }
 }

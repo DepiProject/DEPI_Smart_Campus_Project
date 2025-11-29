@@ -258,8 +258,46 @@ namespace University.App.Services.Implementations
                 CreditHours = c.Credits,
                 CourseCode = c.CourseCode,
                 InstructorId = c.InstructorId ?? 0,
+                InstructorName = c.Instructor?.FullName ?? "Unknown",
+                DepartmentId = c.DepartmentId,
                 DepartmentName = c.Department?.Name ?? "Unknown"
             });
+        }
+
+        public async Task<(IEnumerable<CourseDTO> courses, int totalCount)> GetAllCoursesWithPaginationAsync(int pageNumber, int pageSize)
+        {
+            var (courses, totalCount) = await _courseRepo.GetCoursesWithPaginationAsync(pageNumber, pageSize);
+            var courseDtos = courses.Select(c => new CourseDTO
+            {
+                Id = c.CourseId,
+                Name = c.Name,
+                CreditHours = c.Credits,
+                CourseCode = c.CourseCode,
+                InstructorId = c.InstructorId ?? 0,
+                InstructorName = c.Instructor?.FullName ?? "Unknown",
+                DepartmentId = c.DepartmentId,
+                DepartmentName = c.Department?.Name ?? "Unknown"
+            }).ToList();
+
+            return (courseDtos, totalCount);
+        }
+
+        public async Task<(IEnumerable<CourseDTO> courses, int totalCount)> SearchCoursesAsync(string? searchTerm, int? departmentId, int? instructorId, int pageNumber, int pageSize)
+        {
+            var (courses, totalCount) = await _courseRepo.SearchCoursesAsync(searchTerm, departmentId, instructorId, pageNumber, pageSize);
+            var courseDtos = courses.Select(c => new CourseDTO
+            {
+                Id = c.CourseId,
+                Name = c.Name,
+                CreditHours = c.Credits,
+                CourseCode = c.CourseCode,
+                InstructorId = c.InstructorId ?? 0,
+                InstructorName = c.Instructor?.FullName ?? "Unknown",
+                DepartmentId = c.DepartmentId,
+                DepartmentName = c.Department?.Name ?? "Unknown"
+            }).ToList();
+
+            return (courseDtos, totalCount);
         }
 
         /// <summary>
@@ -280,6 +318,34 @@ namespace University.App.Services.Implementations
                 Name = course.Name,
                 CreditHours = course.Credits,
                 InstructorId = course.InstructorId ?? 0,
+                InstructorName = course.Instructor?.FullName ?? "Unknown",
+                DepartmentId = course.DepartmentId,
+                DepartmentName = course.Department?.Name ?? "Unknown"
+            };
+        }
+
+        /// <summary>
+        /// Retrieve a specific course by course code
+        /// VALIDATION ENHANCED: Includes related data (department, instructor information)
+        /// </summary>
+        public async Task<CourseDTO?> GetCourseByCode(string courseCode)
+        {
+            // Get all courses and find by course code
+            var courses = await _courseRepo.GetAllCourses();
+            var course = courses.FirstOrDefault(c => 
+                c.CourseCode.Equals(courseCode, StringComparison.OrdinalIgnoreCase));
+            
+            if (course == null) return null;
+
+            return new CourseDTO
+            {
+                Id = course.CourseId,
+                CourseCode = course.CourseCode,
+                Name = course.Name,
+                CreditHours = course.Credits,
+                InstructorId = course.InstructorId ?? 0,
+                InstructorName = course.Instructor?.FullName ?? "Unknown",
+                DepartmentId = course.DepartmentId,
                 DepartmentName = course.Department?.Name ?? "Unknown"
             };
         }
@@ -287,13 +353,23 @@ namespace University.App.Services.Implementations
         /// <summary>
         /// Create a new course with comprehensive validation
         /// VALIDATION ENHANCED: Multi-layer validation applied:
-        /// 1. Instructor existence and validity
-        /// 2. Instructor workload limits (max 2 courses, max 12 credit hours)
-        /// 3. Course code uniqueness
-        /// 4. Department validation
+        /// 1. Course name uniqueness check
+        /// 2. Instructor existence and validity
+        /// 3. Instructor workload limits (max 2 courses, max 12 credit hours)
+        /// 4. Course code uniqueness
+        /// 5. Department validation
         /// </summary>
         public async Task<CreateCourseDTO?> AddCourse(CreateCourseDTO courseDto)
         {
+            // VALIDATION ENHANCED: Check for duplicate course name
+            // Prevents creating courses with identical names
+            var allCourses = await _courseRepo.GetAllCourses();
+            var duplicateName = allCourses.Any(c => 
+                c.Name.Trim().Equals(courseDto.Name.Trim(), StringComparison.OrdinalIgnoreCase));
+            
+            if (duplicateName)
+                throw new InvalidOperationException($"A course with the name '{courseDto.Name}' already exists. Please use a different name.");
+
             // VALIDATION ENHANCED: Instructor existence check
             // Prevents course assignment to non-existent or deleted instructors
             var instructor = await _instructorRepo.GetInstructorByIdAsync(courseDto.InstructorId)
@@ -310,21 +386,27 @@ namespace University.App.Services.Implementations
             var generatedCourseCode = await GenerateCourseCodeAsync(courseDto.DepartmentId);
 
             // VALIDATION ENHANCED: Create new course entity with valid data
+            // CourseCode is assigned BEFORE saving to database
             // IsDeleted set to false for new courses (soft delete pattern)
             // DepartmentId used for enrollment filtering and restriction enforcement
             var course = new Course
             {
                 CourseCode = generatedCourseCode,
-                Name = courseDto.Name,
+                Name = courseDto.Name.Trim(),
                 Credits = courseDto.CreditHours,
                 InstructorId = courseDto.InstructorId,
                 DepartmentId = courseDto.DepartmentId,
-                IsDeleted = false
+                IsDeleted = false,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             };
 
             // VALIDATION ENHANCED: Persist course to repository
             // Repository handles database transaction and consistency
             await _courseRepo.AddCourse(course);
+            
+            // Return the DTO with generated course code for response
+            courseDto.CourseCode = generatedCourseCode;
             return courseDto;
         }
 
@@ -358,9 +440,10 @@ namespace University.App.Services.Implementations
             // VALIDATION ENHANCED: Update course properties
             // Only updating name, credit hours, and instructor assignment
             // CourseCode cannot be modified (immutable identifier)
-            courseExist.Name = courseDto.CourseName;
+            courseExist.Name = courseDto.Name;
             courseExist.Credits = courseDto.CreditHours;
             courseExist.InstructorId = courseDto.InstructorId;
+            courseExist.DepartmentId = courseDto.DepartmentId;
 
             // VALIDATION ENHANCED: Persist changes to repository
             var updatedCourse = await _courseRepo.UpdateCourse(courseExist);
@@ -413,6 +496,32 @@ namespace University.App.Services.Implementations
         }
 
         /// <summary>
+        /// Check if course can be permanently deleted
+        /// Returns information about related data that would prevent deletion
+        /// </summary>
+        public async Task<(bool CanDelete, string Reason, int RelatedDataCount)> CanPermanentlyDeleteCourse(int id)
+        {
+            // IMPORTANT: Must get course including deleted ones since we're checking a deleted course
+            var allCourses = await _courseRepo.GetAllCoursesIncludingDeleted();
+            var course = allCourses.FirstOrDefault(c => c.CourseId == id);
+            
+            if (course == null)
+            {
+                return (false, "Course not found", 0);
+            }
+
+            // Get enrollment count for this course
+            var enrollmentCount = await _courseRepo.GetActiveEnrollmentCountByCourseId(id);
+            
+            if (enrollmentCount > 0)
+            {
+                return (false, $"Course has {enrollmentCount} enrollment record(s). Cannot permanently delete courses with enrollment history to preserve student academic records.", enrollmentCount);
+            }
+
+            return (true, "Course can be safely deleted - no related data found", 0);
+        }
+
+        /// <summary>
         /// Retrieve all courses including soft-deleted ones (Admin audit)
         /// VALIDATION ENHANCED: Admin-only operation for administrative review
         /// </summary>
@@ -428,7 +537,11 @@ namespace University.App.Services.Implementations
                 Name = c.Name,
                 CreditHours = c.Credits,
                 InstructorId = c.InstructorId ?? 0,
-                CourseCode = c.CourseCode
+                InstructorName = c.Instructor?.FullName ?? "Unknown",
+                DepartmentId = c.DepartmentId,
+                DepartmentName = c.Department?.Name ?? "Unknown",
+                CourseCode = c.CourseCode,
+                DeletedAt = c.DeletedAt  // Include soft delete timestamp
             });
         }
 
@@ -600,35 +713,24 @@ namespace University.App.Services.Implementations
             // Generate prefix based on department name
             string prefix = GenerateCourseCodePrefix(departmentName);
 
-            // Get all courses for this department and find the next number
-            var departmentCourses = await _courseRepo.GetAllCoursesByDepartmentId(departmentId);
-            var existingCodesForDept = departmentCourses
-                .Where(c => c.CourseCode.StartsWith(prefix))
-                .Select(c => c.CourseCode)
-                .ToList();
+            // Get ALL existing course codes (including deleted) to avoid duplicates
+            var allExistingCodes = allCourses
+                .Where(c => c.CourseCode.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                .Select(c => c.CourseCode.ToUpper())
+                .ToHashSet();
 
-            // Extract the numeric suffix from existing codes and find the highest number
+            // Find the next available number
             int nextNumber = 1;
-            if (existingCodesForDept.Any())
+            string generatedCode;
+            
+            // Keep incrementing until we find an unused code
+            do
             {
-                var numbers = existingCodesForDept
-                    .Select(code => 
-                    {
-                        // Extract digits from the end of the course code
-                        var digitsOnly = new string(code.Where(char.IsDigit).ToArray());
-                        return string.IsNullOrEmpty(digitsOnly) ? 0 : int.Parse(digitsOnly);
-                    })
-                    .Where(n => n > 0)
-                    .OrderByDescending(n => n);
+                generatedCode = $"{prefix}{nextNumber:D2}";
+                nextNumber++;
+            } while (allExistingCodes.Contains(generatedCode));
 
-                if (numbers.Any())
-                {
-                    nextNumber = numbers.First() + 1;
-                }
-            }
-
-            // Combine prefix with number (formatted as 2 digits: 01, 02, etc.)
-            return $"{prefix}{nextNumber:D2}";
+            return generatedCode;
         }
 
         /// <summary>

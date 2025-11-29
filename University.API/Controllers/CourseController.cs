@@ -49,6 +49,78 @@ namespace University.API.Controllers
             }
         }
 
+        [HttpGet("paginated")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<ActionResult> GetAllCoursesPaginated([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                if (pageNumber < 1 || pageSize < 1)
+                    return BadRequest(new { message = "Page number and page size must be greater than 0" });
+
+                var (courses, totalCount) = await _courseService.GetAllCoursesWithPaginationAsync(pageNumber, pageSize);
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Active courses retrieved successfully",
+                    Data = courses,
+                    TotalCount = totalCount,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize,
+                    TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "An error occurred while retrieving courses",
+                    Error = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("search")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<ActionResult> SearchCourses(
+            [FromQuery] string? searchTerm,
+            [FromQuery] int? departmentId,
+            [FromQuery] int? instructorId,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                if (pageNumber < 1 || pageSize < 1)
+                    return BadRequest(new { message = "Page number and page size must be greater than 0" });
+
+                var (courses, totalCount) = await _courseService.SearchCoursesAsync(searchTerm, departmentId, instructorId, pageNumber, pageSize);
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Courses search completed successfully",
+                    Data = courses,
+                    TotalCount = totalCount,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize,
+                    TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                    SearchTerm = searchTerm,
+                    DepartmentId = departmentId,
+                    InstructorId = instructorId
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "An error occurred while searching courses",
+                    Error = ex.Message
+                });
+            }
+        }
+
         /// <summary>
         /// Get all courses including soft-deleted ones (Admin only)
         /// VALIDATION ENHANCED: Admin-only operation showing all courses with deletion status
@@ -113,6 +185,48 @@ namespace University.API.Controllers
                     {
                         Success = false,
                         Message = "Course not found or has been deleted"
+                    });
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Course retrieved successfully",
+                    Data = course
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "An error occurred while retrieving the course",
+                    Error = ex.Message
+                });
+            }
+        }
+
+        // Get a specific course by course code
+        [HttpGet("code/{courseCode}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<CourseDTO>> GetCourseByCode(string courseCode)
+        {
+            // Validate course code
+            if (string.IsNullOrWhiteSpace(courseCode))
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Invalid course code. Course code cannot be empty."
+                });
+
+            try
+            {
+                var course = await _courseService.GetCourseByCode(courseCode);
+                if (course == null)
+                    return NotFound(new
+                    {
+                        Success = false,
+                        Message = $"Course with code '{courseCode}' not found or has been deleted"
                     });
 
                 return Ok(new
@@ -216,11 +330,18 @@ namespace University.API.Controllers
             }
             catch (Exception ex)
             {
+                // Log the full exception for debugging
+                var innerMessage = ex.InnerException?.Message ?? "";
+                var fullError = string.IsNullOrEmpty(innerMessage) 
+                    ? ex.Message 
+                    : $"{ex.Message} | Inner: {innerMessage}";
+                    
                 return StatusCode(500, new
                 {
                     Success = false,
                     Message = "An error occurred while creating the course",
-                    Error = ex.Message
+                    Error = fullError,
+                    Details = ex.InnerException?.Message
                 });
             }
         }
@@ -302,20 +423,26 @@ namespace University.API.Controllers
             }
             catch (Exception ex)
             {
+                // Log the full exception for debugging
+                var innerMessage = ex.InnerException?.Message ?? "";
+                var fullError = string.IsNullOrEmpty(innerMessage) 
+                    ? ex.Message 
+                    : $"{ex.Message} | Inner: {innerMessage}";
+                    
                 return StatusCode(500, new
                 {
                     Success = false,
                     Message = "An error occurred while updating the course",
-                    Error = ex.Message
+                    Error = fullError,
+                    Details = ex.InnerException?.Message
                 });
             }
         }
 
         /// <summary>
         /// Soft delete a course (Admin only)
-        /// VALIDATION ENHANCED: Business rule protection applied
-        /// Note: Related data (enrollments, exams, attendance) is preserved through soft delete
-        /// Soft delete maintains referential integrity and audit trail
+        /// VALIDATION ENHANCED: Soft delete - marks course as deleted (sets DeletedAt)
+        /// Course can be restored later if needed
         /// </summary>
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
@@ -338,9 +465,8 @@ namespace University.API.Controllers
                 // VALIDATION ENHANCED: Soft delete implementation
                 // Service checks:
                 // - Course existence before deletion
-                // - Uses soft delete to preserve data integrity
-                // - Related enrollments, exams, attendance preserved
-                // - Audit trail maintained for compliance
+                // - Marks course as deleted (sets DeletedAt timestamp)
+                // - Course can be restored later using restore endpoint
                 var deleted = await _courseService.DeleteCourse(id);
                 if (!deleted)
                     return NotFound(new
@@ -352,8 +478,8 @@ namespace University.API.Controllers
                 return Ok(new
                 {
                     Success = true,
-                    Message = "Course deleted successfully (soft delete)",
-                    Note = "Related exams, enrollments, and attendance records are preserved"
+                    Message = "Course soft deleted successfully (can be restored)",
+                    Note = "Course is archived but can be restored from deleted courses page"
                 });
             }
             catch (InvalidOperationException ex)
@@ -434,6 +560,104 @@ namespace University.API.Controllers
                 {
                     Success = false,
                     Message = "An error occurred while restoring the course",
+                    Error = ex.Message
+                });
+            }
+        }
+
+        /// <summary>
+        /// Check if a course can be permanently deleted (Admin only)
+        /// Returns true if course has no related data (enrollments, exams, attendance)
+        /// </summary>
+        [HttpGet("{id}/can-permanently-delete")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<ActionResult> CanPermanentlyDelete(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Invalid course ID"
+                });
+
+            try
+            {
+                var result = await _courseService.CanPermanentlyDeleteCourse(id);
+                return Ok(new
+                {
+                    Success = true,
+                    CanDelete = result.CanDelete,
+                    Reason = result.Reason,
+                    RelatedData = result.RelatedDataCount
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "An error occurred while checking course",
+                    Error = ex.Message
+                });
+            }
+        }
+
+        /// <summary>
+        /// Permanently delete a soft-deleted course (Admin only)
+        /// VALIDATION ENHANCED: Hard delete - permanently removes course from database
+        /// WARNING: This operation is irreversible - use only for cleanup
+        /// </summary>
+        [HttpDelete("{id}/permanent")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult> PermanentlyDeleteCourse(int id)
+        {
+            // VALIDATION ENHANCED: Course ID validation
+            if (id <= 0)
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Invalid course ID. ID must be a positive integer."
+                });
+
+            try
+            {
+                // WARNING: This permanently removes the course from database
+                // Soft-deleted courses can be permanently removed to free up course codes
+                var deleted = await _courseService.PermanentlyDeleteCourse(id);
+                if (!deleted)
+                    return NotFound(new
+                    {
+                        Success = false,
+                        Message = "Course not found"
+                    });
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Course permanently deleted from database",
+                    Warning = "This operation is irreversible",
+                    CourseId = id
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Cannot permanently delete course",
+                    Error = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "An error occurred while permanently deleting the course",
                     Error = ex.Message
                 });
             }

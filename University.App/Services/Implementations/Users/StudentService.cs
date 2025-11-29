@@ -19,23 +19,15 @@ namespace University.App.Services.Implementations.Users
 
         public async Task<StudentDTO> CreateAsync(CreateStudentDto dto)
         {
-            // Validate student code uniqueness
-            if (!await _studentRepository.IsStudentCodeUniqueAsync(dto.StudentCode))
-            {
-                throw new InvalidOperationException($"Student code '{dto.StudentCode}' already exists.");
-            }
+            // AUTO-GENERATE STUDENT CODE (meaningful format: YYYY-DEPT-XXX)
+            string generatedCode = await GenerateStudentCodeAsync(dto.DepartmentId);
+            dto.StudentCode = generatedCode; // Override any provided code
 
             // Validate email uniqueness
             var existingUser = await _userManager.FindByEmailAsync(dto.Email);
             if (existingUser != null)
             {
                 throw new InvalidOperationException($"Email '{dto.Email}' is already registered.");
-            }
-
-            // Validate student code format (additional server-side check)
-            if (!System.Text.RegularExpressions.Regex.IsMatch(dto.StudentCode, @"^[A-Za-z][A-Za-z0-9]*$"))
-            {
-                throw new InvalidOperationException("Student code must start with a letter and contain only alphanumeric characters.");
             }
 
             // Validate level is within acceptable range
@@ -58,7 +50,8 @@ namespace University.App.Services.Implementations.Users
                 FirstName = dto.FirstName.Trim(),
                 LastName = dto.LastName.Trim(),
                 Role = "Student",
-                EmailConfirmed = true
+                EmailConfirmed = true,
+                MustChangePassword = true // Force password change on first login
             };
 
             var result = await _userManager.CreateAsync(user, dto.Password);
@@ -76,7 +69,7 @@ namespace University.App.Services.Implementations.Users
                 {
                     UserId = user.Id,
                     FullName = dto.FullName.Trim(),
-                    StudentCode = dto.StudentCode.ToUpper(), // Standardize to uppercase
+                    StudentCode = dto.StudentCode, // Use auto-generated code
                     ContactNumber = dto.ContactNumber?.Trim(),
                     
                     Level = dto.Level,
@@ -110,14 +103,14 @@ namespace University.App.Services.Implementations.Users
                 throw new InvalidOperationException("Level must be 1, 2, 3, or 4.");
             }
 
-            // 2. Validate department exists if provided
-            if (dto.DepartmentId.HasValue && dto.DepartmentId.Value <= 0)
+            // 2. Validate department exists
+            if (dto.DepartmentId <= 0)
             {
                 throw new InvalidOperationException("Invalid department ID.");
             }
 
             // 3. Check if student can change departments (business rule)
-            if (dto.DepartmentId.HasValue && student.DepartmentId != dto.DepartmentId)
+            if (student.DepartmentId != dto.DepartmentId)
             {
                 // Check for active enrollments in current department
                 var hasActiveEnrollments = student.Enrollments?.Any(e =>
@@ -130,8 +123,8 @@ namespace University.App.Services.Implementations.Users
                 }
             }
 
-            student.FullName = dto.FullName.Trim();
-            student.ContactNumber = dto.ContactNumber?.Trim();
+            // ========== ADMIN UPDATE: Only Level and Department ==========
+            // Do NOT update name or contact number
             student.Level = dto.Level;
             student.DepartmentId = dto.DepartmentId;
             student.UpdatedAt = DateTime.UtcNow;
@@ -191,6 +184,20 @@ namespace University.App.Services.Implementations.Users
             return students.Select(MapToDto);
         }
 
+        public async Task<(IEnumerable<StudentDTO> students, int totalCount)> GetAllWithPaginationAsync(int pageNumber, int pageSize)
+        {
+            var (students, totalCount) = await _studentRepository.GetStudentsWithPaginationAsync(pageNumber, pageSize);
+            var studentDtos = students.Select(MapToDto).ToList();
+            return (studentDtos, totalCount);
+        }
+
+        public async Task<(IEnumerable<StudentDTO> students, int totalCount)> SearchStudentsAsync(string? searchTerm, int? departmentId, int pageNumber, int pageSize)
+        {
+            var (students, totalCount) = await _studentRepository.SearchStudentsAsync(searchTerm, departmentId, pageNumber, pageSize);
+            var studentDtos = students.Select(MapToDto).ToList();
+            return (studentDtos, totalCount);
+        }
+
         public async Task<IEnumerable<StudentDTO>> GetByDepartmentAsync(int departmentId)
         {
             var students = await _studentRepository.GetByDepartmentAsync(departmentId);
@@ -211,9 +218,11 @@ namespace University.App.Services.Implementations.Users
                 throw new KeyNotFoundException("Student profile not found.");
             }
 
-            student.FullName = dto.FullName.Trim();
+            // ========== STUDENT UPDATE: Only Contact Number ==========
+            // Do NOT update name, email, code, level, or department
             student.ContactNumber = dto.ContactNumber?.Trim();
             student.UpdatedAt = DateTime.UtcNow;
+
             await _studentRepository.UpdateStudent(student);
             var updatedStudent = await _studentRepository.GetByIdWithDetailsAsync(student.StudentId);
             return MapToDto(updatedStudent!);
@@ -231,6 +240,8 @@ namespace University.App.Services.Implementations.Users
             {
                 StudentId = student.StudentId,
                 FullName = student.FullName,
+                FirstName = student.User?.FirstName ?? string.Empty,
+                LastName = student.User?.LastName ?? string.Empty,
                 StudentCode = student.StudentCode,
                 ContactNumber = student.ContactNumber,
                 Level = student.Level,
@@ -239,8 +250,83 @@ namespace University.App.Services.Implementations.Users
                 CreatedAt = student.CreatedAt,
                 UserId = student.UserId,
                 Email = student.User?.Email ?? string.Empty,
-
+                IsDeleted = student.IsDeleted,
+                DeletedAt = student.DeletedAt
             };
+        }
+
+        // ========== SOFT DELETE OPERATIONS ==========
+
+        public async Task<bool> SoftDeleteAsync(int id)
+        {
+            // ENHANCED: Check for active enrollments before soft delete
+            var enrollmentCount = await _studentRepository.GetStudentEnrollmentCount(id);
+            
+            if (enrollmentCount > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot archive student with {enrollmentCount} active enrollment(s). " +
+                    $"Student must complete, drop, or withdraw from all courses first.");
+            }
+
+            return await _studentRepository.SoftDeleteStudent(id);
+        }
+
+        public async Task<bool> RestoreAsync(int id)
+        {
+            return await _studentRepository.RestoreStudent(id);
+        }
+
+        public async Task<bool> PermanentlyDeleteAsync(int id)
+        {
+            // ENHANCED: Strict validation for permanent delete
+            var (canDelete, reason, count) = await CanPermanentlyDeleteAsync(id);
+            
+            if (!canDelete)
+            {
+                throw new InvalidOperationException(reason);
+            }
+
+            return await _studentRepository.PermanentlyDeleteStudent(id);
+        }
+
+        public async Task<(bool CanDelete, string Reason, int RelatedDataCount)> CanPermanentlyDeleteAsync(int id)
+        {
+            var enrollmentCount = await _studentRepository.GetStudentEnrollmentCount(id);
+            
+            if (enrollmentCount > 0)
+            {
+                return (false, $"Student has {enrollmentCount} enrollment record(s). Cannot permanently delete students with enrollment history to preserve academic records.", enrollmentCount);
+            }
+
+            return (true, "Student can be safely deleted - no enrollment records found", 0);
+        }
+
+        public async Task<IEnumerable<StudentDTO>> GetAllIncludingDeletedAsync()
+        {
+            var students = await _studentRepository.GetAllStudentsIncludingDeleted();
+            return students.Select(MapToDto);
+        }
+
+        /// <summary>
+        /// Generates a meaningful student code format: YYYY-DEPT-XXX
+        /// Example: 2024-CS-001, 2024-ENG-042
+        /// </summary>
+        private async Task<string> GenerateStudentCodeAsync(int? departmentId)
+        {
+            string year = DateTime.Now.Year.ToString();
+            string deptCode = "GEN"; // Default for students without department
+
+            // Simple sequential numbering for now
+            // Can be enhanced with department logic later if needed
+            string codePrefix = $"{year}-{deptCode}-";
+            
+            // Get all students to find next sequence number
+            var allStudents = await _studentRepository.GetAllStudentsAsync();
+            int count = allStudents.Count(s => s.StudentCode.StartsWith(codePrefix)) + 1;
+
+            string sequenceNumber = count.ToString("D3"); // Format as 001, 002, etc.
+            return $"{year}-{deptCode}-{sequenceNumber}";
         }
     }
 }

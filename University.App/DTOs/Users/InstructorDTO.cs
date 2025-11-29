@@ -18,6 +18,9 @@ namespace University.App.DTOs.Users
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
 
+        // Soft delete info
+        public bool IsDeleted { get; set; }
+        public DateTime? DeletedAt { get; set; }
     }
     public class CreateInstructorDto
     {
@@ -136,57 +139,25 @@ namespace University.App.DTOs.Users
     public class UpdateInstructorDto
     {
         /// <summary>
-        /// VALIDATION ENHANCED: FullName for admin updates
-        /// - Required to ensure instructors always have valid full names
-        /// - ValidName custom attribute maintains naming consistency
-        /// - MinLength (5) and MaxLength (150) constraints prevent invalid inputs
+        /// ADMIN UPDATE: Only Department Assignment
+        /// - Admin can only change instructor's department assignment
+        /// - Personal details (name, contact) must be updated by instructor themselves
+        /// - Required field ensures instructor is always assigned to a department
         /// </summary>
-        [Required(ErrorMessage = "Full name is required")]
-        [ValidName]
-        [MinLength(5, ErrorMessage = "Full name must be at least 5 characters")]
-        [MaxLength(150, ErrorMessage = "Full name cannot exceed 150 characters")]
-        public string FullName { get; set; } = string.Empty;
-
-        /// <summary>
-        /// VALIDATION ENHANCED: ContactNumber validation (Admin Update)
-        /// - Optional field for flexibility
-        /// - If provided, must be exactly 11 characters (Egyptian standard)
-        /// - Strict MinLength and MaxLength prevent partial phone numbers
-        /// </summary>
-        [MaxLength(11, ErrorMessage = "Contact number cannot exceed 11 characters")]
-        [MinLength(11, ErrorMessage = "Contact number must be exactly 11 characters")]
-        public string? ContactNumber { get; set; }
-
-        /// <summary>
-        /// VALIDATION ENHANCED: DepartmentId validation for admin assignment
-        /// - Optional to allow unassigned instructors
-        /// - Range validation ensures only valid department IDs
-        /// - Prevents accidental assignment of invalid department references
-        /// </summary>
+        [Required(ErrorMessage = "Department ID is required")]
         [Range(1, int.MaxValue, ErrorMessage = "Department ID must be a positive number")]
-        public int? DepartmentId { get; set; }
+        public int DepartmentId { get; set; }
     }
 
     // Self-Update DTO (For Instructor - limited fields)
     public class UpdateInstructorProfileDto
     {
         /// <summary>
-        /// VALIDATION ENHANCED: FullName for instructor self-updates
-        /// - Required field to maintain profile completeness
-        /// - ValidName custom attribute enforces naming standards
-        /// - Same length constraints (5-150) as other FullName fields for consistency
-        /// </summary>
-        [Required(ErrorMessage = "Full name is required")]
-        [ValidName]
-        [MinLength(5, ErrorMessage = "Full name must be at least 5 characters")]
-        [MaxLength(150, ErrorMessage = "Full name cannot exceed 150 characters")]
-        public string FullName { get; set; } = string.Empty;
-
-        /// <summary>
-        /// VALIDATION ENHANCED: ContactNumber for instructor profile updates
+        /// INSTRUCTOR PROFILE UPDATE: Only Contact Number
+        /// - Personal details (name) cannot be changed after account creation
+        /// - Names are official identity information tied to academic records
         /// - Optional to allow instructors without contact info initially
-        /// - If provided, enforces exact 11 character length
-        /// - Consistent with Egyptian phone number standard used throughout system
+        /// - If provided, enforces exact 11 character length (Egyptian standard)
         /// </summary>
         [MaxLength(11, ErrorMessage = "Contact number cannot exceed 11 characters")]
         [MinLength(11, ErrorMessage = "Contact number must be exactly 11 characters")]

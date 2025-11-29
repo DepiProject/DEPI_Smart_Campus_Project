@@ -79,6 +79,24 @@ namespace University.Infra.Data
                 }
                 if (entry.State == EntityState.Deleted)
                 {
+                    // Check if entity is already soft-deleted (IsDeleted = true)
+                    // If yes, allow permanent deletion (hard delete)
+                    var isDeletedProperty = entry.Entity.GetType().GetProperty("IsDeleted");
+                    bool isAlreadySoftDeleted = false;
+                    
+                    if (isDeletedProperty != null)
+                    {
+                        var value = isDeletedProperty.GetValue(entry.Entity);
+                        isAlreadySoftDeleted = value is bool b && b;
+                    }
+
+                    // If already soft-deleted, allow hard delete (don't intercept)
+                    if (isAlreadySoftDeleted)
+                    {
+                        continue; // Skip interception - let it be permanently deleted
+                    }
+
+                    // Otherwise, convert to soft delete
                     if (entry.Entity is AppUser user)
                     {
                         entry.State = EntityState.Modified;

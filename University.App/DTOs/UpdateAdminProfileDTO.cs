@@ -5,7 +5,7 @@ namespace University.App.DTOs
 {
     /// <summary>
     /// Admin self-update DTO - Allows admins to update their own profile
-    /// Limited to FirstName, LastName, and password change
+    /// Limited to FirstName, LastName, ContactNumber, and password change
     /// </summary>
     public class UpdateAdminProfileDTO
     {
@@ -20,6 +20,9 @@ namespace University.App.DTOs
         [MinLength(2, ErrorMessage = "Last name must be at least 2 characters")]
         [MaxLength(50, ErrorMessage = "Last name cannot exceed 50 characters")]
         public string LastName { get; set; } = string.Empty;
+
+        [RegularExpression(@"^\d{11}$", ErrorMessage = "Contact number must be exactly 11 digits")]
+        public string? ContactNumber { get; set; }
 
         [Required(ErrorMessage = "Current password is required for security verification")]
         [MinLength(6, ErrorMessage = "Password must be at least 6 characters")]

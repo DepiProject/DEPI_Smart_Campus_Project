@@ -6,6 +6,8 @@ namespace University.App.Interfaces.Courses
         // Basic CRUD
         Task<Course?> GetCourseById(int id);
         Task<IEnumerable<Course>> GetAllCourses();
+        Task<(IEnumerable<Course> courses, int totalCount)> GetCoursesWithPaginationAsync(int pageNumber, int pageSize);
+        Task<(IEnumerable<Course> courses, int totalCount)> SearchCoursesAsync(string? searchTerm, int? departmentId, int? instructorId, int pageNumber, int pageSize);
         Task<IEnumerable<Course>> GetAllCoursesIncludingDeleted();
         Task<Course?> AddCourse(Course course);
         Task<Course?> UpdateCourse(Course course);

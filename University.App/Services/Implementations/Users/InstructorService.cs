@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using University.App.DTOs.Users;
+using University.App.Interfaces.Courses;
 using University.App.Interfaces.Users;
 using University.App.Services.IServices.Users;
 using University.Core.Entities;
@@ -10,10 +11,16 @@ namespace University.App.Services.Implementations.Users
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly IInstructorRepository _instructorRepository;
-        public InstructorService(IInstructorRepository instructorRepository, UserManager<AppUser> userManager)
+        private readonly ICourseRepository _courseRepository;
+        
+        public InstructorService(
+            IInstructorRepository instructorRepository, 
+            UserManager<AppUser> userManager,
+            ICourseRepository courseRepository)
         {
             _instructorRepository = instructorRepository;
             _userManager = userManager;
+            _courseRepository = courseRepository;
         }
         public async Task<InstructorDTO?> GetByIdAsync(int id)
         {
@@ -36,6 +43,34 @@ namespace University.App.Services.Implementations.Users
             }
 
             return dtos;
+        }
+
+        public async Task<(IEnumerable<InstructorDTO> instructors, int totalCount)> GetAllWithPaginationAsync(int pageNumber, int pageSize)
+        {
+            var (instructors, totalCount) = await _instructorRepository.GetInstructorsWithPaginationAsync(pageNumber, pageSize);
+            var dtos = new List<InstructorDTO>();
+
+            foreach (var instructor in instructors)
+            {
+                var isHead = await _instructorRepository.IsHeadOfAnyDepartmentAsync(instructor.InstructorId);
+                dtos.Add(MapToDto(instructor, isHead));
+            }
+
+            return (dtos, totalCount);
+        }
+
+        public async Task<(IEnumerable<InstructorDTO> instructors, int totalCount)> SearchInstructorsAsync(string? searchTerm, int? departmentId, int pageNumber, int pageSize)
+        {
+            var (instructors, totalCount) = await _instructorRepository.SearchInstructorsAsync(searchTerm, departmentId, pageNumber, pageSize);
+            var dtos = new List<InstructorDTO>();
+
+            foreach (var instructor in instructors)
+            {
+                var isHead = await _instructorRepository.IsHeadOfAnyDepartmentAsync(instructor.InstructorId);
+                dtos.Add(MapToDto(instructor, isHead));
+            }
+
+            return (dtos, totalCount);
         }
 
         public async Task<IEnumerable<InstructorDTO>> GetByDepartmentAsync(int departmentId)
@@ -71,7 +106,8 @@ namespace University.App.Services.Implementations.Users
                 FirstName = dto.FirstName,
                 LastName = dto.LastName,
                 Role = "Instructor",
-                EmailConfirmed = true
+                EmailConfirmed = true,
+                MustChangePassword = true // Force password change on first login
             };
 
             // Create user with validated password (meets security requirements)
@@ -110,7 +146,7 @@ namespace University.App.Services.Implementations.Users
 
         public async Task<InstructorDTO> UpdateAsync(int id, UpdateInstructorDto dto)
         {
-            // VALIDATION ENHANCED: Verify instructor exists before update
+            // ADMIN UPDATE: Only department assignment allowed
             var instructor = await _instructorRepository.GetByIdWithDetailsAsync(id);
 
             if (instructor == null)
@@ -118,26 +154,42 @@ namespace University.App.Services.Implementations.Users
                 throw new KeyNotFoundException($"Instructor with ID {id} not found.");
             }
 
-            // VALIDATION ENHANCED: Validate department assignment if changing
-            // Ensures DepartmentId is positive if provided
-            if (dto.DepartmentId.HasValue && dto.DepartmentId.Value <= 0)
+            // Validate department exists
+            if (dto.DepartmentId <= 0)
             {
                 throw new InvalidOperationException("Invalid Department ID provided");
             }
 
-            // Update validated fields from DTO
-            // FullName and ContactNumber have been validated at DTO level
-            instructor.FullName = dto.FullName;
-            instructor.ContactNumber = dto.ContactNumber;
+            // BUSINESS RULE: Cannot change department if instructor is head of current department
+            if (instructor.DepartmentId.HasValue && instructor.DepartmentId.Value != dto.DepartmentId)
+            {
+                var isHead = await _instructorRepository.IsHeadOfAnyDepartmentAsync(id);
+                if (isHead)
+                {
+                    throw new InvalidOperationException("Cannot change department for instructor who is head of their current department. Please reassign department leadership first.");
+                }
+
+                // BUSINESS RULE: Cannot change department if instructor has active courses in current department
+                var courses = await _courseRepository.GetCoursesByInstructorId(id);
+                var activeCourses = courses.Where(c => !c.IsDeleted && c.DepartmentId == instructor.DepartmentId).ToList();
+                
+                if (activeCourses.Any())
+                {
+                    var courseNames = string.Join(", ", activeCourses.Select(c => c.Name));
+                    throw new InvalidOperationException($"Cannot change department. Instructor has active courses in current department: {courseNames}. Please reassign or remove these courses first.");
+                }
+            }
+
+            // Admin can only update department assignment
             instructor.DepartmentId = dto.DepartmentId;
             instructor.UpdatedAt = DateTime.UtcNow;
 
             await _instructorRepository.UpdateInstructor(instructor);
 
             var updatedInstructor = await _instructorRepository.GetByIdWithDetailsAsync(id);
-            var isHead = await _instructorRepository.IsHeadOfAnyDepartmentAsync(id);
+            var isHeadAfterUpdate = await _instructorRepository.IsHeadOfAnyDepartmentAsync(id);
            
-            return MapToDto(updatedInstructor!, isHead);
+            return MapToDto(updatedInstructor!, isHeadAfterUpdate);
         }
 
         public async Task<bool> DeleteAsync(int id)
@@ -189,19 +241,25 @@ namespace University.App.Services.Implementations.Users
 
         public async Task<InstructorDTO> UpdateMyProfileAsync(int userId, UpdateInstructorProfileDto dto)
         {
-            // VALIDATION ENHANCED: Verify instructor exists before self-update
+            // INSTRUCTOR PROFILE UPDATE: Only contact number allowed
             var instructor = await _instructorRepository.GetByUserIdAsync(userId);
             if (instructor == null)
             {
                 throw new KeyNotFoundException("Instructor profile not found for the current user.");
             }
 
-            // VALIDATION ENHANCED: Restrictive update policy for instructor self-updates
-            // Instructors can only update limited fields (FullName and ContactNumber)
-            // Department and other assignments remain admin-controlled for data integrity
-            instructor.FullName = dto.FullName;
+            // Instructors can only update contact number
+            // Names are fixed identity information tied to academic records
             instructor.ContactNumber = dto.ContactNumber;
             instructor.UpdatedAt = DateTime.UtcNow;
+
+            // Update the associated user entity with PhoneNumber
+            var user = await _userManager.FindByIdAsync(instructor.UserId.ToString());
+            if (user != null)
+            {
+                user.PhoneNumber = dto.ContactNumber;
+                await _userManager.UpdateAsync(user);
+            }
 
             _instructorRepository.UpdateInstructor(instructor);
 
@@ -224,8 +282,142 @@ namespace University.App.Services.Implementations.Users
                 UserId = instructor.UserId,
                 Email = instructor.User?.Email ?? string.Empty,
                 FirstName = instructor.User?.FirstName ?? string.Empty,
-                LastName = instructor.User?.LastName ?? string.Empty
+                LastName = instructor.User?.LastName ?? string.Empty,
+                IsDeleted = instructor.IsDeleted,
+                DeletedAt = instructor.DeletedAt
             };
+        }
+
+        // ========== SOFT DELETE OPERATIONS ==========
+
+        public async Task<bool> SoftDeleteAsync(int id)
+        {
+            // ENHANCED: Check for active courses before soft delete
+            var activeCourses = await _courseRepository.GetCoursesByInstructorId(id);
+            var activeCount = activeCourses.Count(c => !c.IsDeleted);
+            
+            if (activeCount > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot archive instructor with {activeCount} active course(s). " +
+                    $"Please reassign courses to another instructor first.");
+            }
+
+            // Check if instructor is department head
+            var isHead = await _instructorRepository.IsHeadOfAnyDepartmentAsync(id);
+            if (isHead)
+            {
+                throw new InvalidOperationException(
+                    "Cannot archive instructor who is a department head. " +
+                    "Please assign a new department head first.");
+            }
+
+            return await _instructorRepository.SoftDeleteInstructor(id);
+        }
+
+        public async Task<bool> RestoreAsync(int id)
+        {
+            return await _instructorRepository.RestoreInstructor(id);
+        }
+
+        public async Task<bool> PermanentlyDeleteAsync(int id)
+        {
+            // ENHANCED: Strict validation for permanent delete
+            var (canDelete, reason, count) = await CanPermanentlyDeleteAsync(id);
+            
+            if (!canDelete)
+            {
+                throw new InvalidOperationException(reason);
+            }
+
+            return await _instructorRepository.PermanentlyDeleteInstructor(id);
+        }
+
+        public async Task<(bool CanDelete, string Reason, int RelatedDataCount)> CanPermanentlyDeleteAsync(int id)
+        {
+            var courseCount = await _instructorRepository.GetInstructorCourseCount(id);
+            
+            if (courseCount > 0)
+            {
+                return (false, $"Instructor has {courseCount} course record(s). Cannot permanently delete instructors with course history to preserve academic records.", courseCount);
+            }
+
+            // Check if department head
+            var isHead = await _instructorRepository.IsHeadOfAnyDepartmentAsync(id);
+            if (isHead)
+            {
+                return (false, "Instructor is a department head. Cannot permanently delete. Please reassign department head first.", 1);
+            }
+
+            return (true, "Instructor can be safely deleted - no course records or dependencies found", 0);
+        }
+
+        /// <summary>
+        /// Reassign all courses from one instructor to another before deletion
+        /// </summary>
+        public async Task<int> ReassignCoursesToInstructorAsync(int fromInstructorId, int toInstructorId)
+        {
+            // Validate both instructors exist
+            var fromInstructor = await _instructorRepository.GetByIdWithDetailsAsync(fromInstructorId);
+            if (fromInstructor == null)
+                throw new InvalidOperationException("Source instructor not found.");
+
+            var toInstructor = await _instructorRepository.GetByIdWithDetailsAsync(toInstructorId);
+            if (toInstructor == null)
+                throw new InvalidOperationException("Target instructor not found.");
+
+            // Get active courses for source instructor
+            var courses = await _courseRepository.GetCoursesByInstructorId(fromInstructorId);
+            var activeCourses = courses.Where(c => !c.IsDeleted).ToList();
+
+            if (activeCourses.Count == 0)
+                return 0;
+
+            // Check target instructor workload limits
+            var targetCourses = await _courseRepository.GetCoursesByInstructorId(toInstructorId);
+            var targetActiveCount = targetCourses.Count(c => !c.IsDeleted);
+            var targetCredits = targetCourses.Where(c => !c.IsDeleted).Sum(c => c.Credits);
+
+            // Validate workload constraints
+            if (targetActiveCount + activeCourses.Count > 2)
+            {
+                throw new InvalidOperationException(
+                    $"Target instructor already has {targetActiveCount} course(s). " +
+                    $"Cannot exceed 2 courses per instructor.");
+            }
+
+            var sourceCredits = activeCourses.Sum(c => c.Credits);
+            if (targetCredits + sourceCredits > 12)
+            {
+                throw new InvalidOperationException(
+                    $"Target instructor has {targetCredits} credit hours. " +
+                    $"Adding {sourceCredits} more would exceed 12-hour limit.");
+            }
+
+            // Reassign courses
+            int reassignedCount = 0;
+            foreach (var course in activeCourses)
+            {
+                course.InstructorId = toInstructorId;
+                await _courseRepository.UpdateCourse(course);
+                reassignedCount++;
+            }
+
+            return reassignedCount;
+        }
+
+        public async Task<IEnumerable<InstructorDTO>> GetAllIncludingDeletedAsync()
+        {
+            var instructors = await _instructorRepository.GetAllInstructorsIncludingDeleted();
+            var result = new List<InstructorDTO>();
+            
+            foreach (var instructor in instructors)
+            {
+                var isHead = await _instructorRepository.IsHeadOfAnyDepartmentAsync(instructor.InstructorId);
+                result.Add(MapToDto(instructor, isHead));
+            }
+            
+            return result;
         }
 
     }

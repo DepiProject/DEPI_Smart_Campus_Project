@@ -24,16 +24,90 @@ namespace University.API.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var token = await _authService.LoginAsync(dto);
-
-            if (token == null)
-                return Unauthorized(new { message = "Invalid email or password" });
-
-            return Ok(new
+            try
             {
-                token = token,
-                message = "Login successful"
-            });
+                var token = await _authService.LoginAsync(dto);
+
+                if (token == null)
+                    return Unauthorized(new { message = "Invalid email or password" });
+
+                return Ok(new
+                {
+                    token = token,
+                    message = "Login successful"
+                });
+            }
+            catch (InvalidOperationException ex) when (ex.Message == "PASSWORD_CHANGE_REQUIRED")
+            {
+                return Ok(new
+                {
+                    requirePasswordChange = true,
+                    message = "You must change your password on first login",
+                    email = dto.Email
+                });
+            }
+        }
+
+        [HttpPost("first-login-password-change")]
+        public async Task<IActionResult> FirstLoginPasswordChange([FromBody] FirstLoginPasswordChangeDTO dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var token = await _authService.FirstLoginPasswordChangeAsync(dto.Email, dto.CurrentPassword, dto.NewPassword);
+
+                if (token == null)
+                    return BadRequest(new { message = "Failed to change password" });
+
+                return Ok(new
+                {
+                    token = token,
+                    message = "Password changed successfully. You can now login."
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while changing password", error = ex.Message });
+            }
+        }
+
+        [HttpGet("me")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAdminProfile()
+        {
+            try
+            {
+                // Get current user ID from JWT token
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!int.TryParse(userIdClaim, out int userId))
+                    return Unauthorized(new { message = "Invalid token" });
+
+                // Get admin profile
+                var adminProfile = await _authService.GetAdminProfileAsync(userId);
+
+                if (adminProfile == null)
+                    return NotFound(new { message = "Admin profile not found" });
+
+                return Ok(adminProfile);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving profile", error = ex.Message });
+            }
         }
 
         [HttpPut("update-profile")]
