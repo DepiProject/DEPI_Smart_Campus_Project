@@ -979,6 +979,15 @@ class InstructorDashboard {
             await this.loadRecentActivity();
 
             console.log('✅ Attendance section loaded successfully');
+            
+            // Check if coming back from mark-attendance page - auto-refresh
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('refresh') === 'true') {
+                console.log('🔄 Auto-refreshing from mark-attendance return');
+                // Remove the refresh parameter from URL
+                window.history.replaceState({}, '', window.location.pathname + '#attendance');
+            }
+            
             return;
 
             // OLD CODE BELOW - keeping for reference but not executing
@@ -2571,243 +2580,14 @@ class InstructorDashboard {
         }
     }
 
-    // ===== NEW ATTENDANCE MANAGEMENT METHODS =====
-    
-    async searchCourseForAttendance() {
-        const searchInput = document.getElementById('courseSearchAttendance');
-        const searchTerm = searchInput.value.trim().toLowerCase();
-        
-        if (searchTerm.length < 2) {
-            document.getElementById('selectedCourseInfo').classList.add('d-none');
-            document.getElementById('attendanceTableSection').classList.add('d-none');
-            return;
-        }
-
-        try {
-            // Search through instructor's courses
-            const coursesResponse = await API.request(`/Course/instructor/${this.instructorId}`, {
-                method: 'GET'
-            });
-
-            if (!coursesResponse.success) {
-                console.error('Failed to load courses');
-                return;
-            }
-
-            let courses = coursesResponse.data?.data || coursesResponse.data?.Data || coursesResponse.data || [];
-            if (!Array.isArray(courses)) {
-                courses = [courses];
-            }
-
-            // Filter courses by search term
-            const matchedCourse = courses.find(course => {
-                const code = (course.courseCode || course.CourseCode || '').toLowerCase();
-                const name = (course.name || course.Name || course.courseName || course.CourseName || '').toLowerCase();
-                return code.includes(searchTerm) || name.includes(searchTerm);
-            });
-
-            if (matchedCourse) {
-                this.selectedCourseForAttendance = matchedCourse;
-                this.displaySelectedCourse(matchedCourse);
-            } else {
-                document.getElementById('selectedCourseInfo').classList.add('d-none');
-                document.getElementById('attendanceTableSection').classList.add('d-none');
-            }
-
-        } catch (error) {
-            console.error('Error searching courses:', error);
-        }
-    }
-
-    displaySelectedCourse(course) {
-        const courseCode = course.courseCode || course.CourseCode || '';
-        const courseName = course.name || course.Name || course.courseName || course.CourseName || '';
-        
-        document.getElementById('displayCourseCode').textContent = courseCode;
-        document.getElementById('displayCourseName').textContent = courseName;
-        document.getElementById('selectedCourseInfo').classList.remove('d-none');
-        
-        // Set today's date
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('attendanceDate').value = today;
-        
-        // Load students
-        this.loadStudentsForAttendance();
-    }
-
-    async loadStudentsForAttendance() {
-        const course = this.selectedCourseForAttendance;
-        if (!course) return;
-
-        const courseId = course.id || course.Id || course.courseId || course.CourseId;
-        const courseCode = course.courseCode || course.CourseCode || '';
-        const courseName = course.name || course.Name || course.courseName || course.CourseName || '';
-        const selectedDate = document.getElementById('attendanceDate').value;
-
-        if (!selectedDate) {
-            return;
-        }
-
-        try {
-            // Get enrolled students
-            const enrollmentResponse = await API.request(`/Enrollment/course/${courseId}`, {
-                method: 'GET'
-            });
-
-            if (!enrollmentResponse.success) {
-                console.error('Failed to load enrollments');
-                return;
-            }
-
-            let enrollments = enrollmentResponse.data?.data || enrollmentResponse.data?.Data || enrollmentResponse.data || [];
-            if (!Array.isArray(enrollments)) {
-                enrollments = [enrollments];
-            }
-
-            // Filter approved/enrolled students
-            enrollments = enrollments.filter(e => {
-                if (!e) return false;
-                const status = (e.status || e.Status || '').toString().trim().toLowerCase();
-                return status === 'approved' || status === 'enrolled';
-            });
-
-            // Display students in table
-            const tbody = document.getElementById('attendanceStudentsBody');
-            const markBtn = document.getElementById('markAttendanceBtn');
-            if (enrollments.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">No enrolled students found</td></tr>';
-                if (markBtn) markBtn.classList.add('d-none');
-                return;
-            }
-
-            tbody.innerHTML = enrollments.map((enrollment, index) => {
-                const studentName = enrollment.studentName || enrollment.StudentName || 'Unknown';
-                const studentId = enrollment.studentId || enrollment.StudentId || '';
-                
-                return `
-                    <tr>
-                        <td class="align-middle">${courseCode}</td>
-                        <td class="align-middle">${courseName}</td>
-                        <td class="align-middle"><strong>${studentName}</strong></td>
-                        <td class="align-middle">${selectedDate}</td>
-                        <td class="align-middle">
-                            <select class="form-select status-select" data-student-id="${studentId}" data-index="${index}">
-                                <option value="">Select Status</option>
-                                <option value="Present">✓ Present</option>
-                                <option value="Late">⏰ Late</option>
-                                <option value="Absent">✗ Absent</option>
-                                <option value="Excused">📝 Excused</option>
-                            </select>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-
-            // Show mark attendance button
-            if (markBtn) markBtn.classList.remove('d-none');
-
-        } catch (error) {
-            console.error('Error loading students:', error);
-        }
-    }
-
-    async markBulkAttendance() {
-        const course = this.selectedCourseForAttendance;
-        if (!course) {
-            this.showToast('Error', 'Please select a course first', 'error');
-            return;
-        }
-
-        const courseId = course.id || course.Id || course.courseId || course.CourseId;
-        const selectedDate = document.getElementById('attendanceDate').value;
-
-        if (!selectedDate) {
-            this.showToast('Error', 'Please select a date', 'error');
-            return;
-        }
-
-        // Collect all attendance data
-        const selects = document.querySelectorAll('#attendanceStudentsBody .status-select');
-        const attendanceData = [];
-        let hasSelection = false;
-
-        selects.forEach(select => {
-            const status = select.value;
-            if (status) {
-                hasSelection = true;
-                const studentId = parseInt(select.dataset.studentId);
-                attendanceData.push({
-                    courseId: courseId,
-                    studentId: studentId,
-                    date: selectedDate,
-                    status: status
-                });
-            }
-        });
-
-        if (!hasSelection) {
-            this.showToast('Warning', 'Please select at least one attendance status', 'warning');
-            return;
-        }
-
-        try {
-            console.log('Marking attendance:', attendanceData);
-
-            // Mark attendance for each student
-            let successCount = 0;
-            let errorCount = 0;
-
-            for (const data of attendanceData) {
-                try {
-                    // Use the correct DTO format for the API
-                    const markDto = {
-                        studentId: data.studentId,
-                        courseId: data.courseId,
-                        date: data.date,
-                        status: data.status
-                    };
-
-                    const response = await API.request('/Attendance/mark', {
-                        method: 'POST',
-                        body: JSON.stringify(markDto)
-                    });
-
-                    if (response.success || response.message) {
-                        successCount++;
-                    } else {
-                        errorCount++;
-                    }
-                } catch (error) {
-                    errorCount++;
-                    console.error('Error marking attendance:', error);
-                }
-            }
-
-            if (successCount > 0) {
-                this.showToast('Success', `Marked attendance for ${successCount} student(s)`, 'success');
-                
-                // Refresh stats and records
-                await this.loadAttendanceStats();
-                await this.loadAttendanceRecords();
-                await this.loadRecentActivity();
-                
-                // Reset selections
-                selects.forEach(select => select.value = '');
-            }
-
-            if (errorCount > 0) {
-                this.showToast('Warning', `Failed to mark ${errorCount} attendance record(s)`, 'warning');
-            }
-
-        } catch (error) {
-            console.error('Error in bulk attendance:', error);
-            this.showToast('Error', 'Failed to mark attendance', 'error');
-        }
-    }
+    // ===== ATTENDANCE STATS AND RECORDS (Mark attendance is in separate page) =====
 
     async loadAttendanceStats() {
         try {
-            if (!this.instructorId) {
+            // Use currentInstructorId if instructorId is not set
+            const instructorId = this.instructorId || this.currentInstructorId;
+            
+            if (!instructorId) {
                 console.warn('⚠️ Instructor ID not available for stats');
                 document.getElementById('totalAttendanceRecords').textContent = '0';
                 document.getElementById('totalPresent').textContent = '0';
@@ -2815,9 +2595,11 @@ class InstructorDashboard {
                 document.getElementById('totalLate').textContent = '0';
                 return;
             }
+            
+            console.log('📊 Loading stats for instructor ID:', instructorId);
 
             // Get all courses for this instructor
-            const coursesResponse = await API.request(`/Course/instructor/${this.instructorId}`, {
+            const coursesResponse = await API.request(`/Course/instructor/${instructorId}`, {
                 method: 'GET'
             });
 
@@ -2874,13 +2656,18 @@ class InstructorDashboard {
 
     async loadAttendanceRecords() {
         try {
-            if (!this.instructorId) {
+            // Use currentInstructorId if instructorId is not set
+            const instructorId = this.instructorId || this.currentInstructorId;
+            
+            if (!instructorId) {
                 console.warn('⚠️ Instructor ID not available for records');
                 return;
             }
+            
+            console.log('📋 Loading records for instructor ID:', instructorId);
 
             // Get all courses for this instructor
-            const coursesResponse = await API.request(`/Course/instructor/${this.instructorId}`, {
+            const coursesResponse = await API.request(`/Course/instructor/${instructorId}`, {
                 method: 'GET'
             });
 
@@ -2989,20 +2776,20 @@ class InstructorDashboard {
                 `;
             }).join('');
 
-        } catch (error) {
-            console.error('Error loading attendance records:', error);
-        }
-    }
-
     async loadRecentActivity() {
         try {
-            if (!this.instructorId) {
+            // Use currentInstructorId if instructorId is not set
+            const instructorId = this.instructorId || this.currentInstructorId;
+            
+            if (!instructorId) {
                 console.warn('⚠️ Instructor ID not available for recent activity');
                 return;
             }
+            
+            console.log('📱 Loading recent activity for instructor ID:', instructorId);
 
             // Get all courses for this instructor
-            const coursesResponse = await API.request(`/Course/instructor/${this.instructorId}`, {
+            const coursesResponse = await API.request(`/Course/instructor/${instructorId}`, {
                 method: 'GET'
             });
 
@@ -3115,21 +2902,18 @@ class InstructorDashboard {
     async refreshAttendance() {
         console.log('🔄 Refreshing attendance data...');
         
-        // Clear search
-        document.getElementById('courseSearchAttendance').value = '';
-        document.getElementById('selectedCourseInfo').classList.add('d-none');
-        document.getElementById('attendanceTableSection').classList.add('d-none');
-        
-        // Clear date filters
-        document.getElementById('filterFromDate').value = '';
-        document.getElementById('filterToDate').value = '';
+        // Clear date filters if they exist
+        const fromDate = document.getElementById('filterFromDate');
+        const toDate = document.getElementById('filterToDate');
+        if (fromDate) fromDate.value = '';
+        if (toDate) toDate.value = '';
         
         // Reload all data
         await this.loadAttendanceStats();
         await this.loadAttendanceRecords();
         await this.loadRecentActivity();
         
-        this.showToast('Success', 'Attendance data refreshed', 'success');
+        this.showToast('Success', 'Attendance data refreshed successfully!', 'success');
     }
 
     // ===== HELPER METHODS =====

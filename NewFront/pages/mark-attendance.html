@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mark Attendance - Smart Campus</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../css/modern-theme.css">
+    <link rel="stylesheet" href="../css/utilities.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding-top: 80px;
+        }
+
+        .attendance-search-wrapper {
+            position: relative;
+            max-width: 600px;
+            margin: 2rem auto;
+        }
+
+        .attendance-search-input {
+            border: 2px solid #e5e7eb;
+            border-radius: 50px;
+            padding: 1rem 3rem 1rem 3.5rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .attendance-search-input:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.2);
+            outline: none;
+        }
+
+        .attendance-search-icon {
+            position: absolute;
+            left: 1.25rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            font-size: 1.25rem;
+        }
+
+        .attendance-table-card {
+            border-radius: 12px;
+            overflow: hidden;
+            border: none;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        }
+
+        .attendance-table thead {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .attendance-table tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        .attendance-table tbody tr:hover {
+            background-color: #f3f4f6;
+            transform: scale(1.01);
+        }
+
+        .status-select {
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 0.5rem;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+
+        .status-select:focus {
+            border-color: #4f46e5;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .mark-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            color: white;
+        }
+
+        .mark-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .back-btn {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            color: white;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+            color: white;
+        }
+
+        .recent-activity-item {
+            padding: 0.75rem;
+            border-left: 3px solid #10b981;
+            background: #f9fafb;
+            border-radius: 6px;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s ease;
+        }
+
+        .recent-activity-item:hover {
+            background: #f3f4f6;
+            transform: translateX(4px);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="modern-nav">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <span class="navbar-brand mb-0 h5 text-white fw-bold">
+                <i class="bi bi-mortarboard-fill"></i> Smart Campus - Mark Attendance
+            </span>
+            <div class="dropdown">
+                <button class="btn user-dropdown-btn dropdown-toggle" type="button" id="userDropdown"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-person-circle"></i> <span id="userName">Instructor</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end user-dropdown-menu" aria-labelledby="userDropdown">
+                    <li><a class="dropdown-item" href="instructor-dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+                    <li><a class="dropdown-item text-danger" href="#" id="logoutBtn"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <div class="mb-4">
+            <a href="instructor-dashboard.html?refresh=true#attendance" class="back-btn">
+                <i class="bi bi-arrow-left me-2"></i>Back to Attendance Dashboard
+            </a>
+        </div>
+
+        <h2 class="mb-4"><i class="bi bi-calendar-check me-2" style="color: #10b981;"></i>Mark Student Attendance</h2>
+
+        <!-- Search Bar -->
+        <div class="attendance-search-wrapper">
+            <i class="bi bi-search attendance-search-icon"></i>
+            <input type="text" 
+                   class="form-control attendance-search-input" 
+                   id="courseSearchAttendance" 
+                   placeholder="Search by course name or course code..."
+                   onkeyup="markAttendancePage.searchCourseForAttendance()">
+        </div>
+
+        <!-- Attendance Table -->
+        <div id="attendanceTableSection">
+            <div class="card attendance-table-card mb-3">
+                <div class="card-header text-white border-0" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 1rem;">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5 class="mb-0"><i class="bi bi-table me-2"></i>Student Attendance</h5>
+                            <small class="text-white-50">Search for a course to begin</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="attendanceDate" class="form-label text-white mb-1 small">Select Date:</label>
+                            <input type="date" class="form-control form-control-sm" id="attendanceDate" onchange="markAttendancePage.loadStudentsForAttendance()">
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover attendance-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="padding: 1rem;">Course Code</th>
+                                    <th style="padding: 1rem;">Course Name</th>
+                                    <th style="padding: 1rem;">Student Name</th>
+                                    <th style="padding: 1rem;">Date</th>
+                                    <th style="padding: 1rem;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendanceStudentsBody">
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted p-4">
+                                        <i class="bi bi-search" style="font-size: 2rem; opacity: 0.3;"></i>
+                                        <p class="mt-2">Search for a course to display enrolled students</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mark Attendance Button -->
+            <div class="text-center mb-4 d-none" id="markAttendanceBtn">
+                <button class="btn mark-btn" onclick="markAttendancePage.markBulkAttendance()">
+                    <i class="bi bi-check-circle-fill me-2"></i>Mark Attendance
+                </button>
+            </div>
+        </div>
+
+        <!-- Recent Activity Section -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header text-white border-0" style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); padding: 1.25rem;">
+                        <h5 class="mb-0"><i class="bi bi-activity me-2"></i>Recent Attendance Activity</h5>
+                        <small class="text-white-50">Last 10 attendance records across all courses</small>
+                    </div>
+                    <div class="card-body" style="max-height: 450px; overflow-y: auto;">
+                        <div id="recentActivityList">
+                            <p class="text-muted text-center">Loading recent activity...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alertContainer" style="position: fixed; top: 80px; right: 20px; z-index: 9999; width: 350px;"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/mark-attendance.js"></script>
+</body>
+</html>
