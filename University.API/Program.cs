@@ -26,7 +26,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // 1. Add Database Context
 builder.Services.AddDbContext<UniversityDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("MyConnection")));
 
 // 2. Add Identity
 builder.Services.AddIdentity<AppUser, IdentityRole<int>>(options =>
