@@ -27,7 +27,7 @@ public static class DbInitializer
         var users = new List<AppUser>
             {
                 // Admin
-                new AppUser { UserName = "Amal", Email = "amal@fci.edu.eg", FirstName="Amal", LastName="Ahmed", Role="Admin", EmailConfirmed=true },
+                new AppUser { UserName = "Aml", Email = "aml@fci.edu.eg", FirstName="Aml", LastName="Ahmed", Role="Admin", EmailConfirmed=true },
                 
                 // 10 Instructors
                 new AppUser { UserName = "Ahmed", Email = "ahmed.hassan@fci.edu.eg", FirstName="Ahmed", LastName="Hassan", Role="Instructor", EmailConfirmed=true },
