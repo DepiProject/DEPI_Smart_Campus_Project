@@ -632,92 +632,23 @@
                     </div>
                 </div>
 
-                <!-- Attractive Search Bar with Refresh -->
-                <div class="attendance-search-wrapper">
-                    <i class="bi bi-search attendance-search-icon"></i>
-                    <input type="text" 
-                           class="form-control attendance-search-input" 
-                           id="courseSearchAttendance" 
-                           placeholder="Search by course name or course code..."
-                           onkeyup="instructorDashboard.searchCourseForAttendance()"
-                           style="padding-right: 4rem;">
-                    <button class="btn btn-primary" 
-                            onclick="instructorDashboard.refreshAttendance()" 
-                            style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); border-radius: 25px; padding: 0.5rem 1rem;"
-                            title="Refresh Data">
-                        <i class="bi bi-arrow-clockwise"></i>
+                <!-- Mark Attendance Button - Link to Separate Page -->
+                <div class="text-center mb-4">
+                    <a href="mark-attendance.html" class="btn btn-lg" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 1rem 2.5rem; border-radius: 12px; font-weight: 600; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); transition: all 0.3s ease;" onmouseover="this.style.boxShadow='0 6px 20px rgba(16, 185, 129, 0.4)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.3)'; this.style.transform='translateY(0)'">
+                        <i class="bi bi-calendar-check me-2"></i>Mark Student Attendance
+                    </a>
+                    <button onclick="instructorDashboard.refreshAttendance()" class="btn btn-lg ms-3" style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; border: none; padding: 1rem 2rem; border-radius: 12px; font-weight: 600; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3); transition: all 0.3s ease;" onmouseover="this.style.boxShadow='0 6px 20px rgba(14, 165, 233, 0.4)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='0 4px 12px rgba(14, 165, 233, 0.3)'; this.style.transform='translateY(0)'">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Refresh Data
                     </button>
-                </div>
-
-                <!-- Attendance Table (Main Table) -->
-                <div id="attendanceTableSection" class="mb-4">
-                    <div class="card attendance-table-card mb-3">
-                        <div class="card-header text-white border-0" style="background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); padding: 1rem;">
-                            <div class="row align-items-center">
-                                <div class="col-md-8">
-                                    <h5 class="mb-0"><i class="bi bi-table me-2"></i>Mark Student Attendance</h5>
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="attendanceDate" class="form-label text-white mb-1 small">Select Date:</label>
-                                    <input type="date" class="form-control form-control-sm" id="attendanceDate" onchange="instructorDashboard.loadStudentsForAttendance()">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-hover attendance-table mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th style="padding: 1rem;">Course Code</th>
-                                            <th style="padding: 1rem;">Course Name</th>
-                                            <th style="padding: 1rem;">Student Name</th>
-                                            <th style="padding: 1rem;">Date</th>
-                                            <th style="padding: 1rem;">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="attendanceStudentsBody">
-                                        <tr>
-                                            <td colspan="5" class="text-center text-muted p-4">
-                                                <i class="bi bi-search" style="font-size: 2rem; opacity: 0.3;"></i>
-                                                <p class="mt-2">Search for a course to display enrolled students</p>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Mark Attendance Button -->
-                    <div class="text-center mb-4 d-none" id="markAttendanceBtn">
-                        <button class="btn btn-primary mark-btn" onclick="instructorDashboard.markBulkAttendance()">
-                            <i class="bi bi-check-circle-fill me-2"></i>Mark Attendance
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Course Info Display (shown after search/selection) - REMOVED, using header instead -->
-                <div id="selectedCourseInfo" class="card border-0 shadow-sm mb-4 d-none" style="display: none !important;">
-                    <div class="card-body" style="background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);">
-                        <div class="row align-items-center">
-                            <div class="col-md-8">
-                                <h5 class="mb-1 fw-bold"><i class="bi bi-journal-code text-primary me-2"></i><span id="displayCourseCode">-</span></h5>
-                                <p class="mb-0 text-muted"><span id="displayCourseName">-</span></p>
-                            </div>
-                            <div class="col-md-4 text-end">
-                                <label for="attendanceDate" class="form-label fw-bold">Select Date:</label>
-                                <input type="date" class="form-control" id="attendanceDate" onchange="instructorDashboard.loadStudentsForAttendance()">
-                            </div>
-                        </div>
-                    </div>
+                    <p class="text-muted mt-2 small">Click to open the attendance marking page or refresh to see latest data</p>
                 </div>
 
 
 
                 <!-- Attendance Records and Recent Activity -->
-                <div class="row">
+                <div class="row justify-content-center">
                     <!-- Attendance Records -->
-                    <div class="col-md-8">
+                    <div class="col-md-10 col-lg-8">
                         <div class="card border-0 shadow-sm">
                             <div class="card-header text-white border-0" style="background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%); padding: 1.25rem;">
                                 <h5 class="mb-0"><i class="bi bi-table me-2"></i>Attendance Records</h5>
@@ -755,20 +686,6 @@
                                             </tr>
                                         </tbody>
                                     </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Recent Activity -->
-                    <div class="col-md-4">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-header text-white border-0" style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); padding: 1.25rem;">
-                                <h5 class="mb-0"><i class="bi bi-activity me-2"></i>Recent Activity</h5>
-                            </div>
-                            <div class="card-body" style="max-height: 450px; overflow-y: auto;">
-                                <div id="recentActivityList">
-                                    <p class="text-muted text-center">No recent activity</p>
                                 </div>
                             </div>
                         </div>

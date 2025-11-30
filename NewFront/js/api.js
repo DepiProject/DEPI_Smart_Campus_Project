@@ -775,9 +775,22 @@ const API = {
 
         // Mark attendance (Instructor)
         async markAttendance(attendanceData) {
+            // Ensure property names are PascalCase for C# backend
+            const dto = {
+                StudentId: attendanceData.studentId || attendanceData.StudentId,
+                CourseId: attendanceData.courseId || attendanceData.CourseId,
+                Date: attendanceData.date || attendanceData.Date,
+                Status: attendanceData.status || attendanceData.Status
+            };
+            
+            // Ensure Date is in DateTime format if it's just a date string
+            if (typeof dto.Date === 'string' && !dto.Date.includes('T')) {
+                dto.Date = dto.Date + 'T00:00:00';
+            }
+            
             return API.request('/Attendance/mark', {
                 method: 'POST',
-                body: attendanceData
+                body: dto
             });
         },
 
