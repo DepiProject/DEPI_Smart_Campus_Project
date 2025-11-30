@@ -222,6 +222,30 @@ namespace University.App.DTOs
         public int EnrollmentId { get; set; }
 
         /// <summary>
+        /// Student identifier
+        /// - Required: Links enrollment to specific student
+        /// - Used for attendance marking and grade management
+        /// </summary>
+        [Range(1, int.MaxValue)]
+        public int? StudentId { get; set; }
+
+        /// <summary>
+        /// Student code for display
+        /// - Display: e.g., "CS20240001"
+        /// </summary>
+        [StringLength(20, ErrorMessage = "Student code cannot exceed 20 characters")]
+        public string StudentCode { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Student email for display
+        /// - Display: Student's email address
+        /// - StringLength: Max 100 chars
+        /// </summary>
+        [StringLength(100, ErrorMessage = "Student email cannot exceed 100 characters")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
+        public string StudentEmail { get; set; } = string.Empty;
+
+        /// <summary>
         /// Student name validation for display
         /// - Required: Enrollment must show who is enrolled
         /// - StringLength: Max 150 chars

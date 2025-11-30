@@ -2,21 +2,21 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using University.App.Services.Implementations;
+using SmartCampus.App.Services.Implementations;
 using System.Text;
 using University.App.Interfaces;
+using University.App.Interfaces.Courses;
 using University.App.Interfaces.Users;
+using University.App.Services.Implementations;
 using University.App.Services.Implementations.Users;
 using University.App.Services.IServices;
 using University.App.Services.IServices.Users;
+using University.App.Validators;
 using University.Core.Entities;
 using University.Infra.Data;
 using University.Infra.Repositories;
-using University.Infra.Repositories.Users;
-using University.App.Interfaces.Courses;
 using University.Infra.Repositories.Courses;
-using University.App.Validators;
-using SmartCampus.App.Services.Implementations;
+using University.Infra.Repositories.Users;
 
 var builder = WebApplication.CreateBuilder(args);
 

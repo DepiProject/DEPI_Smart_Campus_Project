@@ -5,7 +5,7 @@
 
 const API = {
     // baseURL: 'https://smartcampus-university.runasp.net/api'
-    baseURL: 'https://localhost:7034/api',
+    baseURL: 'http://localhost:5175/api',
 
     // Get token dynamically to always use the latest
     get token() {
@@ -229,6 +229,13 @@ const API = {
 
     // ===== STUDENT ENDPOINTS =====
     student: {
+        // Check if phone number is unique
+        async checkPhoneUnique(phoneNumber) {
+            return API.request(`/Student/check-phone/${encodeURIComponent(phoneNumber)}`, {
+                method: 'GET'
+            });
+        },
+
         // Get all students (Admin only)
         async getAll(pageNumber = 1, pageSize = 10) {
             return API.request(`/Student?pageNumber=${pageNumber}&pageSize=${pageSize}`, {
@@ -324,6 +331,13 @@ const API = {
 
     // ===== INSTRUCTOR ENDPOINTS =====
     instructor: {
+        // Check if phone number is unique
+        async checkPhoneUnique(phoneNumber) {
+            return API.request(`/Instructor/check-phone/${encodeURIComponent(phoneNumber)}`, {
+                method: 'GET'
+            });
+        },
+
         // Get all instructors (Admin only)
         async getAll(pageNumber = 1, pageSize = 10) {
             return API.request(`/Instructor?pageNumber=${pageNumber}&pageSize=${pageSize}`, {

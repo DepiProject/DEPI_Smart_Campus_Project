@@ -91,6 +91,7 @@ namespace University.Infra.Repositories.Courses
                 .Include(c => c.Department)
                 .Include(c => c.Enrollments) // Include enrollments for GetEnrollmentStudentsByCourseID
                     .ThenInclude(e => e.Student)
+                        .ThenInclude(s => s.User) // Include User to get email
                 .Where(c => !c.IsDeleted) // Filter out soft-deleted courses
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.CourseId == id);

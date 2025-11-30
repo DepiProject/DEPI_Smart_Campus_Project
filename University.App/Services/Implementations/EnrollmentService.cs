@@ -128,6 +128,8 @@ namespace University.App.Services.Implementations
             return enrollments.Select(e => new StudentEnrollmentDTO
             {
                 EnrollmentId = e.EnrollmentId,
+                StudentId = e.StudentId,
+                StudentCode = e.Student?.StudentCode ?? "N/A",
                 StudentName = e.Student?.FullName ?? "Unknown",
                 CourseName = e.Course?.Name ?? "Unknown",
                 CourseCode = e.Course?.CourseCode ?? "Unknown",
@@ -151,6 +153,9 @@ namespace University.App.Services.Implementations
             return course.Enrollments.Select(e => new StudentEnrollmentDTO
             {
                 EnrollmentId = e.EnrollmentId,
+                StudentId = e.StudentId,
+                StudentCode = e.Student?.StudentCode ?? "N/A",
+                StudentEmail = e.Student?.User?.Email ?? "N/A",
                 StudentName = e.Student?.FullName ?? "Unknown",
                 CourseName = e.Course?.Name ?? course.Name,
                 CourseCode = e.Course?.CourseCode ?? course.CourseCode,
@@ -221,6 +226,9 @@ namespace University.App.Services.Implementations
                 return new StudentEnrollmentDTO
                 {
                     EnrollmentId = enrollment.EnrollmentId,
+                    StudentId = enrollment.StudentId,
+                    StudentCode = enrollment.Student?.StudentCode ?? "N/A",
+                    StudentEmail = enrollment.Student?.User?.Email ?? "N/A",
                     StudentName = enrollment.Student?.FullName ?? "",
                     CourseName = course.Name,
                     CourseCode = course.CourseCode,
@@ -271,6 +279,9 @@ namespace University.App.Services.Implementations
             return new StudentEnrollmentDTO
             {
                 EnrollmentId = enrollment.EnrollmentId,
+                StudentId = enrollment.StudentId,
+                StudentCode = enrollment.Student?.StudentCode ?? "N/A",
+                StudentEmail = enrollment.Student?.User?.Email ?? "N/A",
                 StudentName = enrollment.Student?.FullName ?? "",
                 CourseName = course.Name,
                 CourseCode = course.CourseCode,
@@ -400,6 +411,9 @@ namespace University.App.Services.Implementations
             return enrollments.Select(e => new StudentEnrollmentDTO
             {
                 EnrollmentId = e.EnrollmentId,
+                StudentId = e.StudentId,
+                StudentCode = e.Student?.StudentCode ?? "N/A",
+                StudentEmail = e.Student?.User?.Email ?? "N/A",
                 StudentName = e.Student?.FullName ?? "Unknown",
                 CourseName = e.Course?.Name ?? "Unknown",
                 CourseCode = e.Course?.CourseCode ?? "Unknown",
@@ -421,6 +435,9 @@ namespace University.App.Services.Implementations
             return enrollments.Select(e => new StudentEnrollmentDTO
             {
                 EnrollmentId = e.EnrollmentId,
+                StudentId = e.StudentId,
+                StudentCode = e.Student?.StudentCode ?? "N/A",
+                StudentEmail = e.Student?.User?.Email ?? "N/A",
                 StudentName = e.Student?.FullName ?? "Unknown",
                 CourseName = e.Course?.Name ?? "Unknown",
                 CourseCode = e.Course?.CourseCode ?? "Unknown",
@@ -434,8 +451,6 @@ namespace University.App.Services.Implementations
                 IsCourseActive = e.Course?.IsDeleted == false
             });
         }
-
-        // ================= INPUT SANITIZATION =================
 
         /// <summary>
         /// ENHANCEMENT: Sanitizes string inputs to prevent data pollution

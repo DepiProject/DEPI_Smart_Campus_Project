@@ -62,7 +62,9 @@ namespace University.App.DTOs.Users
         public string StudentCode { get; set; } = string.Empty;
 
         [MaxLength(11, ErrorMessage = "Contact number cannot exceed 11 characters")]
-        [MinLength(11, ErrorMessage = "Contact number cannot Less than 11 characters")]
+        [MinLength(11, ErrorMessage = "Contact number must be exactly 11 characters")]
+        [RegularExpression(@"^(010|011|012|015)\d{8}$", ErrorMessage = "Contact number must start with 010, 011, 012, or 015")]
+        [ValidEgyptianPhone]
         public string? ContactNumber { get; set; }
 
         [Required(ErrorMessage = "Level is required")]
@@ -111,8 +113,9 @@ namespace University.App.DTOs.Users
     public class UpdateStudentProfileDto
     {
         [MaxLength(11, ErrorMessage = "Contact number cannot exceed 11 characters")]
-        [MinLength(11, ErrorMessage = "Contact number must be exactly 11 digits")]
-        [RegularExpression(@"^\d{11}$", ErrorMessage = "Contact number must be exactly 11 digits")]
+        [MinLength(11, ErrorMessage = "Contact number must be exactly 11 characters")]
+        [RegularExpression(@"^(010|011|012|015)\d{8}$", ErrorMessage = "Contact number must start with 010, 011, 012, or 015")]
+        [ValidEgyptianPhone]
         public string? ContactNumber { get; set; }
     }
 }

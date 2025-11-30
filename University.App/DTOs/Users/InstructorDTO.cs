@@ -94,10 +94,13 @@ namespace University.App.DTOs.Users
         /// VALIDATION ENHANCED: ContactNumber validation ensures
         /// - Optional field (nullable)
         /// - Exact length of 11 characters (Egyptian phone number standard)
-        /// - Both MinLength and MaxLength set to 11 for strict validation
+        /// - Must start with 010, 011, 012, or 015
+        /// - Last 8 digits cannot be all the same number
         /// </summary>
         [MaxLength(11, ErrorMessage = "Contact number cannot exceed 11 characters")]
         [MinLength(11, ErrorMessage = "Contact number must be exactly 11 characters")]
+        [RegularExpression(@"^(010|011|012|015)\d{8}$", ErrorMessage = "Contact number must start with 010, 011, 012, or 015")]
+        [ValidEgyptianPhone]
         public string? ContactNumber { get; set; }
 
         /// <summary>
@@ -158,9 +161,13 @@ namespace University.App.DTOs.Users
         /// - Names are official identity information tied to academic records
         /// - Optional to allow instructors without contact info initially
         /// - If provided, enforces exact 11 character length (Egyptian standard)
+        /// - Must start with 010, 011, 012, or 015
+        /// - Last 8 digits cannot be all the same number
         /// </summary>
         [MaxLength(11, ErrorMessage = "Contact number cannot exceed 11 characters")]
         [MinLength(11, ErrorMessage = "Contact number must be exactly 11 characters")]
+        [RegularExpression(@"^(010|011|012|015)\d{8}$", ErrorMessage = "Contact number must start with 010, 011, 012, or 015")]
+        [ValidEgyptianPhone]
         public string? ContactNumber { get; set; }
     }
 }

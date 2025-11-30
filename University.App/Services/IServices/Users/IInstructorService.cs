@@ -27,5 +27,8 @@ namespace University.App.Services.IServices.Users
         
         // Reassignment operations
         Task<int> ReassignCoursesToInstructorAsync(int fromInstructorId, int toInstructorId);
+        
+        // Validation operations
+        Task<bool> IsPhoneNumberUniqueAsync(string phoneNumber);
     }
 }

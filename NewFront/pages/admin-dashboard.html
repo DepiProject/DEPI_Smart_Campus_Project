@@ -81,8 +81,6 @@
                     <li><a class="dropdown-item" href="#profile" data-section="profile"
                             onclick="document.querySelector('.icon-sidebar-item[data-section=profile]').click()"><i
                                 class="bi bi-person-circle"></i> My Profile</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-gear"></i> Settings</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-question-circle"></i> Help</a></li>
                     <li>
                         <hr class="dropdown-divider">
                     </li>
@@ -300,7 +298,7 @@
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2>Manage Instructors</h2>
                     <div>
-                        <a href="archived-instructors.html" class="btn btn-outline-primary me-2">
+                        <a href="archived-instructors.html" class="btn btn-outline-warning me-2">
                             <i class="bi bi-archive"></i> View Archived Instructors
                         </a>
                         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#instructorModal">
@@ -438,11 +436,11 @@
                             <i class="bi bi-x-circle"></i> View Rejected Enrollments
                         </a>
                         <div class="input-group" style="width: 300px;">
-                            <input type="text" class="form-control" id="enrollmentSearchInput"
+                            <span class="input-group-text bg-white border-end-0">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text" class="form-control border-start-0" id="enrollmentSearchInput"
                                 placeholder="Search student, course, code...">
-                            <button class="btn btn-outline-secondary" type="button" id="enrollmentSearchBtn">
-                                <i class="bi bi-search"></i>
-                            </button>
                         </div>
                         <select class="form-select" id="enrollmentStatusFilter" style="width: 150px;">
                             <option value="">All Status</option>
@@ -556,8 +554,8 @@
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Contact Number</label>
                                     <input type="tel" class="form-control" id="profileContactNumber"
-                                        placeholder="Enter 11-digit contact number" maxlength="11">
-                                    <small class="text-muted">11 digits (optional)</small>
+                                        placeholder="01012345678" maxlength="11" pattern="^(010|011|012|015)\d{8}$">
+                                    <small class="text-muted">Must start with 010, 011, 012, or 015 (optional)</small>
                                     <div id="contactNumberError" class="text-danger small mt-1"></div>
                                 </div>
                             </div>
@@ -584,7 +582,7 @@
                             </div>
                             <div class="alert alert-info small mt-3">
                                 <i class="bi bi-info-circle"></i> Your full name should contain only letters. Phone
-                                numbers must be exactly 11 digits if provided.
+                                numbers must start with 010, 011, 012, or 015 (last 8 digits cannot be all same).
                             </div>
                             <div class="d-flex gap-2">
                                 <button type="submit" class="btn btn-success">
@@ -616,23 +614,23 @@
                 </div>
                 <div class="modal-body">
                     <!-- Business Rules Info (shown in create mode) -->
-                    <!-- <div class="alert alert-info" id="instructorBusinessRules">
+                    <div class="alert alert-info" id="instructorBusinessRules">
                         <h6 class="alert-heading"><i class="bi bi-info-circle"></i> Business Rules</h6>
                         <ul class="mb-0 small">
                             <li>Email must be in university format (e.g., user@example.edu.eg)</li>
                             <li>Password: min 8 chars, UPPERCASE, lowercase, number, special char (@$!%*?&)</li>
                             <li>Names: letters, spaces, hyphens, apostrophes only (5-150 chars total)</li>
-                            <li>Contact: exactly 11 digits (optional)</li>
+                            <li>Contact: must start with 010, 011, 012, or 015 (last 8 digits cannot be all same)</li>
                             <li>Department assignment required</li>
                         </ul>
-                    </div> -->
+                    </div>
 
                     <!-- Edit Mode Info -->
-                    <!-- <div class="alert alert-warning d-none" id="instructorEditInfo">
+                    <div class="alert alert-warning d-none" id="instructorEditInfo">
                         <h6 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Edit Mode</h6>
                         <p class="mb-0 small">As an admin, you can only change the department assignment. Personal
                             details can only be updated by the instructor themselves.</p>
-                    </div> -->
+                    </div>
 
                     <form id="instructorForm" class="needs-validation" novalidate>
                         <div class="row">
@@ -701,10 +699,10 @@
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="bi bi-phone"></i></span>
                                     <input type="tel" class="form-control" id="instructorPhone"
-                                        placeholder="01234567890" maxlength="11" pattern="^\d{11}$">
-                                    <div class="invalid-feedback" id="instructorPhoneError">Exactly 11 digits</div>
+                                        placeholder="01012345678" maxlength="11" pattern="^(010|011|012|015)\d{8}$">
+                                    <div class="invalid-feedback" id="instructorPhoneError">Must start with 010, 011, 012, or 015</div>
                                 </div>
-                                <small class="text-muted">Egyptian format: 11 digits</small>
+                                <small class="text-muted">Must start with 010, 011, 012, or 015 (last 8 digits cannot be all same)</small>
                             </div>
 
                             <!-- Password (Create mode only) -->
@@ -738,7 +736,7 @@
                         <i class="bi bi-x-lg"></i> Cancel
                     </button>
                     <button type="button" class="btn btn-primary" id="saveInstructorBtn">
-                        <i class="bi bi-check-lg"></i> <span id="instructorBtnText">Save Instructor</span>
+                        <i class="bi bi-check-lg"></i> <span id="instructorBtnText">Add Instructor</span>
                         <span class="spinner-border spinner-border-sm ms-2 d-none" id="instructorBtnSpinner"></span>
                     </button>
                 </div>
@@ -766,7 +764,7 @@
                             <li>Password: min 8 chars, UPPERCASE, lowercase, number, special (@$!%*?&)</li>
                             <li>Student Code: must start with letter, letters/numbers only (max 20 chars)</li>
                             <li>Names: letters, spaces, hyphens, apostrophes (5-150 chars total)</li>
-                            <li>Contact: exactly 11 digits (optional)</li>
+                            <li>Contact: must start with 010, 011, 012, or 015 (last 8 digits cannot be all same)</li>
                             <li>Level: 1-4 required</li>
                         </ul>
                     </div>
@@ -857,10 +855,11 @@
                                         class="text-muted">(optional)</span></label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="bi bi-phone"></i></span>
-                                    <input type="tel" class="form-control" id="studentPhone" placeholder="01234567890"
-                                        maxlength="11" pattern="^\d{11}$">
-                                    <div class="invalid-feedback">11 digits</div>
+                                    <input type="tel" class="form-control" id="studentPhone" placeholder="01012345678"
+                                        maxlength="11" pattern="^(010|011|012|015)\d{8}$">
+                                    <div class="invalid-feedback" id="studentPhoneError">Must start with 010, 011, 012, or 015</div>
                                 </div>
+                                <small class="text-muted">Must start with 010, 011, 012, or 015 (last 8 digits cannot be all same)</small>
                             </div>
                         </div>
                         <div class="row" id="passwordField">
@@ -892,7 +891,7 @@
                         <i class="bi bi-x-lg"></i> Cancel
                     </button>
                     <button type="button" class="btn btn-primary" id="saveStudentBtn">
-                        <i class="bi bi-check-lg"></i> <span id="studentBtnText">Save Student</span>
+                        <i class="bi bi-check-lg"></i> <span id="studentBtnText">Add Student</span>
                         <span class="spinner-border spinner-border-sm ms-2 d-none" id="studentBtnSpinner"></span>
                     </button>
                 </div>
@@ -922,7 +921,6 @@
                             <li>Only one instructor can be head of a department</li>
                         </ul>
                     </div>
-
                     <form id="departmentForm" class="needs-validation" novalidate>
                         <div class="row">
                             <div class="col-md-6 mb-3">
@@ -1074,7 +1072,7 @@
                         <i class="bi bi-x-lg"></i> Cancel
                     </button>
                     <button type="button" class="btn btn-primary" id="saveCourseBtn">
-                        <i class="bi bi-check-lg"></i> <span id="courseBtnText">Save Course</span>
+                        <i class="bi bi-check-lg"></i> <span id="courseBtnText">Add Course</span>
                         <span class="spinner-border spinner-border-sm ms-2 d-none" id="courseBtnSpinner"></span>
                     </button>
                 </div>
@@ -1085,12 +1083,12 @@
     <!-- Delete Choice Modal (Soft or Hard Delete) -->
     <div class="modal fade" id="deleteChoiceModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header border-0 bg-warning">
+            <div class="modal-content border-danger">
+                <div class="modal-header border-0 bg-danger text-white">
                     <h5 class="modal-title">
-                        <i class="bi bi-question-circle"></i> Choose Delete Type
+                        <i class="bi bi-exclamation-triangle-fill"></i> Choose Delete Type
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <!-- Warning/Info Container (will be populated dynamically) -->
@@ -1140,19 +1138,19 @@
     <!-- Archive/Delete Confirmation Modal -->
     <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header border-0 bg-warning text-dark">
+            <div class="modal-content border-danger">
+                <div class="modal-header border-0 bg-danger text-white">
                     <h5 class="modal-title" id="deleteModalTitle">
                         <i class="bi bi-exclamation-triangle-fill"></i> Confirm Action
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body" id="deleteModalBody">
                     <!-- Dynamic content will be injected here -->
                 </div>
                 <div class="modal-footer border-0">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-warning" id="confirmDeleteBtn">
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
                         <i class="bi bi-check-circle me-1"></i>Confirm
                     </button>
                 </div>

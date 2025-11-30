@@ -187,14 +187,14 @@ namespace University.App.Services.Implementations.Users
         public async Task<(IEnumerable<StudentDTO> students, int totalCount)> GetAllWithPaginationAsync(int pageNumber, int pageSize)
         {
             var (students, totalCount) = await _studentRepository.GetStudentsWithPaginationAsync(pageNumber, pageSize);
-            var studentDtos = students.Select(MapToDto).ToList();
+            var studentDtos = students.Select(s => MapToDto(s)).ToList();
             return (studentDtos, totalCount);
         }
 
         public async Task<(IEnumerable<StudentDTO> students, int totalCount)> SearchStudentsAsync(string? searchTerm, int? departmentId, int pageNumber, int pageSize)
         {
             var (students, totalCount) = await _studentRepository.SearchStudentsAsync(searchTerm, departmentId, pageNumber, pageSize);
-            var studentDtos = students.Select(MapToDto).ToList();
+            var studentDtos = students.Select(s => MapToDto(s)).ToList();
             return (studentDtos, totalCount);
         }
 
@@ -253,6 +253,22 @@ namespace University.App.Services.Implementations.Users
                 IsDeleted = student.IsDeleted,
                 DeletedAt = student.DeletedAt
             };
+        }
+
+        // ========== VALIDATION OPERATIONS ==========
+
+        // ========== VALIDATION OPERATIONS ==========
+
+        public async Task<bool> IsPhoneNumberUniqueAsync(string phoneNumber)
+        {
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+                return true;
+
+            var normalizedPhone = phoneNumber.Trim();
+            var allStudents = await _studentRepository.GetAllStudentsAsync();
+            var exists = allStudents.Any(s => s.ContactNumber == normalizedPhone && !s.IsDeleted);
+
+            return !exists;
         }
 
         // ========== SOFT DELETE OPERATIONS ==========

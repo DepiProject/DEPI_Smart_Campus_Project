@@ -59,6 +59,7 @@ namespace University.Infra.Repositories.Courses
                 .Include(e => e.Course)
                     .ThenInclude(c => c.Instructor)
                 .Include(e => e.Student)
+                    .ThenInclude(s => s.User) // Include User to get email
                 .Where(e => e.StudentId == studentId && !e.IsDeleted)
                 .IgnoreQueryFilters() // includes soft-deleted courses
                 .AsNoTracking()
@@ -129,6 +130,7 @@ namespace University.Infra.Repositories.Courses
                 .Include(e => e.Course)
                     .ThenInclude(c => c.Department)
                 .Include(e => e.Student)
+                    .ThenInclude(s => s.User) // Include User to get email
                 .Where(e => e.StudentId == studentId && !e.IsDeleted)
                 .IgnoreQueryFilters() // This ensures soft-deleted courses are included
                 .AsNoTracking()

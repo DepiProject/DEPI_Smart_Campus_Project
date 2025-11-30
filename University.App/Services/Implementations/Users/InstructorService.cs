@@ -420,5 +420,17 @@ namespace University.App.Services.Implementations.Users
             return result;
         }
 
+        public async Task<bool> IsPhoneNumberUniqueAsync(string phoneNumber)
+        {
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+                return true;
+
+            var normalizedPhone = phoneNumber.Trim();
+            var allInstructors = await _instructorRepository.GetAllInstructorsAsync();
+            var exists = allInstructors.Any(i => i.ContactNumber == normalizedPhone && !i.IsDeleted);
+
+            return !exists;
+        }
+
     }
 }

@@ -21,7 +21,8 @@ namespace University.App.DTOs
         [MaxLength(50, ErrorMessage = "Last name cannot exceed 50 characters")]
         public string LastName { get; set; } = string.Empty;
 
-        [RegularExpression(@"^\d{11}$", ErrorMessage = "Contact number must be exactly 11 digits")]
+        [RegularExpression(@"^(010|011|012|015)\d{8}$", ErrorMessage = "Contact number must start with 010, 011, 012, or 015")]
+        [ValidEgyptianPhone]
         public string? ContactNumber { get; set; }
 
         [Required(ErrorMessage = "Current password is required for security verification")]

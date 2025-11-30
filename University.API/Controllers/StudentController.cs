@@ -97,6 +97,17 @@ namespace University.API.Controllers
             return Ok(student);
         }
 
+        [HttpGet("check-phone/{phoneNumber}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> CheckPhoneUnique(string phoneNumber)
+        {
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+                return BadRequest(new { isUnique = false, message = "Phone number is required" });
+
+            var isUnique = await _studentService.IsPhoneNumberUniqueAsync(phoneNumber);
+            return Ok(new { isUnique });
+        }
+
         [HttpPost]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] CreateStudentDto dto)

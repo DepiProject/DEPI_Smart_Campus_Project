@@ -32,5 +32,8 @@ namespace University.App.Services.IServices.Users
         Task<bool> PermanentlyDeleteAsync(int id);
         Task<(bool CanDelete, string Reason, int RelatedDataCount)> CanPermanentlyDeleteAsync(int id);
         Task<IEnumerable<StudentDTO>> GetAllIncludingDeletedAsync();
+        
+        // Validation operations
+        Task<bool> IsPhoneNumberUniqueAsync(string phoneNumber);
     }
 }

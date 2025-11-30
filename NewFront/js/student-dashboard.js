@@ -850,38 +850,96 @@ class StudentDashboard {
             return;
         }
 
-        // Show confirmation dialog
-        this.showConfirmToast(
-            'Confirm Drop Course',
-            'Are you sure you want to drop this course? This action cannot be undone.',
-            async () => {
-                try {
-                    console.log('🗑️ Dropping course, enrollmentId:', enrollmentId);
-                    const response = await API.enrollment.delete(enrollmentId);
-                    console.log('📊 Drop course response:', response);
+        // Create custom styled modal with danger theme
+        const modalHtml = `
+            <div class="modal fade" id="dropCourseModal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="dropCourseModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-danger">
+                        <div class="modal-header bg-danger text-white border-0">
+                            <h5 class="modal-title" id="dropCourseModalLabel">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirm Drop Course
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-danger mb-3">
+                                <h6 class="alert-heading">
+                                    <i class="bi bi-exclamation-circle-fill"></i> Are you sure you want to drop this course?
+                                </h6>
+                            </div>
+                            <p class="text-danger fw-bold mb-2">
+                                <i class="bi bi-x-circle"></i> This action CANNOT be undone!
+                            </p>
+                            <div class="bg-light p-3 rounded">
+                                <p class="mb-2"><strong>What will happen:</strong></p>
+                                <ul class="text-muted mb-0">
+                                    <li>You will be unenrolled from this course</li>
+                                    <li>Your attendance records will be archived</li>
+                                    <li>You will need to re-enroll if you change your mind</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="bi bi-x-circle me-1"></i>Cancel
+                            </button>
+                            <button type="button" class="btn btn-danger" id="confirmDropCourse">
+                                <i class="bi bi-trash-fill me-1"></i>Drop Course
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        document.getElementById('dropCourseModal')?.remove();
+        
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('dropCourseModal'));
+        modal.show();
+        
+        // Handle confirm button
+        document.getElementById('confirmDropCourse').onclick = async () => {
+            modal.hide();
+            
+            try {
+                console.log('🗑️ Dropping course, enrollmentId:', enrollmentId);
+                const response = await API.enrollment.delete(enrollmentId);
+                console.log('📊 Drop course response:', response);
+                
+                if (response.success) {
+                    this.showToast('Success', '✅ Course dropped successfully!', 'success');
                     
-                    if (response.success) {
-                        this.showToast('Success', '✅ Course dropped successfully!', 'success');
-                        
-                        // Reload data
-                        await Promise.all([
-                            this.loadEnrolledCourses(),
-                            this.loadAvailableCoursesDisplay(),
-                            this.loadDashboardData()
-                        ]);
-                    } else {
-                        const errorMsg = response.data?.Message || 
-                                       response.data?.message || 
-                                       response.error || 
-                                       'Failed to drop course';
-                        this.showToast('Error', errorMsg, 'error');
-                    }
-                } catch (error) {
-                    console.error('❌ Error dropping course:', error);
-                    this.showToast('Error', `An error occurred: ${error.message || 'Unknown error'}`, 'error');
+                    // Reload data
+                    await Promise.all([
+                        this.loadEnrolledCourses(),
+                        this.loadAvailableCoursesDisplay(),
+                        this.loadDashboardData()
+                    ]);
+                } else {
+                    const errorMsg = response.data?.Message || 
+                                   response.data?.message || 
+                                   response.error || 
+                                   'Failed to drop course';
+                    this.showToast('Error', errorMsg, 'error');
                 }
+            } catch (error) {
+                console.error('❌ Error dropping course:', error);
+                this.showToast('Error', `An error occurred: ${error.message || 'Unknown error'}`, 'error');
             }
-        );
+            
+            // Remove modal from DOM after hiding
+            setTimeout(() => document.getElementById('dropCourseModal')?.remove(), 300);
+        };
+        
+        // Cleanup on modal hide
+        document.getElementById('dropCourseModal').addEventListener('hidden.bs.modal', () => {
+            document.getElementById('dropCourseModal')?.remove();
+        });
     }
 
     // ===== ATTENDANCE =====

@@ -56,10 +56,10 @@ namespace University.App.Services.Implementations
                 throw new InvalidOperationException("A student cannot attend more than 6 classes per day.");
             }
 
-            // منع تسجيل الحضور بعد ما بيعدى  7 أيام 
-            if (dto.Date.Date < DateTime.Today.AddDays(-7))
+            // Allow marking attendance for past dates (extended from 7 days to 30 days for bulk Excel uploads)
+            if (dto.Date.Date < DateTime.Today.AddDays(-30))
             {
-                throw new InvalidOperationException("You cannot mark attendance older than 7 days.");
+                throw new InvalidOperationException("You cannot mark attendance older than 30 days.");
 
             }
             // منع تسجيل الحضور لتاريخ لسه مجااااش

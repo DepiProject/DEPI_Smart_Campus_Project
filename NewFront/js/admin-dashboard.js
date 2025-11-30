@@ -287,11 +287,14 @@ class AdminDashboard {
                 return;
             }
 
-            // Contact number validation (exactly 11 digits if provided)
-            if (contactNumber && !this.validateContactNumber(contactNumber)) {
-                this.showToast('Validation', '❌ Contact Number must be EXACTLY 11 digits (e.g., 01234567890)', 'warning');
-                document.getElementById('instructorPhone').classList.add('is-invalid');
-                return;
+            // Contact number validation (Egyptian format if provided)
+            if (contactNumber) {
+                const validation = this.validateContactNumber(contactNumber);
+                if (!validation.valid) {
+                    this.showToast('Validation', '❌ ' + validation.message, 'warning');
+                    document.getElementById('instructorPhone').classList.add('is-invalid');
+                    return;
+                }
             }
 
             if (!password) {
@@ -365,11 +368,14 @@ class AdminDashboard {
             document.getElementById('instructorPasswordField').style.display = 'none';
             document.getElementById('instructorPassword').required = false;
             
-            // Show edit mode alert, hide business rules
+            // Show edit mode alert, HIDE business rules completely
             const businessRules = document.getElementById('instructorBusinessRules');
             const editInfo = document.getElementById('instructorEditInfo');
-            if (businessRules) businessRules.classList.add('d-none');
-            if (editInfo) editInfo.classList.remove('d-none');
+            if (businessRules) businessRules.style.display = 'none';
+            if (editInfo) {
+                editInfo.classList.remove('d-none');
+                editInfo.style.display = 'block';
+            }
             
             // Make email, name, and contact number readonly when editing
             // Admin can only change department assignment
@@ -391,7 +397,7 @@ class AdminDashboard {
             document.getElementById('instructorPhone').style.cursor = 'not-allowed';
             
             document.getElementById('instructorModalTitle').innerHTML = '<i class="bi bi-pencil-square"></i> Edit Instructor - Change Department';
-            document.getElementById('instructorBtnText').textContent = 'Update Department';
+            document.getElementById('instructorBtnText').textContent = 'Update Instructor';
             
             this.editingId = id;
             this.editingType = 'instructor';
@@ -620,11 +626,18 @@ class AdminDashboard {
                 return;
             }
 
-            if (contactNumber && !this.validateContactNumber(contactNumber)) {
-                this.showToast('Validation', '❌ Contact Number must be 11 digits', 'warning');
-                btn.disabled = false;
-                btnText.textContent = originalText;
-                return;
+            if (contactNumber) {
+                const validation = this.validateContactNumber(contactNumber);
+                if (!validation.valid) {
+                    const phoneInput = document.getElementById('studentPhone');
+                    const errorElement = document.getElementById('studentPhoneError');
+                    phoneInput.classList.add('is-invalid');
+                    if (errorElement) errorElement.textContent = validation.message;
+                    this.showToast('Validation', '❌ ' + validation.message, 'warning');
+                    btn.disabled = false;
+                    btnText.textContent = originalText;
+                    return;
+                }
             }
 
             if (!/^[1-4]$/.test(level)) {
@@ -693,20 +706,75 @@ class AdminDashboard {
     }
 
     async permanentDeleteInstructor(id) {
-        const confirmed = confirm('⚠️ PERMANENT DELETE\n\nThis will PERMANENTLY delete the instructor.\n\n🚨 ALL data will be LOST:\n• Instructor account\n• All teaching assignments\n• All course history\n• All exam records\n\n❌ This action CANNOT be undone!\n\nContinue?');
-        if (!confirmed) return;
-
-        try {
-            const response = await API.instructor.permanentDelete(id);
-            if (response.success) {
-                this.showToast('Success', 'Instructor permanently deleted!', 'success');
-                await this.loadInstructors();
-            } else {
-                this.showToast('Error', response.error || 'Failed to delete instructor', 'error');
+        // Create custom styled modal
+        const modalHtml = `
+            <div class="modal fade" id="permanentDeleteModal" tabindex="-1" data-bs-backdrop="static">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-danger">
+                        <div class="modal-header bg-danger text-white border-0">
+                            <h5 class="modal-title">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>PERMANENT DELETE
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-danger mb-3">
+                                <h6 class="alert-heading"><i class="bi bi-exclamation-circle-fill"></i> This will PERMANENTLY delete the instructor.</h6>
+                            </div>
+                            <p class="text-danger fw-bold mb-2"><i class="bi bi-x-circle"></i> ALL data will be LOST:</p>
+                            <ul class="text-danger">
+                                <li>Instructor account</li>
+                                <li>All teaching assignments</li>
+                                <li>All course history</li>
+                                <li>All exam records</li>
+                            </ul>
+                            <div class="alert alert-warning mt-3">
+                                <i class="bi bi-shield-x"></i> <strong>This action CANNOT be undone!</strong>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-danger" id="confirmPermanentDelete">
+                                <i class="bi bi-trash-fill me-1"></i>Delete Forever
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        document.getElementById('permanentDeleteModal')?.remove();
+        
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('permanentDeleteModal'));
+        modal.show();
+        
+        // Handle confirm button
+        document.getElementById('confirmPermanentDelete').onclick = async () => {
+            modal.hide();
+            try {
+                const response = await API.instructor.permanentDelete(id);
+                if (response.success) {
+                    this.showToast('Success', 'Instructor permanently deleted!', 'success');
+                    await this.loadInstructors();
+                } else {
+                    this.showToast('Error', response.error || 'Failed to delete instructor', 'error');
+                }
+            } catch (error) {
+                this.showToast('Error', error.message, 'error');
             }
-        } catch (error) {
-            this.showToast('Error', error.message, 'error');
-        }
+            // Remove modal from DOM after hiding
+            setTimeout(() => document.getElementById('permanentDeleteModal')?.remove(), 300);
+        };
+        
+        // Cleanup on modal hide
+        document.getElementById('permanentDeleteModal').addEventListener('hidden.bs.modal', () => {
+            document.getElementById('permanentDeleteModal')?.remove();
+        });
     }
 
     async editStudent(id) {
@@ -757,12 +825,21 @@ class AdminDashboard {
             document.getElementById('studentPhone').style.backgroundColor = '#e9ecef';
             document.getElementById('studentPhone').style.cursor = 'not-allowed';
             
+            // Hide business rules, show edit info
+            const businessRules = document.getElementById('studentBusinessRules');
+            const editInfo = document.getElementById('studentEditInfo');
+            if (businessRules) businessRules.style.display = 'none';
+            if (editInfo) {
+                editInfo.classList.remove('d-none');
+                editInfo.style.display = 'block';
+            }
+            
             // Show clear note about what admin can edit
             document.getElementById('emailNote').textContent = '⚠️ Admin can only update Level and Department';
             document.getElementById('studentCode').title = 'Cannot be changed';
             
             document.getElementById('studentModalTitle').textContent = 'Edit Student (Level & Department)';
-            document.getElementById('saveStudentBtn').textContent = 'Update';
+            document.getElementById('studentBtnText').textContent = 'Update Student';
             
             this.editingId = id;
             this.editingType = 'student';
@@ -1034,88 +1111,183 @@ class AdminDashboard {
         }
     }
 
+    // async saveDepartment() {
+    //     const btn = document.getElementById('saveDepartmentBtn');
+    //     const btnText = document.getElementById('departmentBtnText');
+    //     const originalText = btnText.textContent;
+
+    //     btn.disabled = true;
+    //     btnText.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+
+    //     const name = document.getElementById('departmentName').value.trim();
+    //     let building = document.getElementById('departmentBuilding').value;
+    //     const headId = document.getElementById('departmentHead').value;
+
+    //     // Validation
+    //     if (!name || !building) {
+    //         this.showToast('Validation', 'Name and Building are required', 'warning');
+    //         btn.disabled = false;
+    //         btnText.textContent = originalText;
+    //         return;
+    //     }
+
+    //     // Name length validation (3-100 characters)
+    //     if (name.length < 3 || name.length > 100) {
+    //         this.showToast('Validation', '❌ Department name must be 3-100 characters', 'warning');
+    //         btn.disabled = false;
+    //         btnText.textContent = originalText;
+    //         return;
+    //     }
+
+    //     // Name format validation
+    //     if (!/^[a-zA-Z\s\-']+$/.test(name)) {
+    //         this.showToast('Validation', '❌ Name must contain only letters, spaces, hyphens, apostrophes', 'warning');
+    //         btn.disabled = false;
+    //         btnText.textContent = originalText;
+    //         return;
+    //     }
+
+    //     // Building validation - ensure proper format
+    //     if (!building.startsWith('Building ')) {
+    //         this.showToast('Validation', '❌ Please select a valid building', 'warning');
+    //         btn.disabled = false;
+    //         btnText.textContent = originalText;
+    //         return;
+    //     }
+
+    //     const departmentData = { 
+    //         name,
+    //         building,
+    //         headId: headId ? parseInt(headId) : null
+    //     };
+
+    //     try {
+    //         let response;
+    //         if (this.editingId && this.editingType === 'department') {
+    //             response = await API.department.update(this.editingId, departmentData);
+    //             if (response.success) {
+    //                 this.showToast('Success', '✅ Department updated successfully!', 'success');
+    //                 this.logActivity('Department Updated', `Department: ${name} in ${building}`);
+    //             }
+    //         } else {
+    //             response = await API.department.create(departmentData);
+    //             if (response.success) {
+    //                 this.showToast('Success', '✅ Department created successfully!', 'success');
+    //                 this.logActivity('Department Created', `New department: ${name} in ${building}`);
+    //             }
+    //         }
+
+    //         if (response.success) {
+    //             bootstrap.Modal.getInstance(document.getElementById('departmentModal')).hide();
+    //             this.resetDepartmentFormEnhanced();
+    //             this.loadDepartments();
+    //             this.loadDepartmentSelects();
+    //             this.loadDashboardData();
+    //         } else {
+    //             this.showDetailedError('Failed to save department', response.data);
+    //         }
+    //     } catch (error) {
+    //         this.showToast('Error', '❌ Failed to save department: ' + error.message, 'error');
+    //     } finally {
+    //         btn.disabled = false;
+    //         btnText.textContent = originalText;
+    //     }
+    // }
     async saveDepartment() {
-        const btn = document.getElementById('saveDepartmentBtn');
-        const btnText = document.getElementById('departmentBtnText');
-        const originalText = btnText.textContent;
+    const btn = document.getElementById('saveDepartmentBtn');
+    const btnText = document.getElementById('departmentBtnText');
+    const btnSpinner = document.getElementById('departmentBtnSpinner');
 
-        btn.disabled = true;
-        btnText.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
-
-        const name = document.getElementById('departmentName').value.trim();
-        let building = document.getElementById('departmentBuilding').value;
-        const headId = document.getElementById('departmentHead').value;
-
-        // Validation
-        if (!name || !building) {
-            this.showToast('Validation', 'Name and Building are required', 'warning');
-            btn.disabled = false;
-            btnText.textContent = originalText;
-            return;
-        }
-
-        // Name length validation (3-100 characters)
-        if (name.length < 3 || name.length > 100) {
-            this.showToast('Validation', '❌ Department name must be 3-100 characters', 'warning');
-            btn.disabled = false;
-            btnText.textContent = originalText;
-            return;
-        }
-
-        // Name format validation
-        if (!/^[a-zA-Z\s\-']+$/.test(name)) {
-            this.showToast('Validation', '❌ Name must contain only letters, spaces, hyphens, apostrophes', 'warning');
-            btn.disabled = false;
-            btnText.textContent = originalText;
-            return;
-        }
-
-        // Building validation - ensure proper format
-        if (!building.startsWith('Building ')) {
-            this.showToast('Validation', '❌ Please select a valid building', 'warning');
-            btn.disabled = false;
-            btnText.textContent = originalText;
-            return;
-        }
-
-        const departmentData = { 
-            name,
-            building,
-            headId: headId ? parseInt(headId) : null
-        };
-
-        try {
-            let response;
-            if (this.editingId && this.editingType === 'department') {
-                response = await API.department.update(this.editingId, departmentData);
-                if (response.success) {
-                    this.showToast('Success', '✅ Department updated successfully!', 'success');
-                    this.logActivity('Department Updated', `Department: ${name} in ${building}`);
-                }
-            } else {
-                response = await API.department.create(departmentData);
-                if (response.success) {
-                    this.showToast('Success', '✅ Department created successfully!', 'success');
-                    this.logActivity('Department Created', `New department: ${name} in ${building}`);
-                }
-            }
-
-            if (response.success) {
-                bootstrap.Modal.getInstance(document.getElementById('departmentModal')).hide();
-                this.resetDepartmentFormEnhanced();
-                this.loadDepartments();
-                this.loadDepartmentSelects();
-                this.loadDashboardData();
-            } else {
-                this.showDetailedError('Failed to save department', response.data);
-            }
-        } catch (error) {
-            this.showToast('Error', '❌ Failed to save department: ' + error.message, 'error');
-        } finally {
-            btn.disabled = false;
-            btnText.textContent = originalText;
-        }
+    // Safety check - if elements don't exist, log error and return
+    if (!btn) {
+        console.error('❌ Save Department button not found!');
+        return;
     }
+
+    const name = document.getElementById('departmentName').value.trim();
+    const building = document.getElementById('departmentBuilding').value;
+    const headId = document.getElementById('departmentHead').value;
+
+    // Show loading state
+    btn.disabled = true;
+    if (btnText) btnText.textContent = 'Saving...';
+    if (btnSpinner) btnSpinner.classList.remove('d-none');
+
+    // Validation
+    if (!name || !building) {
+        this.showToast('Validation', 'Name and Building are required', 'warning');
+        btn.disabled = false;
+        if (btnText) btnText.textContent = this.editingId ? 'Update Department' : 'Save Department';
+        if (btnSpinner) btnSpinner.classList.add('d-none');
+        return;
+    }
+
+    // Name length validation (3-100 characters)
+    if (name.length < 3 || name.length > 100) {
+        this.showToast('Validation', '❌ Department name must be 3-100 characters', 'warning');
+        btn.disabled = false;
+        if (btnText) btnText.textContent = this.editingId ? 'Update Department' : 'Save Department';
+        if (btnSpinner) btnSpinner.classList.add('d-none');
+        return;
+    }
+
+    // Name format validation
+    if (!/^[a-zA-Z\s\-']+$/.test(name)) {
+        this.showToast('Validation', '❌ Name must contain only letters, spaces, hyphens, apostrophes', 'warning');
+        btn.disabled = false;
+        if (btnText) btnText.textContent = this.editingId ? 'Update Department' : 'Save Department';
+        if (btnSpinner) btnSpinner.classList.add('d-none');
+        return;
+    }
+
+    // Building validation - ensure proper format
+    if (!building.startsWith('Building ')) {
+        this.showToast('Validation', '❌ Please select a valid building', 'warning');
+        btn.disabled = false;
+        if (btnText) btnText.textContent = this.editingId ? 'Update Department' : 'Save Department';
+        if (btnSpinner) btnSpinner.classList.add('d-none');
+        return;
+    }
+
+    const departmentData = { 
+        name,
+        building,
+        headId: headId ? parseInt(headId) : null
+    };
+
+    try {
+        let response;
+        if (this.editingId && this.editingType === 'department') {
+            response = await API.department.update(this.editingId, departmentData);
+            if (response.success) {
+                this.showToast('Success', '✅ Department updated successfully!', 'success');
+                this.logActivity('Department Updated', `Department: ${name} in ${building}`);
+            }
+        } else {
+            response = await API.department.create(departmentData);
+            if (response.success) {
+                this.showToast('Success', '✅ Department created successfully!', 'success');
+                this.logActivity('Department Created', `New department: ${name} in ${building}`);
+            }
+        }
+
+        if (response.success) {
+            bootstrap.Modal.getInstance(document.getElementById('departmentModal')).hide();
+            this.resetDepartmentFormEnhanced();
+            this.loadDepartments();
+            this.loadDepartmentSelects();
+            this.loadDashboardData();
+        } else {
+            this.showDetailedError('Failed to save department', response.data);
+        }
+    } catch (error) {
+        this.showToast('Error', '❌ Failed to save department: ' + error.message, 'error');
+    } finally {
+        btn.disabled = false;
+        if (btnText) btnText.textContent = this.editingId ? 'Update Department' : 'Save Department';
+        if (btnSpinner) btnSpinner.classList.add('d-none');
+    }
+}
 
     async permanentDeleteDepartment(id) {
         this.deleteType = 'department';
@@ -1228,11 +1400,8 @@ class AdminDashboard {
                         <button class="btn btn-sm btn-info" onclick="adminDashboard.editCourse(${course.id})" title="Edit">
                             <i class="bi bi-pencil"></i>
                         </button>
-                        <button class="btn btn-sm btn-warning" onclick="adminDashboard.deleteCourse(${course.id})" title="Archive">
-                            <i class="bi bi-archive"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="adminDashboard.permanentDeleteCourse(${course.id})" title="Delete Forever">
-                            <i class="bi bi-trash-fill"></i>
+                        <button class="btn btn-sm btn-danger" onclick="adminDashboard.permanentDeleteCourse(${course.id})" title="Permanent Delete">
+                            <i class="bi bi-trash-fill"></i> Delete
                         </button>
                     </td>
                 </tr>
@@ -1265,7 +1434,7 @@ class AdminDashboard {
                 <tr class="table-secondary">
                     <td>
                         <strong>${course.courseCode || '-'}</strong>
-                        <span class="badge bg-danger ms-2">Deleted</span>
+                        <span class="badge bg-warning ms-2">Archived</span>
                     </td>
                     <td>${course.name}</td>
                     <td><small>${course.departmentName || '-'}</small></td>
@@ -1274,6 +1443,9 @@ class AdminDashboard {
                     <td>
                         <button class="btn btn-sm btn-success" onclick="adminDashboard.restoreCourse(${course.id})" title="Restore">
                             <i class="bi bi-arrow-counterclockwise"></i> Restore
+                        </button>
+                        <button class="btn btn-sm btn-info" onclick="adminDashboard.editArchivedCourse(${course.id})" title="Edit">
+                            <i class="bi bi-pencil"></i> Edit
                         </button>
                         <button class="btn btn-sm btn-danger" onclick="adminDashboard.confirmPermanentDeleteCourse(${course.id})" title="Permanent Delete">
                             <i class="bi bi-trash-fill"></i> Delete Forever
@@ -1605,6 +1777,12 @@ class AdminDashboard {
         }
     }
 
+    async editArchivedCourse(id) {
+        console.log('✏️ Editing archived course:', id);
+        // Use the same edit method - it will work for archived courses
+        await this.editCourse(id);
+    }
+
     async loadInstructorsByDepartment(departmentId) {
         const select = document.getElementById('courseInstructor');
         select.innerHTML = '<option value="">Loading...</option>';
@@ -1633,8 +1811,15 @@ class AdminDashboard {
         const departmentSelect = document.getElementById('courseDepartment');
         if (departmentSelect) {
             departmentSelect.addEventListener('change', (e) => {
-                if (e.target.value) {
-                    this.loadInstructorsByDepartment(e.target.value);
+                const deptId = e.target.value;
+                if (deptId) {
+                    console.log('🏫 Department changed to:', deptId);
+                    this.loadInstructorsByDepartment(deptId);
+                } else {
+                    const instSelect = document.getElementById('courseInstructor');
+                    if (instSelect) {
+                        instSelect.innerHTML = '<option value="">Select Department First</option>';
+                    }
                 }
             });
         }
@@ -1774,8 +1959,9 @@ class AdminDashboard {
 
         // Contact number validation (if provided)
         if (contactNumber) {
-            if (!/^\d{11}$/.test(contactNumber)) {
-                this.showToast('Validation', '❌ Contact Number must be exactly 11 digits', 'warning');
+            const validation = this.validateContactNumber(contactNumber);
+            if (!validation.valid) {
+                this.showToast('Validation', '❌ ' + validation.message, 'warning');
                 return;
             }
         }
@@ -2059,8 +2245,23 @@ class AdminDashboard {
 
     validateContactNumber(number) {
         // Must be exactly 11 digits
-        const numberRegex = /^\d{11}$/;
-        return numberRegex.test(number);
+        if (!/^\d{11}$/.test(number)) {
+            return { valid: false, message: 'Must be exactly 11 digits' };
+        }
+        
+        // Must start with 010, 011, 012, or 015
+        const prefix = number.substring(0, 3);
+        if (!['010', '011', '012', '015'].includes(prefix)) {
+            return { valid: false, message: 'Must start with 010, 011, 012, or 015' };
+        }
+        
+        // Last 8 digits cannot be all the same
+        const last8 = number.substring(3);
+        if (new Set(last8).size === 1) {
+            return { valid: false, message: `Invalid number - last 8 digits cannot be all the same (e.g., ${prefix}00000000)` };
+        }
+        
+        return { valid: true, message: '' };
     }
 
     validatePassword(password) {
@@ -3023,20 +3224,42 @@ AdminDashboard.prototype.setupInstructorValidation = function() {
         });
     }
 
-    // Real-time phone validation
+    // Real-time phone validation with uniqueness check
     if (phoneInput) {
         phoneInput.addEventListener('input', (e) => {
             // Allow only digits
             e.target.value = e.target.value.replace(/\D/g, '').substring(0, 11);
         });
 
-        phoneInput.addEventListener('blur', () => {
+        phoneInput.addEventListener('blur', async () => {
             const value = phoneInput.value.trim();
-            if (value && value.length !== 11) {
-                phoneInput.classList.add('is-invalid');
-                document.getElementById('instructorPhoneError').textContent = 'Must be exactly 11 digits';
+            const errorElement = document.getElementById('instructorPhoneError');
+            
+            if (value) {
+                // Validate format
+                const validation = this.validateContactNumber(value);
+                if (!validation.valid) {
+                    phoneInput.classList.add('is-invalid');
+                    errorElement.textContent = validation.message;
+                    return;
+                }
+                
+                // Check uniqueness
+                try {
+                    const response = await API.instructor.checkPhoneUnique(value);
+                    if (response.success && !response.data.isUnique) {
+                        phoneInput.classList.add('is-invalid');
+                        errorElement.textContent = 'This phone number is already registered';
+                    } else {
+                        phoneInput.classList.remove('is-invalid');
+                        errorElement.textContent = '';
+                    }
+                } catch (error) {
+                    console.error('Phone uniqueness check failed:', error);
+                }
             } else {
                 phoneInput.classList.remove('is-invalid');
+                errorElement.textContent = '';
             }
         });
     }
@@ -3146,15 +3369,21 @@ AdminDashboard.prototype.resetInstructorFormEnhanced = function() {
         strengthText.className = 'text-muted';
     }
 
-    // Show business rules, hide edit info
+    // Show business rules, HIDE edit info completely
     const businessRules = document.getElementById('instructorBusinessRules');
     const editInfo = document.getElementById('instructorEditInfo');
-    if (businessRules) businessRules.classList.remove('d-none');
-    if (editInfo) editInfo.classList.add('d-none');
+    if (businessRules) {
+        businessRules.classList.remove('d-none');
+        businessRules.style.display = 'block';
+    }
+    if (editInfo) {
+        editInfo.classList.add('d-none');
+        editInfo.style.display = 'none';
+    }
 
     // Reset modal title and button
     document.getElementById('instructorModalTitle').innerHTML = '<i class="bi bi-person-workspace"></i> Add Instructor';
-    document.getElementById('instructorBtnText').textContent = 'Save Instructor';
+    document.getElementById('instructorBtnText').textContent = 'Add Instructor';
 
     // Show password field
     const passwordField = document.getElementById('instructorPasswordField');
@@ -3249,10 +3478,48 @@ AdminDashboard.prototype.setupStudentValidation = function() {
         });
     }
 
-    // Real-time phone validation
+    // Real-time phone validation with uniqueness check
     if (phoneInput) {
         phoneInput.addEventListener('input', (e) => {
             e.target.value = e.target.value.replace(/\D/g, '').substring(0, 11);
+            // Clear error on input
+            phoneInput.classList.remove('is-invalid');
+        });
+
+        phoneInput.addEventListener('blur', async () => {
+            const value = phoneInput.value.trim();
+            const errorElement = document.getElementById('studentPhoneError');
+            
+            if (value) {
+                // Validate format
+                const validation = this.validateContactNumber(value);
+                if (!validation.valid) {
+                    phoneInput.classList.add('is-invalid');
+                    if (errorElement) errorElement.textContent = validation.message;
+                    return;
+                }
+                
+                // Check uniqueness (only if not editing or phone changed)
+                if (!this.editingId) {
+                    try {
+                        const response = await API.student.checkPhoneUnique(value);
+                        if (response.success && !response.data.isUnique) {
+                            phoneInput.classList.add('is-invalid');
+                            if (errorElement) errorElement.textContent = 'This phone number is already registered';
+                        } else {
+                            phoneInput.classList.remove('is-invalid');
+                            if (errorElement) errorElement.textContent = 'Must start with 010, 011, 012, or 015';
+                        }
+                    } catch (error) {
+                        console.error('Phone uniqueness check failed:', error);
+                    }
+                } else {
+                    phoneInput.classList.remove('is-invalid');
+                }
+            } else {
+                phoneInput.classList.remove('is-invalid');
+                if (errorElement) errorElement.textContent = 'Must start with 010, 011, 012, or 015';
+            }
         });
     }
 
@@ -3336,15 +3603,21 @@ AdminDashboard.prototype.resetStudentFormEnhanced = function() {
         strengthText.className = 'text-muted';
     }
 
-    // Show business rules, hide edit info
+    // Show business rules, HIDE edit info completely
     const businessRules = document.getElementById('studentBusinessRules');
     const editInfo = document.getElementById('studentEditInfo');
-    if (businessRules) businessRules.classList.remove('d-none');
-    if (editInfo) editInfo.classList.add('d-none');
+    if (businessRules) {
+        businessRules.classList.remove('d-none');
+        businessRules.style.display = 'block';
+    }
+    if (editInfo) {
+        editInfo.classList.add('d-none');
+        editInfo.style.display = 'none';
+    }
 
     // Reset modal title
     document.getElementById('studentModalTitle').innerHTML = '<i class="bi bi-people"></i> Add Student';
-    document.getElementById('studentBtnText').textContent = 'Save Student';
+    document.getElementById('studentBtnText').textContent = 'Add Student';
 
     // Show password field
     const passwordField = document.getElementById('passwordField');
@@ -3516,7 +3789,7 @@ AdminDashboard.prototype.resetCourseFormEnhanced = function() {
     }
 
     document.getElementById('courseModalTitle').innerHTML = '<i class="bi bi-book"></i> Add Course';
-    document.getElementById('courseBtnText').textContent = 'Save Course';
+    document.getElementById('courseBtnText').textContent = 'Add Course';
     document.getElementById('courseInstructor').innerHTML = '<option value="">Select Department First</option>';
     this.resetEditState();
 };
