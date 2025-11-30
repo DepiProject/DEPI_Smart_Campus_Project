@@ -305,10 +305,10 @@ class StudentDashboard {
                 }
             }
 
-            // Load GPA from enrollments
+            // Load GPA and Credits from enrollments
             if (this.studentId) {
                 try {
-                    console.log('📊 Calculating GPA for student:', this.studentId);
+                    console.log('📊 Calculating GPA and Credits for student:', this.studentId);
                     const enrollmentsResponse = await API.enrollment.getByStudentId(this.studentId);
                     
                     if (enrollmentsResponse.success && enrollmentsResponse.data) {
@@ -316,6 +316,21 @@ class StudentDashboard {
                                                   enrollmentsResponse.data.data || 
                                                   enrollmentsResponse.data;
                         
+                        // Calculate total credits from enrolled courses
+                        if (Array.isArray(studentEnrollments)) {
+                            const totalCredits = studentEnrollments.reduce((sum, e) => {
+                                const credits = e.creditHours || e.CreditHours || 0;
+                                return sum + credits;
+                            }, 0);
+                            
+                            const creditsEl = document.getElementById('studentCredits');
+                            if (creditsEl) {
+                                creditsEl.textContent = totalCredits;
+                            }
+                            console.log('✅ Total Credits:', totalCredits);
+                        }
+                        
+                        // Calculate GPA
                         const gradesEnrollments = Array.isArray(studentEnrollments)
                             ? studentEnrollments.filter(e => {
                                 const finalGrade = e.finalGrade || e.FinalGrade;
@@ -328,7 +343,7 @@ class StudentDashboard {
                                 const grade = e.finalGrade || e.FinalGrade || 0;
                                 return sum + grade;
                             }, 0);
-                            const gpa = (totalGrade / gradesEnrollments.length / 25).toFixed(2); // Convert to 4.0 scale
+                            const gpa = (totalGrade / gradesEnrollments.length / 25).toFixed(2);
                             
                             const gpaEl = document.getElementById('studentGPA');
                             if (gpaEl) {
@@ -338,24 +353,187 @@ class StudentDashboard {
                         } else {
                             const gpaEl = document.getElementById('studentGPA');
                             if (gpaEl) {
-                                gpaEl.textContent = 'No grades';
+                                gpaEl.textContent = '1.1';
                             }
                         }
                     }
                 } catch (error) {
-                    console.error('❌ Error loading GPA:', error);
+                    console.error('❌ Error loading GPA/Credits:', error);
                     const gpaEl = document.getElementById('studentGPA');
                     if (gpaEl) {
-                        gpaEl.textContent = 'No grades';
+                        gpaEl.textContent = '1.1';
+                    }
+                    const creditsEl = document.getElementById('studentCredits');
+                    if (creditsEl) {
+                        creditsEl.textContent = '0';
                     }
                 }
             }
+            
+            // Initialize visual charts
+            await this.initializeCharts();
             
             console.log('✅ Dashboard data loaded successfully');
         } catch (error) {
             console.error('❌ Error loading dashboard:', error);
             this.showToast('Error', 'Failed to load some dashboard data', 'error');
         }
+    }
+
+    async initializeCharts() {
+        try {
+            // Get enrollment data for charts
+            const enrollmentsResponse = await API.enrollment.getByStudentId(this.studentId);
+            
+            if (enrollmentsResponse.success && enrollmentsResponse.data) {
+                const studentEnrollments = enrollmentsResponse.data.Data || 
+                                          enrollmentsResponse.data.data || 
+                                          enrollmentsResponse.data;
+                
+                if (Array.isArray(studentEnrollments) && studentEnrollments.length > 0) {
+                    // Performance Chart (Pie/Doughnut)
+                    const attendanceResponse = await API.attendance.getSummary(this.studentId);
+                    let attendancePercentage = 0;
+                    
+                    if (attendanceResponse.success && attendanceResponse.data) {
+                        const summary = attendanceResponse.data.Data || attendanceResponse.data.data || attendanceResponse.data;
+                        attendancePercentage = summary.AttendancePercentage || summary.attendancePercentage || 0;
+                    }
+                    
+                    // Calculate GPA percentage
+                    const gradesEnrollments = studentEnrollments.filter(e => {
+                        const finalGrade = e.finalGrade || e.FinalGrade;
+                        return finalGrade && finalGrade > 0;
+                    });
+                    
+                    let gpaPercentage = 0;
+                    if (gradesEnrollments.length > 0) {
+                        const totalGrade = gradesEnrollments.reduce((sum, e) => {
+                            const grade = e.finalGrade || e.FinalGrade || 0;
+                            return sum + grade;
+                        }, 0);
+                        gpaPercentage = (totalGrade / gradesEnrollments.length);
+                    }
+                    
+                    const enrollmentCount = studentEnrollments.length;
+                    
+                    this.createPerformanceChart(attendancePercentage, gpaPercentage, enrollmentCount);
+                    this.createCreditsChart(studentEnrollments);
+                }
+            }
+        } catch (error) {
+            console.error('Error initializing charts:', error);
+        }
+    }
+
+    createPerformanceChart(attendance, gpa, enrollments) {
+        const ctx = document.getElementById('performanceChart');
+        if (!ctx) return;
+        
+        // Destroy existing chart if it exists
+        if (this.performanceChart) {
+            this.performanceChart.destroy();
+        }
+        
+        this.performanceChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Attendance', 'Academic Performance', 'Course Load'],
+                datasets: [{
+                    data: [attendance, gpa, enrollments * 10],
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(249, 115, 22, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(16, 185, 129, 1)',
+                        'rgba(59, 130, 246, 1)',
+                        'rgba(249, 115, 22, 1)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    title: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+
+    createCreditsChart(enrollments) {
+        const ctx = document.getElementById('creditsChart');
+        if (!ctx) return;
+        
+        // Destroy existing chart if it exists
+        if (this.creditsChart) {
+            this.creditsChart.destroy();
+        }
+        
+        // Prepare data for bar chart
+        const courseNames = enrollments.map(e => {
+            const name = e.CourseName || e.courseName || 'Course';
+            return name.length > 15 ? name.substring(0, 15) + '...' : name;
+        });
+        
+        const credits = enrollments.map(e => e.creditHours || e.CreditHours || 0);
+        
+        this.creditsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: courseNames,
+                datasets: [{
+                    label: 'Credit Hours',
+                    data: credits,
+                    backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: false
+                    }
+                }
+            }
+        });
     }
 
     // ===== COURSES - ENROLLMENT =====
@@ -366,13 +544,13 @@ class StudentDashboard {
         const tbody = document.getElementById('coursesTableBody');
         
         // Show loading state
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Loading courses...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Loading courses...</td></tr>';
 
         try {
             if (!this.studentId) {
                 console.error('❌ Student ID is null or undefined!');
                 console.log('👤 Current user info:', API.getUserInfo());
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-warning">⚠️ Student ID not found. Please log in again.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-warning">⚠️ Student ID not found. Please log in again.</td></tr>';
                 return;
             }
 
@@ -394,7 +572,7 @@ class StudentDashboard {
                 }
 
                 if (enrollments.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">📚 No enrolled courses. <a href="#" onclick="studentDashboard.switchSection(\'courses\'); return false;" class="btn btn-sm btn-primary ms-2">Enroll now!</a></td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">📚 No enrolled courses. <a href="#" onclick="studentDashboard.switchSection(\'courses\'); return false;" class="btn btn-sm btn-primary ms-2">Enroll now!</a></td></tr>';
                     return;
                 }
 
@@ -426,28 +604,70 @@ class StudentDashboard {
                             <td><small>${instructorName}</small></td>
                             <td><span class="badge bg-light text-dark">${credits} credits</span></td>
                             <td><span class="badge bg-${statusBadgeClass}">${status}</span></td>
-                            <td>
-                                ${status === 'Enrolled' ? `
-                                    <button class="btn btn-sm btn-danger" onclick="studentDashboard.dropCourse(${enrollmentId})" title="Drop this course">
-                                        <i class="bi bi-trash"></i> Drop
-                                    </button>
-                                ` : `
-                                    <span class="text-muted small">-</span>
-                                `}
-                            </td>
                         </tr>
                     `;
                 }).join('');
                 
                 console.log('✅ Enrolled courses loaded successfully:', enrollments.length, 'courses');
+                
+                // Initialize courses search functionality
+                this.initializeCoursesSearch();
             } else {
                 console.error('❌ Failed to load courses:', response.error);
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">⚠️ Failed to load courses: ${response.error || 'Unknown error'}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">⚠️ Failed to load courses: ${response.error || 'Unknown error'}</td></tr>`;
             }
         } catch (error) {
             console.error('❌ Error loading courses:', error);
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">⚠️ Error: ${error.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">⚠️ Error: ${error.message}</td></tr>`;
         }
+    }
+
+    initializeCoursesSearch() {
+        const searchInput = document.getElementById('coursesSearchInput');
+        if (!searchInput) return;
+
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            const tbody = document.getElementById('coursesTableBody');
+            const rows = tbody.getElementsByTagName('tr');
+
+            let visibleCount = 0;
+            Array.from(rows).forEach(row => {
+                // Skip the "no results" row
+                if (row.id === 'noCoursesResultsRow') return;
+
+                // Get the course name from the first cell
+                const firstCell = row.cells[0];
+                if (!firstCell) return;
+
+                const courseName = firstCell.textContent.toLowerCase();
+                
+                // Show/hide row based on search match
+                if (courseName.includes(searchTerm)) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Handle "no results" message
+            const noResultsRow = document.getElementById('noCoursesResultsRow');
+            if (visibleCount === 0 && searchTerm !== '') {
+                if (!noResultsRow) {
+                    tbody.innerHTML += `<tr id="noCoursesResultsRow">
+                        <td colspan="5" class="text-center text-muted py-5">
+                            <i class="bi bi-search fs-1 d-block mb-3 text-secondary"></i>
+                            <p class="mb-0">No courses found matching "<strong>${searchTerm}</strong>"</p>
+                        </td>
+                    </tr>`;
+                }
+            } else {
+                if (noResultsRow) {
+                    noResultsRow.remove();
+                }
+            }
+        });
     }
 
     async loadAvailableCoursesForEnrollment() {
@@ -1049,11 +1269,21 @@ class StudentDashboard {
                     const finalGrade = enrollment.FinalGrade || enrollment.finalGrade;
                     const gradeLetter = enrollment.GradeLetter || enrollment.gradeLetter;
                     
-                    // Determine if grade is available
-                    const hasGrade = finalGrade !== null && finalGrade !== undefined && finalGrade > 0;
-                    const gradeDisplay = hasGrade ? finalGrade.toFixed(2) : '-';
-                    const letterDisplay = gradeLetter || (hasGrade ? this.getLetterGrade(finalGrade) : '-');
-                    const gradeColor = hasGrade ? this.getGradeColor(finalGrade) : 'secondary';
+                    // Determine grade display based on status
+                    let gradeDisplay, letterDisplay, gradeColor;
+                    
+                    if (status === 'Rejected') {
+                        // Rejected students: show 0 and "Not graded"
+                        gradeDisplay = '0.00';
+                        letterDisplay = 'Not graded';
+                        gradeColor = 'secondary';
+                    } else {
+                        // Enrolled/other students: show actual grade or default 30 with F
+                        const hasGrade = finalGrade !== null && finalGrade !== undefined && finalGrade > 0;
+                        gradeDisplay = hasGrade ? finalGrade.toFixed(2) : '30.00';
+                        letterDisplay = gradeLetter || (hasGrade ? this.getLetterGrade(finalGrade) : 'F');
+                        gradeColor = hasGrade ? this.getGradeColor(finalGrade) : 'danger';
+                    }
                     
                     // Status badge
                     const statusBadgeClass = status === 'Completed' ? 'success' : 
@@ -1073,15 +1303,18 @@ class StudentDashboard {
                             <td><span class="badge bg-${statusBadgeClass}">${status}</span></td>
                             <td><strong>${gradeDisplay}</strong></td>
                             <td>
-                                ${hasGrade 
-                                    ? `<span class="badge bg-${gradeColor}">${letterDisplay}</span>` 
-                                    : '<span class="text-muted">Not graded</span>'}
+                                ${status === 'Rejected' 
+                                    ? '<span class="text-muted">Not graded</span>'
+                                    : `<span class="badge bg-${gradeColor}">${letterDisplay}</span>`}
                             </td>
                         </tr>
                     `;
                 }).join('');
                 
                 console.log('✅ Grades loaded successfully');
+                
+                // Initialize search functionality
+                this.initializeGradesSearch();
             } else {
                 console.error('❌ Failed to load grades:', response.error);
                 tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Failed to load grades</td></tr>';
@@ -1090,6 +1323,47 @@ class StudentDashboard {
             console.error('❌ Error loading grades:', error);
             tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error loading grades</td></tr>';
         }
+    }
+
+    initializeGradesSearch() {
+        const searchInput = document.getElementById('gradesSearchInput');
+        if (!searchInput) return;
+
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            const tbody = document.getElementById('gradesTableBody');
+            const rows = tbody.getElementsByTagName('tr');
+
+            Array.from(rows).forEach(row => {
+                // Get the course name from the first cell
+                const firstCell = row.cells[0];
+                if (!firstCell) return;
+
+                const courseName = firstCell.textContent.toLowerCase();
+                
+                // Show/hide row based on search match
+                if (courseName.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Check if any rows are visible
+            const visibleRows = Array.from(rows).filter(row => row.style.display !== 'none');
+            if (visibleRows.length === 0 && searchTerm !== '') {
+                // Show "no results" message
+                if (!document.getElementById('noResultsRow')) {
+                    tbody.innerHTML += '<tr id="noResultsRow"><td colspan="5" class="text-center text-muted"><i class="bi bi-search"></i> No courses found matching your search.</td></tr>';
+                }
+            } else {
+                // Remove "no results" message if it exists
+                const noResultsRow = document.getElementById('noResultsRow');
+                if (noResultsRow) {
+                    noResultsRow.remove();
+                }
+            }
+        });
     }
 
     getLetterGrade(marks) {

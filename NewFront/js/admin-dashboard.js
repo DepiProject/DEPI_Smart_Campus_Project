@@ -534,9 +534,8 @@ class AdminDashboard {
         const btnText = document.getElementById('studentBtnText');
         const originalText = btnText.textContent;
 
-        // Show loading state
-        btn.disabled = true;
-        btnText.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+        // Clear all previous validation states
+        this.clearStudentValidation();
 
         const email = document.getElementById('studentEmail').value.trim();
         const firstName = document.getElementById('studentFirstName').value.trim();
@@ -549,19 +548,24 @@ class AdminDashboard {
 
         if (this.editingId) {
             // ========== ADMIN UPDATE: Only Level and Department ==========
-            if (!level || !departmentId) {
-                this.showToast('Validation', 'Level and Department are required', 'warning');
-                btn.disabled = false;
-                btnText.textContent = originalText;
+            if (!level) {
+                this.showStudentFieldError('studentLevel', 'Please select a level');
+                return;
+            }
+
+            if (!departmentId) {
+                this.showStudentFieldError('studentDepartment', 'Please select a department');
                 return;
             }
 
             if (!/^[1-4]$/.test(level)) {
-                this.showToast('Validation', '❌ Level must be 1, 2, 3, or 4', 'warning');
-                btn.disabled = false;
-                btnText.textContent = originalText;
+                this.showStudentFieldError('studentLevel', 'Level must be 1, 2, 3, or 4');
                 return;
             }
+
+            // Show loading state
+            btn.disabled = true;
+            btnText.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
 
             const updateData = { 
                 level,
@@ -569,18 +573,9 @@ class AdminDashboard {
             };
             
             try {
-                const response = await fetch(`https://smartcampus-university.runasp.net/api/Student/${this.editingId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                    },
-                    body: JSON.stringify(updateData)
-                });
+                const response = await API.student.update(this.editingId, updateData);
 
-                const responseData = await response.json();
-
-                if (response.ok) {
+                if (response.success) {
                     this.showToast('Success', '✅ Student updated successfully!', 'success');
                     this.logActivity('Student Updated', `Updated level & department for student ID: ${this.editingId}`);
                     bootstrap.Modal.getInstance(document.getElementById('studentModal')).hide();
@@ -588,7 +583,7 @@ class AdminDashboard {
                     this.loadStudents();
                     this.loadDashboardData();
                 } else {
-                    this.showDetailedError('Failed to update student', responseData);
+                    this.showDetailedError('Failed to update student', response.data);
                 }
             } catch (error) {
                 this.showToast('Error', '❌ Failed to update student: ' + error.message, 'error');
@@ -598,68 +593,85 @@ class AdminDashboard {
             }
         } else {
             // ========== CREATE NEW STUDENT ==========
-            if (!email || !firstName || !lastName || !studentCode || !level || !departmentId) {
-                this.showToast('Validation', 'Please fill in all required fields', 'warning');
-                btn.disabled = false;
-                btnText.textContent = originalText;
-                return;
+            let hasError = false;
+
+            // Validate email
+            if (!email) {
+                this.showStudentFieldError('studentEmail', 'Email is required');
+                hasError = true;
+            } else if (!this.validateEmailFormat(email)) {
+                this.showStudentFieldError('studentEmail', 'Must be university format (user@institution.edu.eg)');
+                hasError = true;
             }
 
-            if (!this.validateEmailFormat(email)) {
-                this.showToast('Validation', '❌ Invalid email format (must be .edu.eg)', 'warning');
-                btn.disabled = false;
-                btnText.textContent = originalText;
-                return;
+            // Validate first name
+            if (!firstName) {
+                this.showStudentFieldError('studentFirstName', 'First name is required');
+                hasError = true;
+            } else if (!this.validateNameFormat(firstName)) {
+                this.showStudentFieldError('studentFirstName', 'Only letters, spaces, hyphens, apostrophes allowed');
+                hasError = true;
             }
 
-            if (!this.validateNameFormat(firstName) || !this.validateNameFormat(lastName)) {
-                this.showToast('Validation', '❌ Names must contain only letters, spaces, hyphens, apostrophes', 'warning');
-                btn.disabled = false;
-                btnText.textContent = originalText;
-                return;
+            // Validate last name
+            if (!lastName) {
+                this.showStudentFieldError('studentLastName', 'Last name is required');
+                hasError = true;
+            } else if (!this.validateNameFormat(lastName)) {
+                this.showStudentFieldError('studentLastName', 'Only letters, spaces, hyphens, apostrophes allowed');
+                hasError = true;
             }
 
-            if (!this.validateStudentCode(studentCode)) {
-                this.showToast('Validation', '❌ Student Code must start with a letter', 'warning');
-                btn.disabled = false;
-                btnText.textContent = originalText;
-                return;
+            // Validate student code
+            if (!studentCode) {
+                this.showStudentFieldError('studentCode', 'Student code is required');
+                hasError = true;
+            } else if (!this.validateStudentCode(studentCode)) {
+                this.showStudentFieldError('studentCode', 'Must start with a letter');
+                hasError = true;
             }
 
+            // Validate contact number (optional)
             if (contactNumber) {
                 const validation = this.validateContactNumber(contactNumber);
                 if (!validation.valid) {
-                    const phoneInput = document.getElementById('studentPhone');
-                    const errorElement = document.getElementById('studentPhoneError');
-                    phoneInput.classList.add('is-invalid');
-                    if (errorElement) errorElement.textContent = validation.message;
-                    this.showToast('Validation', '❌ ' + validation.message, 'warning');
-                    btn.disabled = false;
-                    btnText.textContent = originalText;
-                    return;
+                    this.showStudentFieldError('studentPhone', validation.message);
+                    hasError = true;
                 }
             }
 
-            if (!/^[1-4]$/.test(level)) {
-                this.showToast('Validation', '❌ Level must be 1, 2, 3, or 4', 'warning');
-                btn.disabled = false;
-                btnText.textContent = originalText;
-                return;
+            // Validate level
+            if (!level) {
+                this.showStudentFieldError('studentLevel', 'Please select a level');
+                hasError = true;
+            } else if (!/^[1-4]$/.test(level)) {
+                this.showStudentFieldError('studentLevel', 'Level must be 1, 2, 3, or 4');
+                hasError = true;
             }
 
+            // Validate department
+            if (!departmentId) {
+                this.showStudentFieldError('studentDepartment', 'Please select a department');
+                hasError = true;
+            }
+
+            // Validate password
             if (!password) {
-                this.showToast('Validation', 'Password is required', 'warning');
-                btn.disabled = false;
-                btnText.textContent = originalText;
+                this.showStudentFieldError('studentPassword', 'Password is required');
+                hasError = true;
+            } else if (!this.validatePassword(password)) {
+                this.showStudentFieldError('studentPassword', 'Min 8 chars, must include: UPPERCASE, lowercase, number, special char (@$!%*?&)');
+                hasError = true;
+            }
+
+            // If any validation errors, stop
+            if (hasError) {
                 return;
             }
 
-            if (!this.validatePassword(password)) {
-                this.showToast('Validation', '❌ Password requirements not met', 'warning');
-                btn.disabled = false;
-                btnText.textContent = originalText;
-                return;
-            }
+            // Show loading state
+            btn.disabled = true;
+            btnText.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
 
             const fullName = firstName + ' ' + lastName;
             const createData = {
@@ -675,18 +687,9 @@ class AdminDashboard {
             };
 
             try {
-                const response = await fetch('https://smartcampus-university.runasp.net/api/Student', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                    },
-                    body: JSON.stringify(createData)
-                });
+                const response = await API.student.create(createData);
 
-                const responseData = await response.json();
-
-                if (response.ok) {
+                if (response.success) {
                     this.showToast('Success', '✅ Student created successfully!', 'success');
                     this.logActivity('Student Created', `New student: ${fullName} (${studentCode})`);
                     bootstrap.Modal.getInstance(document.getElementById('studentModal')).hide();
@@ -694,7 +697,7 @@ class AdminDashboard {
                     this.loadStudents();
                     this.loadDashboardData();
                 } else {
-                    this.showDetailedError('Failed to create student', responseData);
+                    this.showDetailedError('Failed to create student', response.data);
                 }
             } catch (error) {
                 this.showToast('Error', '❌ Failed to create student: ' + error.message, 'error');
@@ -706,75 +709,38 @@ class AdminDashboard {
     }
 
     async permanentDeleteInstructor(id) {
-        // Create custom styled modal
-        const modalHtml = `
-            <div class="modal fade" id="permanentDeleteModal" tabindex="-1" data-bs-backdrop="static">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content border-danger">
-                        <div class="modal-header bg-danger text-white border-0">
-                            <h5 class="modal-title">
-                                <i class="bi bi-exclamation-triangle-fill me-2"></i>PERMANENT DELETE
-                            </h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="alert alert-danger mb-3">
-                                <h6 class="alert-heading"><i class="bi bi-exclamation-circle-fill"></i> This will PERMANENTLY delete the instructor.</h6>
-                            </div>
-                            <p class="text-danger fw-bold mb-2"><i class="bi bi-x-circle"></i> ALL data will be LOST:</p>
-                            <ul class="text-danger">
-                                <li>Instructor account</li>
-                                <li>All teaching assignments</li>
-                                <li>All course history</li>
-                                <li>All exam records</li>
-                            </ul>
-                            <div class="alert alert-warning mt-3">
-                                <i class="bi bi-shield-x"></i> <strong>This action CANNOT be undone!</strong>
-                            </div>
-                        </div>
-                        <div class="modal-footer border-0">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn btn-danger" id="confirmPermanentDelete">
-                                <i class="bi bi-trash-fill me-1"></i>Delete Forever
-                            </button>
-                        </div>
-                    </div>
-                </div>
+        this.deleteType = 'instructor';
+        this.deleteId = id;
+        this.deleteAction = 'permanent';
+        
+        const modalTitle = document.getElementById('deleteModalTitle');
+        const modalBody = document.getElementById('deleteModalBody');
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        
+        modalTitle.innerHTML = '<i class="bi bi-trash-fill text-danger"></i> Delete Instructor';
+        modalBody.innerHTML = `
+            <div class="alert alert-danger">
+                <h6 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> Permanently Delete Instructor</h6>
+                <p class="mb-2">This will <strong>PERMANENTLY DELETE</strong> the instructor from the database.</p>
+                <p class="mb-2"><strong>⚠️ This ONLY works if the instructor has NO related data:</strong></p>
+                <ul class="mb-2 text-danger">
+                    <li>❌ No course records (active or historical)</li>
+                    <li>❌ Not a department head</li>
+                </ul>
+                <p class="text-danger fw-bold mb-0"><i class="bi bi-shield-x"></i> This action CANNOT be undone!</p>
+            </div>
+            <div class="alert alert-warning mb-0">
+                <i class="bi bi-info-circle"></i> <strong>If instructor has courses or is dept head:</strong> 
+                The deletion will be blocked and you'll see a clear error message. 
+                Use the <span class="badge bg-warning text-dark">Archive</span> button instead to preserve data.
             </div>
         `;
+        confirmBtn.textContent = 'Delete Forever';
+        confirmBtn.classList.remove('btn-warning');
+        confirmBtn.classList.add('btn-danger');
         
-        // Remove existing modal if any
-        document.getElementById('permanentDeleteModal')?.remove();
-        
-        // Add modal to body
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('permanentDeleteModal'));
+        const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
         modal.show();
-        
-        // Handle confirm button
-        document.getElementById('confirmPermanentDelete').onclick = async () => {
-            modal.hide();
-            try {
-                const response = await API.instructor.permanentDelete(id);
-                if (response.success) {
-                    this.showToast('Success', 'Instructor permanently deleted!', 'success');
-                    await this.loadInstructors();
-                } else {
-                    this.showToast('Error', response.error || 'Failed to delete instructor', 'error');
-                }
-            } catch (error) {
-                this.showToast('Error', error.message, 'error');
-            }
-            // Remove modal from DOM after hiding
-            setTimeout(() => document.getElementById('permanentDeleteModal')?.remove(), 300);
-        };
-        
-        // Cleanup on modal hide
-        document.getElementById('permanentDeleteModal').addEventListener('hidden.bs.modal', () => {
-            document.getElementById('permanentDeleteModal')?.remove();
-        });
     }
 
     async editStudent(id) {
@@ -888,18 +854,22 @@ class AdminDashboard {
         const modalBody = document.getElementById('deleteModalBody');
         const confirmBtn = document.getElementById('confirmDeleteBtn');
         
-        modalTitle.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Permanent Delete';
+        modalTitle.innerHTML = '<i class="bi bi-trash-fill text-danger"></i> Delete Student';
         modalBody.innerHTML = `
             <div class="alert alert-danger">
-                <h6><i class="bi bi-exclamation-circle"></i> This will PERMANENTLY delete the student.</h6>
-                <p class="mb-0"><strong>ALL data will be LOST:</strong></p>
-                <ul class="mb-0">
-                    <li>Student account</li>
-                    <li>All enrollments</li>
-                    <li>All grades and exam records</li>
-                    <li>All academic history</li>
+                <h6 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> Permanently Delete Student</h6>
+                <p class="mb-2">This will <strong>PERMANENTLY DELETE</strong> the student from the database.</p>
+                <p class="mb-2"><strong>⚠️ This ONLY works if the student has NO related data:</strong></p>
+                <ul class="mb-2 text-danger">
+                    <li>❌ No enrollment records (current or historical)</li>
+                    <li>❌ No grades or academic history</li>
                 </ul>
-                <p class="text-danger mt-2 mb-0"><strong>This action CANNOT be undone!</strong></p>
+                <p class="text-danger fw-bold mb-0"><i class="bi bi-shield-x"></i> This action CANNOT be undone!</p>
+            </div>
+            <div class="alert alert-warning mb-0">
+                <i class="bi bi-info-circle"></i> <strong>If student has enrollments:</strong> 
+                The deletion will be blocked and you'll see a clear error message. 
+                Use the <span class="badge bg-warning text-dark">Archive</span> button instead to preserve academic records.
             </div>
         `;
         confirmBtn.textContent = 'Delete Forever';
@@ -928,9 +898,9 @@ class AdminDashboard {
             // Handle archive (soft delete)
             if (action === 'archive') {
                 if (type === 'instructor') {
-                    response = await API.instructor.delete(id);
+                    response = await API.instructor.archive(id);
                 } else if (type === 'student') {
-                    response = await API.student.delete(id);
+                    response = await API.student.archive(id);
                 } else if (type === 'department') {
                     response = await API.department.delete(id);
                 } else if (type === 'course') {
@@ -939,12 +909,12 @@ class AdminDashboard {
                     response = await API.enrollment.softDelete(id);
                 }
             }
-            // Handle permanent delete
+            // Handle permanent/hard delete
             else if (action === 'permanent') {
                 if (type === 'instructor') {
-                    response = await API.instructor.permanentDelete(id);
+                    response = await API.instructor.delete(id);
                 } else if (type === 'student') {
-                    response = await API.student.permanentDelete(id);
+                    response = await API.student.delete(id);
                 } else if (type === 'department') {
                     response = await API.department.permanentDelete(id);
                 } else if (type === 'course') {
@@ -976,18 +946,18 @@ class AdminDashboard {
                 
                 if (action === 'archive') {
                     if (type === 'instructor') {
-                        successMessage = 'Instructor archived successfully! View archived instructors in the Archived Instructors page.';
+                        successMessage = '✅ Instructor archived successfully! View in Archived Instructors page.';
                     } else if (type === 'student') {
-                        successMessage = 'Student archived successfully! View archived students in the Archived Students page.';
+                        successMessage = '✅ Student archived successfully! View in Archived Students page.';
                     } else if (type === 'department') {
-                        successMessage = 'Department archived successfully! View archived departments in the Archived Departments page.';
+                        successMessage = '✅ Department archived successfully! View in Archived Departments page.';
                     } else if (type === 'course') {
-                        successMessage = 'Course archived successfully! View archived courses in the Archived Courses page.';
+                        successMessage = '✅ Course archived successfully! View in Archived Courses page.';
                     } else if (type === 'enrollment') {
-                        successMessage = 'Enrollment archived successfully!';
+                        successMessage = '✅ Enrollment archived successfully!';
                     }
                 } else if (action === 'permanent') {
-                    successMessage = `${type.charAt(0).toUpperCase() + type.slice(1)} permanently deleted!`;
+                    successMessage = `✅ ${type.charAt(0).toUpperCase() + type.slice(1)} permanently deleted!`;
                 }
                 
                 this.showToast('Success', successMessage, 'success');
@@ -1018,7 +988,30 @@ class AdminDashboard {
                 
                 this.loadDashboardData();
             } else {
-                this.showToast('Error', response.error || 'Operation failed', 'error');
+                // Extract clear error message from response
+                let errorMessage = 'Operation failed';
+                let errorTitle = 'Operation Failed';
+                
+                if (response.data && typeof response.data === 'object') {
+                    // Check for message property (case insensitive)
+                    errorMessage = response.data.message || response.data.Message || 
+                                  response.data.error || response.data.Error ||
+                                  response.error || errorMessage;
+                } else if (response.error) {
+                    errorMessage = response.error;
+                } else if (typeof response.data === 'string') {
+                    errorMessage = response.data;
+                }
+                
+                // Customize title based on action
+                if (action === 'archive') {
+                    errorTitle = `Cannot Archive ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+                } else if (action === 'permanent') {
+                    errorTitle = `Cannot Delete ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+                }
+                
+                // Show clear error notification with detailed message
+                this.showToast(errorTitle, errorMessage, 'error');
             }
         } catch (error) {
             console.error('❌ Delete error:', error);
@@ -2294,20 +2287,51 @@ class AdminDashboard {
 
     showToast(title, message, type = 'info') {
         const alertContainer = document.getElementById('alertContainer');
+        
+        // Determine icon and color based on type
+        let icon = 'info-circle';
+        let alertClass = 'info';
+        let borderStyle = '';
+        
+        if (type === 'error' || type === 'danger') {
+            icon = 'exclamation-triangle-fill';
+            alertClass = 'danger';
+            borderStyle = 'border-left: 5px solid #dc3545;';
+        } else if (type === 'success') {
+            icon = 'check-circle-fill';
+            alertClass = 'success';
+            borderStyle = 'border-left: 5px solid #198754;';
+        } else if (type === 'warning') {
+            icon = 'exclamation-circle';
+            alertClass = 'warning';
+            borderStyle = 'border-left: 5px solid #ffc107;';
+        }
+        
         const toastHtml = `
-            <div class="alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show" role="alert">
-                <strong>${title}</strong> ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <div class="alert alert-${alertClass} alert-dismissible fade show shadow-sm" role="alert" 
+                 style="${borderStyle} border-radius: 8px; padding: 1rem 1.5rem; margin-bottom: 1rem; animation: slideIn 0.3s ease-out;">
+                <div class="d-flex align-items-start">
+                    <i class="bi bi-${icon} fs-4 me-3 mt-1"></i>
+                    <div class="flex-grow-1">
+                        <strong class="d-block mb-1" style="font-size: 1.1rem;">${title}</strong>
+                        <div style="font-size: 0.95rem; line-height: 1.5;">${message}</div>
+                    </div>
+                    <button type="button" class="btn-close ms-3" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
             </div>
         `;
+        
         alertContainer.innerHTML = toastHtml;
 
+        // Auto-dismiss after 8 seconds for errors (longer to read), 5 seconds for others
+        const dismissTime = (type === 'error' || type === 'danger') ? 8000 : 5000;
+        
         setTimeout(() => {
             const alert = alertContainer.querySelector('.alert');
             if (alert) {
                 new bootstrap.Alert(alert).close();
             }
-        }, 5000);
+        }, dismissTime);
     }
 
     // ===== ENROLLMENT CRUD =====
@@ -3580,15 +3604,53 @@ AdminDashboard.prototype.updateStudentPasswordStrength = function(password) {
     }
 };
 
+// Show validation error for a student field
+AdminDashboard.prototype.showStudentFieldError = function(fieldId, message) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+
+    field.classList.add('is-invalid');
+    field.classList.remove('is-valid');
+
+    // Find or create error feedback element
+    const errorId = fieldId + 'Error';
+    let errorElement = document.getElementById(errorId);
+    
+    if (!errorElement) {
+        // If no error element exists, find the invalid-feedback div
+        errorElement = field.parentElement.querySelector('.invalid-feedback');
+    }
+    
+    if (errorElement) {
+        errorElement.textContent = message;
+    }
+
+    // Focus on the first error field
+    if (!document.querySelector('.is-invalid')) {
+        field.focus();
+    }
+};
+
+// Clear all validation errors from student form
+AdminDashboard.prototype.clearStudentValidation = function() {
+    const form = document.getElementById('studentForm');
+    if (!form) return;
+
+    // Remove validation classes
+    form.querySelectorAll('.is-invalid, .is-valid').forEach(el => {
+        el.classList.remove('is-invalid', 'is-valid');
+    });
+
+    // Clear was-validated class
+    form.classList.remove('was-validated');
+};
+
 // Enhanced student form reset
 AdminDashboard.prototype.resetStudentFormEnhanced = function() {
     const form = document.getElementById('studentForm');
     if (form) {
         form.reset();
-        form.classList.remove('was-validated');
-        form.querySelectorAll('.is-invalid, .is-valid').forEach(el => {
-            el.classList.remove('is-invalid', 'is-valid');
-        });
+        this.clearStudentValidation();
     }
 
     // Reset password strength

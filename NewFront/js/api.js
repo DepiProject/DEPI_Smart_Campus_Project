@@ -295,10 +295,17 @@ const API = {
             });
         },
 
-        // Delete student (Admin only)
+        // Delete student permanently (Admin only) - HARD DELETE
         async delete(id) {
             return API.request(`/Student/${id}`, {
                 method: 'DELETE'
+            });
+        },
+
+        // Archive student (Admin only) - SOFT DELETE
+        async archive(id) {
+            return API.request(`/Student/${id}/archive`, {
+                method: 'POST'
             });
         },
 
@@ -390,10 +397,17 @@ const API = {
             });
         },
 
-        // Delete instructor (Admin only)
+        // Delete instructor permanently (Admin only) - HARD DELETE
         async delete(id) {
             return API.request(`/Instructor/${id}`, {
                 method: 'DELETE'
+            });
+        },
+
+        // Archive instructor (Admin only) - SOFT DELETE
+        async archive(id) {
+            return API.request(`/Instructor/${id}/archive`, {
+                method: 'POST'
             });
         },
 

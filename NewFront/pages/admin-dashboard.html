@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="../css/utilities.css">
     <link rel="stylesheet" href="../css/dashboard.css">
     <link rel="stylesheet" href="../css/admin-enhanced.css">
+    <link rel="stylesheet" href="../css/profile.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         body {
@@ -63,6 +64,10 @@
         <a href="enrollment-management.html" class="icon-sidebar-item">
             <i class="bi bi-card-checklist"></i>
             <span>Enrollments</span>
+        </a>
+        <a href="#profile" data-section="profile" class="icon-sidebar-item">
+            <i class="bi bi-person-circle"></i>
+            <span>Profile</span>
         </a>
     </div>
 
@@ -475,126 +480,179 @@
             </div>
 
             <!-- Profile Section -->
-            <div id="profile" class="section d-none">
-                <h2 class="mb-4">My Profile</h2>
-
-                <!-- Profile Display View -->
-                <div id="profileDisplayView" class="card border-0 shadow-sm">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0" style="color: var(--sage-700);"><i class="bi bi-person-circle"></i> Profile
-                            Information</h5>
-                        <button class="btn btn-light btn-sm" onclick="adminDashboard.showEditProfileForm()">
-                            <i class="bi bi-pencil"></i> Edit
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <h6 class="text-muted">First Name</h6>
-                                <p class="fs-6" id="displayFirstName">-</p>
+            <div id="profile" class="section d-none profile-container">
+                <!-- Profile Hero Section -->
+                <div class="profile-hero">
+                    <button class="profile-edit-btn" onclick="adminDashboard.showEditProfileForm()">
+                        <i class="bi bi-pencil"></i> Edit Profile
+                    </button>
+                    
+                    <div id="profileDisplayView">
+                        <div class="profile-avatar-section">
+                            <div class="profile-avatar admin-avatar">
+                                <i class="bi bi-shield-fill-check"></i>
+                                <div class="profile-status-badge"></div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <h6 class="text-muted">Last Name</h6>
-                                <p class="fs-6" id="displayLastName">-</p>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <h6 class="text-muted">Email</h6>
-                                <p class="fs-6" id="displayEmail">-</p>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <h6 class="text-muted">Contact Number</h6>
-                                <p class="fs-6" id="displayContactNumber">-</p>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <h6 class="text-muted">Role</h6>
-                                <p class="fs-6"><span class="badge bg-success">Administrator</span></p>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <h6 class="text-muted">Account Created</h6>
-                                <p class="fs-6" id="displayCreatedDate">-</p>
+                            <div class="profile-hero-info">
+                                <h1><span id="displayFirstName">-</span> <span id="displayLastName">-</span></h1>
+                                <div class="role-badge">
+                                    <i class="bi bi-shield-check"></i> Administrator
+                                </div>
+                                <div class="profile-meta">
+                                    <div class="profile-meta-item">
+                                        <i class="bi bi-envelope-fill"></i>
+                                        <span id="displayEmail">-</span>
+                                    </div>
+                                    <div class="profile-meta-item">
+                                        <i class="bi bi-telephone-fill"></i>
+                                        <span id="displayContactNumber">Not provided</span>
+                                    </div>
+                                    <div class="profile-meta-item">
+                                        <i class="bi bi-calendar-plus"></i>
+                                        <span>Joined: <span id="displayCreatedDate">-</span></span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Profile Edit View -->
-                <div id="profileEditView" class="card border-0 shadow-sm d-none mt-4">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0"><i class="bi bi-pencil-square"></i> Edit Profile</h5>
+                <!-- Profile Content Cards -->
+                <div class="profile-content">
+                    <div class="profile-info-card admin-card">
+                        <div class="card-icon">
+                            <i class="bi bi-shield-lock"></i>
+                        </div>
+                        <h3>Access Level</h3>
+                        <p class="value">
+                            <span class="info-badge warning-badge">
+                                <i class="bi bi-key-fill"></i> Full Access
+                            </span>
+                        </p>
                     </div>
-                    <div class="card-body">
-                        <form id="profileForm">
+
+                    <div class="profile-info-card admin-card">
+                        <div class="card-icon">
+                            <i class="bi bi-gear-fill"></i>
+                        </div>
+                        <h3>Role</h3>
+                        <p class="value">
+                            <span class="info-badge success-badge">
+                                <i class="bi bi-award-fill"></i> System Admin
+                            </span>
+                        </p>
+                    </div>
+
+                    <div class="profile-info-card admin-card">
+                        <div class="card-icon">
+                            <i class="bi bi-calendar-check"></i>
+                        </div>
+                        <h3>Status</h3>
+                        <p class="value">
+                            <span class="info-badge success-badge">
+                                <i class="bi bi-check-circle-fill"></i> Active
+                            </span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Profile Edit View -->
+                <div id="profileEditView" class="profile-edit-form d-none">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="mb-0">
+                            <i class="bi bi-pencil-square text-primary"></i> Edit Profile
+                        </h2>
+                        <button class="btn btn-outline-secondary" onclick="adminDashboard.showDisplayProfileView()">
+                            <i class="bi bi-arrow-left"></i> Back to Profile
+                        </button>
+                    </div>
+                    
+                    <form id="profileForm">
+                        <div class="form-section">
+                            <div class="form-section-title">
+                                <i class="bi bi-person-fill"></i>
+                                <span>Personal Information</span>
+                            </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">First Name</label>
+                                    <label class="form-label">First Name <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" id="profileFirstName" required
                                         placeholder="Enter first name">
                                     <small class="text-muted">Letters only, max 50 characters</small>
                                     <div id="firstNameError" class="text-danger small mt-1"></div>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Last Name</label>
+                                    <label class="form-label">Last Name <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" id="profileLastName" required
                                         placeholder="Enter last name">
                                     <small class="text-muted">Letters only, max 50 characters</small>
                                     <div id="lastNameError" class="text-danger small mt-1"></div>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="form-section">
+                            <div class="form-section-title">
+                                <i class="bi bi-envelope-fill"></i>
+                                <span>Contact Information</span>
+                            </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Email</label>
                                     <input type="email" class="form-control" id="profileEmail" disabled
                                         placeholder="Email (read-only)">
-                                    <small class="text-muted">Email cannot be changed</small>
+                                    <small class="text-muted">
+                                        <i class="bi bi-lock-fill"></i> Email cannot be changed
+                                    </small>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Contact Number</label>
                                     <input type="tel" class="form-control" id="profileContactNumber"
-                                        placeholder="01012345678" maxlength="11" pattern="^(010|011|012|015)\d{8}$">
+                                        placeholder="01012345678" maxlength="11" pattern="^(010|011|012|015)\\d{8}$">
                                     <small class="text-muted">Must start with 010, 011, 012, or 015 (optional)</small>
                                     <div id="contactNumberError" class="text-danger small mt-1"></div>
                                 </div>
                             </div>
-                            <hr>
-                            <h6 class="mb-3">Password Security</h6>
+                        </div>
+
+                        <div class="form-section">
+                            <div class="form-section-title">
+                                <i class="bi bi-shield-lock-fill"></i>
+                                <span>Password Security</span>
+                            </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Current Password <span
-                                            class="text-danger">*</span></label>
+                                    <label class="form-label">Current Password <span class="text-danger">*</span></label>
                                     <input type="password" class="form-control" id="currentPassword" required
                                         placeholder="Enter your current password">
                                     <small class="text-muted">Required for security verification</small>
                                     <div id="passwordError" class="text-danger small mt-1"></div>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">New Password <span
-                                            class="text-muted">(optional)</span></label>
+                                    <label class="form-label">New Password <span class="text-muted">(optional)</span></label>
                                     <input type="password" class="form-control" id="newPassword"
                                         placeholder="Leave blank to keep current password">
-                                    <small class="text-muted">Min 8 chars: uppercase, lowercase, number, special
-                                        char (@$!%*?&)</small>
+                                    <small class="text-muted">Min 8 chars: uppercase, lowercase, number, special char</small>
                                     <div id="newPasswordError" class="text-danger small mt-1"></div>
                                 </div>
                             </div>
-                            <div class="alert alert-info small mt-3">
-                                <i class="bi bi-info-circle"></i> Your full name should contain only letters. Phone
-                                numbers must start with 010, 011, 012, or 015 (last 8 digits cannot be all same).
-                            </div>
-                            <div class="d-flex gap-2">
-                                <button type="submit" class="btn btn-success">
-                                    <i class="bi bi-check-lg"></i> Save Changes
-                                </button>
-                                <button type="button" class="btn btn-secondary"
-                                    onclick="adminDashboard.showDisplayProfileView()">
-                                    <i class="bi bi-x-lg"></i> Cancel
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+                        </div>
+
+                        <div class="profile-info-alert">
+                            <i class="bi bi-info-circle-fill"></i>
+                            <strong>Important:</strong> Your full name should contain only letters. Phone numbers must start with 010, 011, 012, or 015 (last 8 digits cannot be all same).
+                        </div>
+                        
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-save">
+                                <i class="bi bi-check-lg"></i> Save Changes
+                            </button>
+                            <button type="button" class="btn btn-cancel"
+                                onclick="adminDashboard.showDisplayProfileView()">
+                                <i class="bi bi-x-lg"></i> Cancel
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
             </main>
