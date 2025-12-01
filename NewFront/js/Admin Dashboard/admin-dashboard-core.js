@@ -196,19 +196,30 @@ class AdminDashboard {
         let details = '';
 
         if (typeof responseData === 'object') {
-            errorMsg = responseData.Error || responseData.error || 
-                      responseData.Message || responseData.message || 
+            // Extract the main error message - prioritize the message field
+            errorMsg = responseData.message || responseData.Message || 
+                      responseData.error || responseData.Error || 
                       responseData.title || errorMsg;
             
+            // Clean up technical error messages to be user-friendly
+            if (errorMsg.includes('InvalidOperationException')) {
+                // Extract the actual message after the exception type
+                const match = errorMsg.match(/InvalidOperationException:\s*(.+?)(?:\s+at\s+|$)/);
+                if (match && match[1]) {
+                    errorMsg = match[1].trim();
+                }
+            }
+            
+            // Handle validation errors
             if (responseData.errors) {
                 const errors = responseData.errors;
                 if (typeof errors === 'object' && !Array.isArray(errors)) {
                     const errorList = [];
                     for (const field in errors) {
                         if (Array.isArray(errors[field])) {
-                            errorList.push(`${field}: ${errors[field].join(', ')}`);
+                            errorList.push(errors[field].join(', '));
                         } else {
-                            errorList.push(`${field}: ${errors[field]}`);
+                            errorList.push(errors[field]);
                         }
                     }
                     details = errorList.join('\n');
@@ -218,9 +229,17 @@ class AdminDashboard {
             }
         } else if (typeof responseData === 'string') {
             errorMsg = responseData;
+            // Clean up technical error messages
+            if (errorMsg.includes('InvalidOperationException')) {
+                const match = errorMsg.match(/InvalidOperationException:\s*(.+?)(?:\s+at\s+|$)/);
+                if (match && match[1]) {
+                    errorMsg = match[1].trim();
+                }
+            }
         }
 
-        this.showToast('Error', title + ': ' + errorMsg, 'error');
+        // Show the cleaned error message
+        this.showToast('Error', errorMsg, 'error');
 
         if (details) {
             console.error('📋 Validation Details:\n' + details);
@@ -325,13 +344,58 @@ class AdminDashboard {
             let instructors = response.data.data || response.data;
             if (!Array.isArray(instructors)) instructors = [];
 
-            const currentValue = selectElement.value;
-            const optionsHtml = instructors.map(instr => 
-                `<option value="${instr.instructorId || instr.id}">${instr.fullName}</option>`
-            ).join('');
+            // For new department: only show instructors without a department OR who are not heads
+            const unassignedInstructors = instructors.filter(instr => 
+                !instr.departmentId && !instr.DepartmentId
+            );
 
-            selectElement.innerHTML = '<option value="">Select Instructor as Head</option>' + optionsHtml;
-            if (currentValue) selectElement.value = currentValue;
+            const currentValue = selectElement.value;
+            
+            if (unassignedInstructors.length === 0) {
+                selectElement.innerHTML = '<option value="">No instructors assign yet</option>';
+            } else {
+                const optionsHtml = unassignedInstructors.map(instr => 
+                    `<option value="${instr.instructorId || instr.id}">${instr.fullName}</option>`
+                ).join('');
+                selectElement.innerHTML = '<option value="">No instructors assign yet</option>' + optionsHtml;
+                if (currentValue) selectElement.value = currentValue;
+            }
+        }
+    }
+
+    async loadDepartmentHeadInstructors(departmentId) {
+        const selectElement = document.getElementById('departmentHead');
+        if (!selectElement) return;
+
+        try {
+            const response = await API.instructor.getAll(1, 100);
+            
+            if (response.success && response.data) {
+                let instructors = response.data.data || response.data;
+                if (!Array.isArray(instructors)) instructors = [];
+
+                // Filter instructors by department if departmentId is provided
+                if (departmentId) {
+                    instructors = instructors.filter(instr => 
+                        (instr.departmentId || instr.DepartmentId) == departmentId
+                    );
+                }
+
+                const currentValue = selectElement.value;
+                
+                if (instructors.length === 0) {
+                    selectElement.innerHTML = '<option value="">No instructors in this department yet</option>';
+                } else {
+                    const optionsHtml = instructors.map(instr => 
+                        `<option value="${instr.instructorId || instr.id}">${instr.fullName}</option>`
+                    ).join('');
+                    selectElement.innerHTML = '<option value="">No Head (Assign Later)</option>' + optionsHtml;
+                    if (currentValue) selectElement.value = currentValue;
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load instructors:', error);
+            selectElement.innerHTML = '<option value="">Error loading instructors</option>';
         }
     }
 }
@@ -382,5 +446,184 @@ document.addEventListener('DOMContentLoaded', () => {
         adminDashboard.loadDepartmentSelects();
         adminDashboard.loadInstructorSelects();
         adminDashboard.setupCourseFormListeners();
+
+        // Setup search and filter listeners
+        setupAdminSearchFilters();
     }
 });
+
+// =====================================================
+// Search and Filter Functions for Admin Dashboard
+// =====================================================
+
+function setupAdminSearchFilters() {
+    // Instructor Search and Department Filter
+    const instructorSearch = document.getElementById('instructorSearchInput');
+    const instructorDeptFilter = document.getElementById('instructorDepartmentFilter');
+    
+    const filterInstructors = () => {
+        const searchTerm = (instructorSearch?.value || '').toLowerCase();
+        const deptTerm = instructorDeptFilter?.value || '';
+        const rows = document.querySelectorAll('#instructorsTableBody tr');
+        
+        rows.forEach(row => {
+            const matchSearch = row.textContent.toLowerCase().includes(searchTerm);
+            const matchDept = !deptTerm || row.textContent.includes(deptTerm);
+            row.style.display = (matchSearch && matchDept) ? '' : 'none';
+        });
+    };
+
+    if (instructorSearch) {
+        instructorSearch.addEventListener('input', filterInstructors);
+    }
+    if (instructorDeptFilter) {
+        instructorDeptFilter.addEventListener('change', filterInstructors);
+    }
+
+    // Populate instructor department filter
+    const populateInstructorDeptFilter = () => {
+        const deptFilter = document.getElementById('instructorDepartmentFilter');
+        if (!deptFilter) return;
+        
+        const departments = new Set();
+        document.querySelectorAll('#instructorsTableBody tr').forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length > 2) {
+                const dept = cells[2].textContent.trim();
+                if (dept && dept !== 'Not Assigned') {
+                    departments.add(dept);
+                }
+            }
+        });
+        
+        const existingOptions = Array.from(deptFilter.options).map(opt => opt.value);
+        departments.forEach(dept => {
+            if (!existingOptions.includes(dept)) {
+                const option = document.createElement('option');
+                option.value = dept;
+                option.textContent = dept;
+                deptFilter.appendChild(option);
+            }
+        });
+    };
+
+    // Call this after instructors are loaded
+    const originalLoadInstructors = adminDashboard?.loadInstructors;
+    if (originalLoadInstructors) {
+        adminDashboard.loadInstructors = async function() {
+            await originalLoadInstructors.call(this);
+            populateInstructorDeptFilter();
+        };
+    }
+
+    // Student Search
+    const studentSearch = document.getElementById('studentSearchInput');
+    const studentLevelFilter = document.getElementById('studentLevelFilter');
+    
+    const filterStudents = () => {
+        const searchTerm = (studentSearch?.value || '').toLowerCase();
+        const levelTerm = studentLevelFilter?.value || '';
+        const rows = document.querySelectorAll('#studentsTableBody tr');
+        
+        rows.forEach(row => {
+            const matchSearch = row.textContent.toLowerCase().includes(searchTerm);
+            const matchLevel = !levelTerm || row.textContent.includes(`Level ${levelTerm}`);
+            row.style.display = (matchSearch && matchLevel) ? '' : 'none';
+        });
+    };
+
+    if (studentSearch) {
+        studentSearch.addEventListener('input', filterStudents);
+    }
+    if (studentLevelFilter) {
+        studentLevelFilter.addEventListener('change', filterStudents);
+    }
+
+    // Department Search
+    const departmentSearch = document.getElementById('departmentSearchInput');
+    const departmentBuildingFilter = document.getElementById('departmentBuildingFilter');
+    
+    const filterDepartments = () => {
+        const searchTerm = (departmentSearch?.value || '').toLowerCase();
+        const buildingTerm = departmentBuildingFilter?.value || '';
+        const rows = document.querySelectorAll('#departmentsTableBody tr');
+        
+        rows.forEach(row => {
+            const matchSearch = row.textContent.toLowerCase().includes(searchTerm);
+            const matchBuilding = !buildingTerm || row.textContent.includes(buildingTerm);
+            row.style.display = (matchSearch && matchBuilding) ? '' : 'none';
+        });
+    };
+
+    if (departmentSearch) {
+        departmentSearch.addEventListener('input', filterDepartments);
+    }
+    if (departmentBuildingFilter) {
+        departmentBuildingFilter.addEventListener('change', filterDepartments);
+    }
+
+    // Course Search
+    const courseSearch = document.getElementById('courseSearchInput');
+    const courseDepartmentFilter = document.getElementById('courseDepartmentFilter');
+    const courseCreditFilter = document.getElementById('courseCreditFilter');
+    
+    const filterCourses = () => {
+        const searchTerm = (courseSearch?.value || '').toLowerCase();
+        const deptTerm = courseDepartmentFilter?.value || '';
+        const creditTerm = courseCreditFilter?.value || '';
+        const rows = document.querySelectorAll('#coursesTableBody tr');
+        
+        rows.forEach(row => {
+            const matchSearch = row.textContent.toLowerCase().includes(searchTerm);
+            const matchDept = !deptTerm || row.textContent.includes(deptTerm);
+            const matchCredit = !creditTerm || row.textContent.includes(creditTerm);
+            row.style.display = (matchSearch && matchDept && matchCredit) ? '' : 'none';
+        });
+    };
+
+    if (courseSearch) {
+        courseSearch.addEventListener('input', filterCourses);
+    }
+    if (courseDepartmentFilter) {
+        courseDepartmentFilter.addEventListener('change', filterCourses);
+    }
+    if (courseCreditFilter) {
+        courseCreditFilter.addEventListener('change', filterCourses);
+    }
+
+    // Populate course department filter with departments from table
+    const populateCourseDeptFilter = () => {
+        const deptFilter = document.getElementById('courseDepartmentFilter');
+        if (!deptFilter) return;
+        
+        const departments = new Set();
+        document.querySelectorAll('#coursesTableBody tr').forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length > 2) {
+                const dept = cells[2].textContent.trim();
+                if (dept && dept !== 'Not Assigned') {
+                    departments.add(dept);
+                }
+            }
+        });
+        
+        const existingOptions = Array.from(deptFilter.options).map(opt => opt.value);
+        departments.forEach(dept => {
+            if (!existingOptions.includes(dept)) {
+                const option = document.createElement('option');
+                option.value = dept;
+                option.textContent = dept;
+                deptFilter.appendChild(option);
+            }
+        });
+    };
+
+    // Call this after courses are loaded
+    const originalLoadCourses = adminDashboard?.loadCourses;
+    if (originalLoadCourses) {
+        adminDashboard.loadCourses = async function() {
+            await originalLoadCourses.call(this);
+            populateCourseDeptFilter();
+        };
+    }
+}

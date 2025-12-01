@@ -26,7 +26,7 @@ AdminDashboard.prototype.loadStudents = async function() {
                 <td>${student.fullName || 'N/A'}</td>
                 <td><small>${student.email || student.Email || '-'}</small></td>
                 <td><span class="badge bg-info">${student.level || 'N/A'}</span></td>
-                <td><small>${student.departmentName || student.DepartmentName || '-'}</small></td>
+                <td><small>${student.departmentName || student.DepartmentName || 'Not Assigned'}</small></td>
                 <td>${student.contactNumber || '-'}</td>
                 <td>
                     <button class="btn btn-sm btn-info" onclick="adminDashboard.editStudent(${student.studentId})" title="Edit">
@@ -34,9 +34,6 @@ AdminDashboard.prototype.loadStudents = async function() {
                     </button>
                     <button class="btn btn-sm btn-warning" onclick="adminDashboard.deleteStudent(${student.studentId})" title="Archive">
                         <i class="bi bi-archive"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="adminDashboard.permanentDeleteStudent(${student.studentId})" title="Delete Forever">
-                        <i class="bi bi-trash"></i>
                     </button>
                 </td>
             </tr>
@@ -182,15 +179,14 @@ AdminDashboard.prototype.editStudent = async function(id) {
         document.getElementById('studentEmail').value = student.email || '';
         document.getElementById('studentFirstName').value = firstName;
         document.getElementById('studentLastName').value = lastName;
-        document.getElementById('studentCode').value = student.studentCode || '';
         document.getElementById('studentPhone').value = student.contactNumber || '';
         document.getElementById('studentLevel').value = student.level || '';
         document.getElementById('studentDepartment').value = student.departmentId || '';
         
-        document.getElementById('passwordField').style.display = 'none';
+        document.getElementById('studentPasswordField').style.display = 'none';
         document.getElementById('studentPassword').required = false;
         
-        ['studentEmail', 'studentFirstName', 'studentLastName', 'studentCode', 'studentPhone'].forEach(id => {
+        ['studentEmail', 'studentFirstName', 'studentLastName', 'studentPhone'].forEach(id => {
             const field = document.getElementById(id);
             field.readOnly = true;
             field.style.backgroundColor = '#e9ecef';
@@ -205,7 +201,7 @@ AdminDashboard.prototype.editStudent = async function(id) {
             editInfo.style.display = 'block';
         }
         
-        document.getElementById('emailNote').textContent = '⚠️ Admin can only update Level and Department';
+        document.getElementById('studentEmailNote').textContent = '⚠️ Admin can only update Level and Department';
         document.getElementById('studentModalTitle').textContent = 'Edit Student (Level & Department)';
         document.getElementById('studentBtnText').textContent = 'Update Student';
         
@@ -231,7 +227,7 @@ AdminDashboard.prototype.deleteStudent = function(id) {
             <li>Not in active lists</li>
             <li>All records preserved</li>
         </ul>
-        <p class="text-success"><i class="bi bi-check-circle"></i> Can be restored</p>
+        <p class="text-success"><i class="bi bi-check-circle"></i> Can be restored from archived students page</p>
     `;
     document.getElementById('confirmDeleteBtn').textContent = 'Archive';
     document.getElementById('confirmDeleteBtn').className = 'btn btn-warning';
@@ -308,10 +304,10 @@ AdminDashboard.prototype.resetStudentFormEnhanced = function() {
 
     document.getElementById('studentModalTitle').innerHTML = '<i class="bi bi-people"></i> Add Student';
     document.getElementById('studentBtnText').textContent = 'Add Student';
-    document.getElementById('passwordField').style.display = 'block';
+    document.getElementById('studentPasswordField').style.display = 'block';
     document.getElementById('studentPassword').required = true;
 
-    ['studentEmail', 'studentFirstName', 'studentLastName', 'studentCode', 'studentPhone'].forEach(id => {
+    ['studentEmail', 'studentFirstName', 'studentLastName', 'studentPhone'].forEach(id => {
         const field = document.getElementById(id);
         if (field) {
             field.readOnly = false;
@@ -320,7 +316,7 @@ AdminDashboard.prototype.resetStudentFormEnhanced = function() {
         }
     });
 
-    document.getElementById('emailNote').textContent = 'University format required';
+    document.getElementById('studentEmailNote').textContent = 'Must be university email format';
     this.resetEditState();
 };
 
@@ -341,15 +337,15 @@ AdminDashboard.prototype.loadCourses = async function() {
             <tr>
                 <td><strong>${course.courseCode || '-'}</strong></td>
                 <td>${course.name}</td>
-                <td><small>${course.departmentName || '-'}</small></td>
+                <td><small>${course.departmentName || 'Not Assigned'}</small></td>
                 <td><small>${course.instructorName || '-'}</small></td>
                 <td>${course.creditHours || '-'}</td>
                 <td>
                     <button class="btn btn-sm btn-info" onclick="adminDashboard.editCourse(${course.id})" title="Edit">
                         <i class="bi bi-pencil"></i>
                     </button>
-                    <button class="btn btn-sm btn-danger" onclick="adminDashboard.permanentDeleteCourse(${course.id})" title="Permanent Delete">
-                        <i class="bi bi-trash-fill"></i> Delete
+                    <button class="btn btn-sm btn-warning" onclick="adminDashboard.deleteCourse(${course.id})" title="Archive">
+                        <i class="bi bi-archive"></i>
                     </button>
                 </td>
             </tr>
@@ -466,20 +462,23 @@ AdminDashboard.prototype.editCourse = async function(id) {
     }
 };
 
-AdminDashboard.prototype.permanentDeleteCourse = function(id) {
+AdminDashboard.prototype.deleteCourse = function(id) {
     this.deleteType = 'course';
     this.deleteId = id;
-    this.deleteAction = 'permanent';
+    this.deleteAction = 'archive';
     
-    document.getElementById('deleteModalTitle').innerHTML = '<i class="bi bi-exclamation-triangle"></i> Permanent Delete';
+    document.getElementById('deleteModalTitle').innerHTML = '<i class="bi bi-archive"></i> Archive Course';
     document.getElementById('deleteModalBody').innerHTML = `
-        <div class="alert alert-danger">
-            <h6><i class="bi bi-exclamation-circle"></i> This will PERMANENTLY delete the course.</h6>
-            <p><strong>ALL data will be LOST</strong></p>
-        </div>
+        <p>This will make the course <strong>INACTIVE</strong>.</p>
+        <ul>
+            <li>Students cannot enroll</li>
+            <li>Not in active lists</li>
+            <li>All records preserved</li>
+        </ul>
+        <p class="text-success"><i class="bi bi-check-circle"></i> Can be restored from archived courses page</p>
     `;
-    document.getElementById('confirmDeleteBtn').textContent = 'Delete Forever';
-    document.getElementById('confirmDeleteBtn').className = 'btn btn-danger';
+    document.getElementById('confirmDeleteBtn').textContent = 'Archive';
+    document.getElementById('confirmDeleteBtn').className = 'btn btn-warning';
     
     new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show();
 };

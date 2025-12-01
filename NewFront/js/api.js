@@ -295,18 +295,16 @@ const API = {
             });
         },
 
-        // Delete student permanently (Admin only) - HARD DELETE
-        async delete(id) {
+        // Archive student (Admin only) - SOFT DELETE (this is what the DELETE endpoint does)
+        async archive(id) {
             return API.request(`/Student/${id}`, {
                 method: 'DELETE'
             });
         },
 
-        // Archive student (Admin only) - SOFT DELETE
-        async archive(id) {
-            return API.request(`/Student/${id}/archive`, {
-                method: 'POST'
-            });
+        // Alias for backwards compatibility
+        async delete(id) {
+            return this.archive(id);
         },
 
         // Soft delete operations
@@ -491,11 +489,16 @@ const API = {
             });
         },
 
-        // Delete department
-        async delete(id) {
+        // Archive department (soft delete)
+        async archive(id) {
             return API.request(`/Department/${id}`, {
                 method: 'DELETE'
             });
+        },
+
+        // Alias for backwards compatibility
+        async delete(id) {
+            return this.archive(id);
         },
 
         // Soft delete operations
@@ -565,11 +568,16 @@ const API = {
             });
         },
 
-        // Soft delete course (marks as deleted)
-        async delete(id) {
+        // Archive course (soft delete - marks as deleted)
+        async archive(id) {
             return API.request(`/Course/${id}`, {
                 method: 'DELETE'
             });
+        },
+
+        // Alias for backwards compatibility  
+        async delete(id) {
+            return this.archive(id);
         },
 
         // Permanently delete course (removes from database)

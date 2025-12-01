@@ -184,6 +184,10 @@
             }
 
             container.innerHTML = departments.map(dept => {
+                console.log('Department object:', dept); // Debug log
+                const deptId = dept.departmentId || dept.DepartmentId || dept.id || dept.Id;
+                console.log('Department ID:', deptId); // Debug log
+
                 const initials = (dept.name || 'D').substring(0, 2).toUpperCase();
                 const deletedDate = dept.deletedAt ? new Date(dept.deletedAt).toLocaleDateString('en-US', {
                     year: 'numeric', month: 'short', day: 'numeric'
@@ -215,10 +219,10 @@
                                 </div>
                             </div>
                             <div class="entity-actions">
-                                <button onclick="restore(${dept.departmentId})" class="action-btn btn-restore">
+                                <button onclick="restore(${deptId})" class="action-btn btn-restore">
                                     <i class="bi bi-arrow-counterclockwise"></i>Restore
                                 </button>
-                                <button onclick="confirmDelete(${dept.departmentId})" class="action-btn btn-delete">
+                                <button onclick="confirmDelete(${deptId})" class="action-btn btn-delete">
                                     <i class="bi bi-trash-fill"></i>Delete Forever
                                 </button>
                             </div>
@@ -230,13 +234,19 @@
         window.restore = async function (id) {
             try {
                 const response = await API.department.restore(id);
-                if (response.success) {
-                    notifications.success('Success', 'Department restored!');
+                console.log('Restore response:', response);
+
+                if (response.success || (response.Success !== undefined ? response.Success : response.success)) {
+                    notifications.success('Success', 'Department restored successfully!');
                     restoredToday++;
                     await loadArchivedDepartments();
+                } else {
+                    const message = response.message || response.Message || 'Failed to restore department';
+                    notifications.error('Error', message);
                 }
             } catch (error) {
-                notifications.error('Error', 'Failed to restore');
+                console.error('Restore error:', error);
+                notifications.error('Error', 'Failed to restore department: ' + (error.message || error));
             }
         };
 
@@ -255,13 +265,20 @@
         document.getElementById('confirmDeleteBtn').addEventListener('click', async function () {
             try {
                 const response = await API.department.permanentDelete(window.deleteDeptId);
+                console.log('Delete response:', response);
+
                 bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
-                if (response.success) {
-                    notifications.success('Success', 'Department deleted');
+
+                if (response.success || (response.Success !== undefined ? response.Success : response.success)) {
+                    notifications.success('Success', 'Department permanently deleted!');
                     await loadArchivedDepartments();
+                } else {
+                    const message = response.message || response.Message || 'Failed to delete department';
+                    notifications.error('Error', message);
                 }
             } catch (error) {
-                notifications.error('Error', 'Failed to delete');
+                console.error('Delete error:', error);
+                notifications.error('Error', 'Failed to delete department: ' + (error.message || error));
             }
         });
     </script>

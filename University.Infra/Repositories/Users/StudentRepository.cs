@@ -50,6 +50,9 @@ namespace University.Infra.Repositories.Users
         {
             return await _context.Students
                     .Include(s => s.User)
+                    .Include(s => s.Department)
+                    .Include(s => s.Enrollments)
+                        .ThenInclude(e => e.Course)
                     .FirstOrDefaultAsync(s => s.StudentId == id);
         }
 

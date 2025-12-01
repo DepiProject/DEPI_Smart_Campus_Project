@@ -24,7 +24,7 @@ AdminDashboard.prototype.loadInstructors = async function() {
             <tr>
                 <td>${instructor.fullName || 'N/A'}</td>
                 <td><small>${instructor.email || '-'}</small></td>
-                <td><small>${instructor.departmentName || '-'}</small></td>
+                <td><small>${instructor.departmentName || 'Not Assigned'}</small></td>
                 <td>${instructor.contactNumber || '-'}</td>
                 <td>
                     <button class="btn btn-sm btn-info" onclick="adminDashboard.editInstructor(${instructor.instructorId})" title="Edit">

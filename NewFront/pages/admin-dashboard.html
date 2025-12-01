@@ -311,6 +311,24 @@
                         </button>
                     </div>
                 </div>
+                <div class="mb-3">
+                    <div class="row g-2">
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" class="form-control border-start-0" id="instructorSearchInput"
+                                    placeholder="Search by name, email, or department...">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select" id="instructorDepartmentFilter">
+                                <option value="">All Departments</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-striped" id="instructorsTable">
                         <thead>
@@ -342,6 +360,28 @@
                         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#studentModal">
                             <i class="bi bi-plus-lg"></i> Add Student
                         </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="row g-2">
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" class="form-control border-start-0" id="studentSearchInput"
+                                    placeholder="Search by code, name, email, or department...">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select" id="studentLevelFilter">
+                                <option value="">All Levels</option>
+                                <option value="1">Level 1 (Freshman)</option>
+                                <option value="2">Level 2 (Sophomore)</option>
+                                <option value="3">Level 3 (Junior)</option>
+                                <option value="4">Level 4 (Senior)</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div class="table-responsive">
@@ -379,6 +419,29 @@
                         </button>
                     </div>
                 </div>
+                <div class="mb-3">
+                    <div class="row g-2">
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" class="form-control border-start-0" id="departmentSearchInput"
+                                    placeholder="Search by name, building, or head...">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select" id="departmentBuildingFilter">
+                                <option value="">All Buildings</option>
+                                <option value="Building A">Building A</option>
+                                <option value="Building B">Building B</option>
+                                <option value="Building C">Building C</option>
+                                <option value="Building D">Building D</option>
+                                <option value="Building E">Building E</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-striped" id="departmentsTable">
                         <thead>
@@ -409,6 +472,35 @@
                         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#courseModal">
                             <i class="bi bi-plus-lg"></i> Add Course
                         </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" class="form-control border-start-0" id="courseSearchInput"
+                                    placeholder="Search by code, name, or instructor...">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="courseDepartmentFilter">
+                                <option value="">All Departments</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="courseCreditFilter">
+                                <option value="">All Credits</option>
+                                <option value="1">1 Credit</option>
+                                <option value="2">2 Credits</option>
+                                <option value="3">3 Credits</option>
+                                <option value="4">4 Credits</option>
+                                <option value="5">5 Credits</option>
+                                <option value="6">6 Credits</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div class="table-responsive">
@@ -1366,14 +1458,13 @@
     <script src="../js/pagination.js"></script>
     <script src="../js/api.js?v=20251128011"></script>
     <script src="../js/dashboard.js?v=20251128011"></script>
-
+    <script src="../js/admin-dashboard.js?v=20251128014"></script>
     <!-- Admin Dashboard - Split Files (Load in Order) -->
     <script src="../js/Admin Dashboard/admin-dashboard-core.js"></script>
     <script src="../js/Admin Dashboard/admin-validation-charts.js"></script>
     <script src="../js/Admin Dashboard/admin-crud-instructors.js"></script>
     <script src="../js/Admin Dashboard/admin-crud-students-courses.js"></script>
     <script src="../js/Admin Dashboard/admin-crud-departments-enrollments.js"></script>
-
     <!-- Mobile Navigation Toggle -->
     <button class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Toggle Navigation">
         <i class="bi bi-list"></i>

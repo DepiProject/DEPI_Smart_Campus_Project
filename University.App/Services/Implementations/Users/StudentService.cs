@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using University.App.DTOs.Users;
+using University.App.Interfaces;
 using University.App.Interfaces.Users;
 using University.App.Services.IServices.Users;
 using University.Core.Entities;
@@ -10,11 +11,13 @@ namespace University.App.Services.Implementations.Users
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly IStudentRepository _studentRepository;
+        private readonly IDepartmentRepository _departmentRepository;
 
-        public StudentService(IStudentRepository studentRepository, UserManager<AppUser> userManager)
+        public StudentService(IStudentRepository studentRepository, UserManager<AppUser> userManager, IDepartmentRepository departmentRepository)
         {
             _studentRepository = studentRepository;
             _userManager = userManager;
+            _departmentRepository = departmentRepository;
         }
 
         public async Task<StudentDTO> CreateAsync(CreateStudentDto dto)
@@ -113,13 +116,21 @@ namespace University.App.Services.Implementations.Users
             if (student.DepartmentId != dto.DepartmentId)
             {
                 // Check for active enrollments in current department
-                var hasActiveEnrollments = student.Enrollments?.Any(e =>
-                    e.Status == "Enrolled" && e.Course?.DepartmentId == student.DepartmentId) ?? false;
+                // Student cannot change department if they have any active courses
+                var activeEnrollments = student.Enrollments?
+                    .Where(e => e.Status != "Rejected" && 
+                               e.Status != "Completed" &&
+                               e.Course?.DepartmentId == student.DepartmentId)
+                    .ToList();
 
-                if (hasActiveEnrollments)
+                if (activeEnrollments != null && activeEnrollments.Any())
                 {
+                    var courseNames = string.Join(", ", activeEnrollments
+                        .Select(e => e.Course?.Name ?? "Unknown")
+                        .Take(3));
+                    
                     throw new InvalidOperationException(
-                        "Cannot change department while student has active enrollments in current department.");
+                        $"Cannot change department. Student has {activeEnrollments.Count} active enrollment(s) in current department: {courseNames}");
                 }
             }
 
@@ -333,8 +344,18 @@ namespace University.App.Services.Implementations.Users
             string year = DateTime.Now.Year.ToString();
             string deptCode = "GEN"; // Default for students without department
 
-            // Simple sequential numbering for now
-            // Can be enhanced with department logic later if needed
+            // Get department code from actual department if provided
+            if (departmentId.HasValue && departmentId.Value > 0)
+            {
+                var department = await _departmentRepository.GetDepartmentById(departmentId.Value);
+                if (department != null && !string.IsNullOrWhiteSpace(department.Name))
+                {
+                    // Extract abbreviation from department name
+                    // For example: "Computer Science" -> "CS", "Mathematics" -> "MATH"
+                    deptCode = GetDepartmentAbbreviation(department.Name);
+                }
+            }
+            
             string codePrefix = $"{year}-{deptCode}-";
             
             // Get all students to find next sequence number
@@ -343,6 +364,34 @@ namespace University.App.Services.Implementations.Users
 
             string sequenceNumber = count.ToString("D3"); // Format as 001, 002, etc.
             return $"{year}-{deptCode}-{sequenceNumber}";
+        }
+
+        /// <summary>
+        /// Generate department abbreviation from department name
+        /// </summary>
+        private string GetDepartmentAbbreviation(string departmentName)
+        {
+            if (string.IsNullOrWhiteSpace(departmentName))
+                return "GEN";
+
+            // Remove common words and extract key parts
+            var words = departmentName.Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries)
+                .Where(w => !new[] { "of", "and", "the" }.Contains(w.ToLower()))
+                .ToList();
+
+            if (words.Count == 0)
+                return "GEN";
+
+            // If single word, take first 3-4 letters
+            if (words.Count == 1)
+            {
+                string word = words[0].ToUpper();
+                return word.Length <= 4 ? word : word.Substring(0, 4);
+            }
+
+            // If multiple words, take first letter of each word (max 4 letters)
+            string abbr = string.Join("", words.Take(4).Select(w => w[0])).ToUpper();
+            return abbr;
         }
     }
 }

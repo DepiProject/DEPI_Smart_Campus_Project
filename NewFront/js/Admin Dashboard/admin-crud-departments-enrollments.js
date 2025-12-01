@@ -21,16 +21,13 @@ AdminDashboard.prototype.loadDepartments = async function() {
             <tr>
                 <td>${dept.name || 'N/A'}</td>
                 <td>${dept.building || '-'}</td>
-                <td><small>${dept.headFullName || dept.headName || '-'}</small></td>
+                <td><small>${dept.headFullName || dept.headName || 'No Head Assigned'}</small></td>
                 <td>
                     <button class="btn btn-sm btn-info" onclick="adminDashboard.editDepartment(${dept.id})" title="Edit">
                         <i class="bi bi-pencil"></i>
                     </button>
                     <button class="btn btn-sm btn-warning" onclick="adminDashboard.deleteDepartment(${dept.id})" title="Archive">
                         <i class="bi bi-archive"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="adminDashboard.permanentDeleteDepartment(${dept.id})" title="Delete Forever">
-                        <i class="bi bi-trash"></i>
                     </button>
                 </td>
             </tr>
@@ -133,10 +130,23 @@ AdminDashboard.prototype.editDepartment = async function(id) {
         const dept = response.data;
         document.getElementById('departmentName').value = dept.name || '';
         document.getElementById('departmentBuilding').value = dept.building || '';
-        document.getElementById('departmentHead').value = dept.headId || '';
         
-        document.getElementById('departmentModalTitle').textContent = 'Edit Department';
-        document.getElementById('saveDepartmentBtn').textContent = 'Update';
+        // Load instructors for this department first
+        if (this.loadDepartmentHeadInstructors) {
+            await this.loadDepartmentHeadInstructors(id);
+        }
+        
+        // Then set the current head
+        const headSelect = document.getElementById('departmentHead');
+        if (headSelect) {
+            headSelect.value = dept.headId || '';
+        }
+        
+        const titleElement = document.getElementById('departmentModalTitle');
+        const btnElement = document.getElementById('saveDepartmentBtn');
+        
+        if (titleElement) titleElement.textContent = 'Edit Department';
+        if (btnElement) btnElement.textContent = 'Update';
         
         this.editingId = id;
         this.editingType = 'department';
@@ -160,7 +170,7 @@ AdminDashboard.prototype.deleteDepartment = function(id) {
             <li>Cannot accept new students/instructors</li>
             <li>All data preserved</li>
         </ul>
-        <p class="text-success"><i class="bi bi-check-circle"></i> Can be restored</p>
+        <p class="text-success"><i class="bi bi-check-circle"></i> Can be restored from archived departments page</p>
     `;
     document.getElementById('confirmDeleteBtn').textContent = 'Archive';
     document.getElementById('confirmDeleteBtn').className = 'btn btn-warning';
@@ -196,8 +206,17 @@ AdminDashboard.prototype.resetDepartmentFormEnhanced = function() {
         });
     }
 
-    document.getElementById('departmentModalTitle').innerHTML = '<i class="bi bi-building"></i> Add Department';
-    document.getElementById('departmentBtnText').textContent = 'Save Department';
+    const titleElement = document.getElementById('departmentModalTitle');
+    const btnTextElement = document.getElementById('departmentBtnText');
+    
+    if (titleElement) titleElement.innerHTML = '<i class="bi bi-building"></i> Add Department';
+    if (btnTextElement) btnTextElement.textContent = 'Save Department';
+    
+    // Reset to show all instructors when creating new department
+    if (this.loadInstructorSelects) {
+        this.loadInstructorSelects();
+    }
+    
     this.resetEditState();
 };
 

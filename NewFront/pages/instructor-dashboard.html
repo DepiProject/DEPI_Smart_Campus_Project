@@ -888,8 +888,11 @@
     <script src="../js/pagination.js"></script>
     <script src="../js/api.js"></script>
     <script src="../js/dashboard.js"></script>
-    <script src="../js/instructor-dashboard.js"></script>
-
+    <!-- Load in this specific order -->
+<script src="js/instructor-dashboard-main.js"></script>
+<script src="js/instructor-dashboard-courses.js"></script>
+<script src="js/instructor-dashboard-attendance.js"></script>
+<script src="js/instructor-dashboard-profile.js"></script>
     <!-- Mobile Navigation Toggle -->
     <button class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Toggle Navigation">
         <i class="bi bi-list"></i>
