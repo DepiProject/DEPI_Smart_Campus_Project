@@ -98,6 +98,38 @@ namespace University.API.Controllers
             return Ok(new { isUnique });
         }
 
+        [HttpGet("{id}/courses-count")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetCoursesCount(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new { message = "Invalid instructor ID" });
+
+            try
+            {
+                var instructor = await _instructorService.GetByIdAsync(id);
+                if (instructor == null)
+                    return NotFound(new { message = "Instructor not found" });
+
+                var courseCount = await _instructorService.GetInstructorCourseCountAsync(id);
+                var isHead = await _instructorService.IsHeadOfDepartmentAsync(id);
+
+                return Ok(new 
+                { 
+                    courseCount, 
+                    isHead,
+                    canArchiveDirectly = courseCount == 0 && !isHead,
+                    message = courseCount == 0 && !isHead 
+                        ? "Instructor can be archived directly" 
+                        : "Reassignment required before archiving"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error checking instructor data", error = ex.Message });
+            }
+        }
+
         [HttpPost]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] CreateInstructorDto dto)
@@ -152,13 +184,16 @@ namespace University.API.Controllers
             }
         }
 
-        [HttpDelete("{id}")]
+        [HttpPost("{id}/archive")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Archive(int id)
         {
+            if (id <= 0)
+                return BadRequest(new { Success = false, Message = "Invalid instructor ID. Please provide a valid ID." });
+
             try
             {
-                // VALIDATION ENHANCED: Delete operation enforces business rules
+                // VALIDATION ENHANCED: Archive operation enforces business rules
                 // The service validates:
                 // - Instructor exists
                 // - Instructor is not a department head
@@ -166,14 +201,18 @@ namespace University.API.Controllers
                 // Uses soft delete to preserve data integrity and audit trail
                 var result = await _instructorService.SoftDeleteAsync(id);
                 if (!result)
-                    return NotFound(new { message = "Instructor not found" });
+                    return NotFound(new { Success = false, Message = $"Instructor with ID {id} not found or is already archived." });
 
-                return Ok(new { message = "Instructor archived successfully" });
+                return Ok(new { Success = true, Message = "Instructor archived successfully. You can restore it from the Archived Instructors page." });
             }
             catch (InvalidOperationException ex)
             {
                 // Business rule violations (head of dept, active courses, etc.)
-                return BadRequest(new { message = ex.Message });
+                return BadRequest(new { Success = false, Message = $"Cannot archive instructor: {ex.Message}" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = "An error occurred while archiving the instructor.", Error = ex.Message });
             }
         }
 
@@ -250,19 +289,24 @@ namespace University.API.Controllers
         public async Task<IActionResult> PermanentDelete(int id)
         {
             if (id <= 0)
-                return BadRequest(new { Success = false, Message = "Invalid instructor ID" });
+                return BadRequest(new { Success = false, Message = "Invalid instructor ID. Please provide a valid ID." });
 
             try
             {
                 var deleted = await _instructorService.PermanentlyDeleteAsync(id);
                 if (!deleted)
-                    return NotFound(new { Success = false, Message = "Instructor not found" });
+                    return NotFound(new { Success = false, Message = $"Instructor with ID {id} not found in the system." });
 
-                return Ok(new { Success = true, Message = "Instructor permanently deleted" });
+                return Ok(new { Success = true, Message = "Instructor permanently deleted from the database." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Business rule violations (has courses, is dept head, has related data)
+                return BadRequest(new { Success = false, Message = $"Cannot permanently delete instructor: {ex.Message}. Use Archive instead to preserve data." });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Success = false, Message = "An error occurred while deleting the instructor", Error = ex.Message });
+                return StatusCode(500, new { Success = false, Message = "An unexpected error occurred while deleting the instructor.", Error = ex.Message });
             }
         }
 
@@ -272,7 +316,9 @@ namespace University.API.Controllers
         {
             if (id <= 0)
                 return BadRequest(new { Success = false, Message = "Invalid instructor ID" });
-
+            var instructor = await _instructorService.GetByIdAsync(id);
+            if (instructor == null)
+                return NotFound(new { Success = false, Message = "Instructor is already deleted or not found" });
             try
             {
                 var result = await _instructorService.CanPermanentlyDeleteAsync(id);
@@ -316,6 +362,71 @@ namespace University.API.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { Success = false, Message = "An error occurred while reassigning courses", Error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Reassign only courses from one instructor to another
+        /// </summary>
+        [HttpPost("{fromId}/reassign-courses-only/{toId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ReassignCoursesOnly(int fromId, int toId)
+        {
+            if (fromId <= 0 || toId <= 0)
+                return BadRequest(new { Success = false, Message = "Invalid instructor IDs" });
+
+            if (fromId == toId)
+                return BadRequest(new { Success = false, Message = "Cannot reassign to the same instructor" });
+
+            try
+            {
+                var count = await _instructorService.ReassignCoursesOnlyAsync(fromId, toId);
+                return Ok(new 
+                { 
+                    Success = true, 
+                    Message = $"{count} course(s) reassigned successfully",
+                    ReassignedCount = count 
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Success = false, Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = "An error occurred while reassigning courses", Error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Transfer department head role from one instructor to another
+        /// </summary>
+        [HttpPost("{fromId}/transfer-head-role/{toId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> TransferHeadRole(int fromId, int toId)
+        {
+            if (fromId <= 0 || toId <= 0)
+                return BadRequest(new { Success = false, Message = "Invalid instructor IDs" });
+
+            if (fromId == toId)
+                return BadRequest(new { Success = false, Message = "Cannot transfer to the same instructor" });
+
+            try
+            {
+                var success = await _instructorService.TransferDepartmentHeadRoleAsync(fromId, toId);
+                return Ok(new 
+                { 
+                    Success = true, 
+                    Message = success ? "Department head role transferred successfully" : "No department head role to transfer"
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Success = false, Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = "An error occurred while transferring head role", Error = ex.Message });
             }
         }
     }

@@ -56,7 +56,6 @@ namespace University.App.DTOs.Users
         [MaxLength(50, ErrorMessage = "Last name cannot exceed 50 characters")]
         public string LastName { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Student code is required")]
         [MaxLength(20)]
         [ValidStudentCode]
         public string StudentCode { get; set; } = string.Empty;

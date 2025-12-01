@@ -2776,6 +2776,11 @@ class InstructorDashboard {
                 `;
             }).join('');
 
+        } catch (error) {
+            console.error('Error loading attendance records:', error);
+        }
+    }
+
     async loadRecentActivity() {
         try {
             // Use currentInstructorId if instructorId is not set

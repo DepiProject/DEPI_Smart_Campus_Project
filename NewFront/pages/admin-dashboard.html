@@ -486,7 +486,7 @@
                     <button class="profile-edit-btn" onclick="adminDashboard.showEditProfileForm()">
                         <i class="bi bi-pencil"></i> Edit Profile
                     </button>
-                    
+
                     <div id="profileDisplayView">
                         <div class="profile-avatar-section">
                             <div class="profile-avatar admin-avatar">
@@ -566,7 +566,7 @@
                             <i class="bi bi-arrow-left"></i> Back to Profile
                         </button>
                     </div>
-                    
+
                     <form id="profileForm">
                         <div class="form-section">
                             <div class="form-section-title">
@@ -622,17 +622,20 @@
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Current Password <span class="text-danger">*</span></label>
+                                    <label class="form-label">Current Password <span
+                                            class="text-danger">*</span></label>
                                     <input type="password" class="form-control" id="currentPassword" required
                                         placeholder="Enter your current password">
                                     <small class="text-muted">Required for security verification</small>
                                     <div id="passwordError" class="text-danger small mt-1"></div>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">New Password <span class="text-muted">(optional)</span></label>
+                                    <label class="form-label">New Password <span
+                                            class="text-muted">(optional)</span></label>
                                     <input type="password" class="form-control" id="newPassword"
                                         placeholder="Leave blank to keep current password">
-                                    <small class="text-muted">Min 8 chars: uppercase, lowercase, number, special char</small>
+                                    <small class="text-muted">Min 8 chars: uppercase, lowercase, number, special
+                                        char</small>
                                     <div id="newPasswordError" class="text-danger small mt-1"></div>
                                 </div>
                             </div>
@@ -640,9 +643,10 @@
 
                         <div class="profile-info-alert">
                             <i class="bi bi-info-circle-fill"></i>
-                            <strong>Important:</strong> Your full name should contain only letters. Phone numbers must start with 010, 011, 012, or 015 (last 8 digits cannot be all same).
+                            <strong>Important:</strong> Your full name should contain only letters. Phone numbers must
+                            start with 010, 011, 012, or 015 (last 8 digits cannot be all same).
                         </div>
-                        
+
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-primary btn-save">
                                 <i class="bi bi-check-lg"></i> Save Changes
@@ -758,9 +762,11 @@
                                     <span class="input-group-text"><i class="bi bi-phone"></i></span>
                                     <input type="tel" class="form-control" id="instructorPhone"
                                         placeholder="01012345678" maxlength="11" pattern="^(010|011|012|015)\d{8}$">
-                                    <div class="invalid-feedback" id="instructorPhoneError">Must start with 010, 011, 012, or 015</div>
+                                    <div class="invalid-feedback" id="instructorPhoneError">Must start with 010, 011,
+                                        012, or 015</div>
                                 </div>
-                                <small class="text-muted">Must start with 010, 011, 012, or 015 (last 8 digits cannot be all same)</small>
+                                <small class="text-muted">Must start with 010, 011, 012, or 015 (last 8 digits cannot be
+                                    all same)</small>
                             </div>
 
                             <!-- Password (Create mode only) -->
@@ -818,12 +824,13 @@
                     <div class="alert alert-info" id="studentBusinessRules">
                         <h6 class="alert-heading"><i class="bi bi-info-circle"></i> Business Rules</h6>
                         <ul class="mb-0 small">
-                            <li>Email: university format (user@example.edu.eg)</li>
+                            <li>Email must be university format (e.g., user@example.edu.eg)</li>
                             <li>Password: min 8 chars, UPPERCASE, lowercase, number, special (@$!%*?&)</li>
-                            <li>Student Code: must start with letter, letters/numbers only (max 20 chars)</li>
-                            <li>Names: letters, spaces, hyphens, apostrophes (5-150 chars total)</li>
+                            <li>Names: letters, spaces, hyphens, apostrophes only (5-150 chars total)</li>
                             <li>Contact: must start with 010, 011, 012, or 015 (last 8 digits cannot be all same)</li>
+                            <li>Student Code: auto-generated (format: YYYY-DEPT-XXX)</li>
                             <li>Level: 1-4 required</li>
+                            <li>Department assignment required</li>
                         </ul>
                     </div>
 
@@ -836,6 +843,7 @@
 
                     <form id="studentForm" class="needs-validation" novalidate>
                         <div class="row">
+                            <!-- Email -->
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
                                 <div class="input-group">
@@ -843,24 +851,29 @@
                                     <input type="email" class="form-control" id="studentEmail" required
                                         placeholder="student@university.edu.eg"
                                         pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$">
-                                    <div class="invalid-feedback" id="studentEmailError">Valid university email required
-                                    </div>
                                 </div>
-                                <small class="text-muted" id="emailNote">University format required</small>
+                                <small class="text-muted" id="studentEmailNote">Must be university email format</small>
+                                <div class="invalid-feedback" id="studentEmailError">Please enter a valid university
+                                    email</div>
                             </div>
+
+                            <!-- Department -->
                             <div class="col-md-6 mb-3">
-                                <label class="form-label fw-semibold">Student Code <span
+                                <label class="form-label fw-semibold">Department <span
                                         class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-hash"></i></span>
-                                    <input type="text" class="form-control" id="studentCode" required
-                                        placeholder="CS20241125" maxlength="20" pattern="^[a-zA-Z][a-zA-Z0-9]*$">
-                                    <div class="invalid-feedback" id="studentCodeError">Must start with letter</div>
+                                    <span class="input-group-text"><i class="bi bi-building"></i></span>
+                                    <select class="form-select" id="studentDepartment" required>
+                                        <option value="">Select Department</option>
+                                    </select>
                                 </div>
-                                <small class="text-muted">Start with letter, letters/numbers only</small>
+                                <div class="invalid-feedback" id="studentDepartmentError">Please select a department
+                                </div>
                             </div>
                         </div>
+
                         <div class="row">
+                            <!-- First Name -->
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-semibold">First Name <span
                                         class="text-danger">*</span></label>
@@ -868,9 +881,12 @@
                                     <span class="input-group-text"><i class="bi bi-person"></i></span>
                                     <input type="text" class="form-control" id="studentFirstName" required
                                         placeholder="Ahmed" maxlength="50" pattern="^[a-zA-Z\s\-']+$">
-                                    <div class="invalid-feedback">Letters only (max 50)</div>
+                                </div>
+                                <div class="invalid-feedback" id="studentFirstNameError">Letters only (max 50 chars)
                                 </div>
                             </div>
+
+                            <!-- Last Name -->
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-semibold">Last Name <span
                                         class="text-danger">*</span></label>
@@ -878,12 +894,29 @@
                                     <span class="input-group-text"><i class="bi bi-person"></i></span>
                                     <input type="text" class="form-control" id="studentLastName" required
                                         placeholder="Mohammed" maxlength="50" pattern="^[a-zA-Z\s\-']+$">
-                                    <div class="invalid-feedback">Letters only (max 50)</div>
+                                </div>
+                                <div class="invalid-feedback" id="studentLastNameError">Letters only (max 50 chars)
                                 </div>
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-4 mb-3">
+                            <!-- Contact Number -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Contact Number <span
+                                        class="text-muted">(optional)</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-phone"></i></span>
+                                    <input type="tel" class="form-control" id="studentPhone" placeholder="01012345678"
+                                        maxlength="11" pattern="^(010|011|012|015)\d{8}$">
+                                </div>
+                                <small class="text-muted">Must start with 010, 011, 012, or 015 (last 8 digits cannot be
+                                    all same)</small>
+                                <div class="invalid-feedback" id="studentPhoneError">Must start with 010, 011, 012, or
+                                    015</div>
+                            </div>
+
+                            <!-- Level -->
+                            <div class="col-md-6 mb-3">
                                 <label class="form-label fw-semibold">Level <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="bi bi-layers"></i></span>
@@ -894,34 +927,13 @@
                                         <option value="3">Level 3 (Junior)</option>
                                         <option value="4">Level 4 (Senior)</option>
                                     </select>
-                                    <div class="invalid-feedback">Select student level</div>
                                 </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label fw-semibold">Department <span
-                                        class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-building"></i></span>
-                                    <select class="form-select" id="studentDepartment" required>
-                                        <option value="">Select Department</option>
-                                    </select>
-                                    <div class="invalid-feedback">Select department</div>
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label fw-semibold">Contact <span
-                                        class="text-muted">(optional)</span></label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-phone"></i></span>
-                                    <input type="tel" class="form-control" id="studentPhone" placeholder="01012345678"
-                                        maxlength="11" pattern="^(010|011|012|015)\d{8}$">
-                                    <div class="invalid-feedback" id="studentPhoneError">Must start with 010, 011, 012, or 015</div>
-                                </div>
-                                <small class="text-muted">Must start with 010, 011, 012, or 015 (last 8 digits cannot be all same)</small>
+                                <div class="invalid-feedback" id="studentLevelError">Please select a level</div>
                             </div>
                         </div>
-                        <div class="row" id="passwordField">
-                            <div class="col-12 mb-3">
+                        <div class="row">
+                            <!-- Password (Create mode only) -->
+                            <div class="col-12 mb-3" id="studentPasswordField">
                                 <label class="form-label fw-semibold">Password <span
                                         class="text-danger">*</span></label>
                                 <div class="input-group">
@@ -931,14 +943,15 @@
                                     <button class="btn btn-outline-secondary" type="button" id="toggleStudentPassword">
                                         <i class="bi bi-eye"></i>
                                     </button>
-                                    <div class="invalid-feedback">Min 8 chars, uppercase, lowercase, number, special
-                                        (@$!%*?&)</div>
+                                    <div class="invalid-feedback" id="studentPasswordError">Min 8 chars, uppercase,
+                                        lowercase, number, special (@$!%*?&)</div>
                                 </div>
                                 <div class="password-strength mt-1" id="studentPasswordStrength">
                                     <div class="progress" style="height: 4px;">
                                         <div class="progress-bar" role="progressbar" style="width: 0%"></div>
                                     </div>
-                                    <small class="text-muted">Strength: <span id="studentStrengthText">-</span></small>
+                                    <small class="text-muted">Password strength: <span
+                                            id="studentStrengthText">-</span></small>
                                 </div>
                             </div>
                         </div>
@@ -1215,6 +1228,90 @@
             </div>
         </div>
     </div>
+    </div>
+
+    <!-- Reassign Instructor Modal -->
+    <div class="modal fade" id="reassignInstructorModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title" id="reassignModalTitle">
+                        <i class="bi bi-arrow-left-right"></i> Reassign Courses & Department Head Role
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <h6 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Reassignment Required</h6>
+                        <p class="mb-0" id="reassignmentReason">This instructor has active data that must be reassigned
+                            before archiving.</p>
+                    </div>
+
+                    <div id="reassignmentInfo" class="mb-3">
+                        <!-- Will be populated dynamically -->
+                    </div>
+
+                    <form id="reassignInstructorForm">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">What to Reassign:</label>
+                            <div class="border rounded p-3 bg-light">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="reassignCoursesCheck" checked>
+                                    <label class="form-check-label" for="reassignCoursesCheck">
+                                        <i class="bi bi-book"></i> <span id="coursesLabel">Courses (0)</span>
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="reassignHeadCheck" checked>
+                                    <label class="form-check-label" for="reassignHeadCheck">
+                                        <i class="bi bi-person-badge"></i> <span id="headLabel">Department Head Role
+                                            (No)</span>
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block mt-2">
+                                    <i class="bi bi-info-circle"></i> Select what you want to reassign to the
+                                    replacement instructor
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                Select Replacement Instructor <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="replacementInstructor" required>
+                                <option value="">Loading instructors...</option>
+                            </select>
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle"></i> Only instructors from the same department are shown
+                            </small>
+                            <div class="invalid-feedback">Please select a replacement instructor</div>
+                        </div>
+
+                        <div id="workloadValidation" class="alert alert-info d-none">
+                            <!-- Workload validation info will appear here -->
+                        </div>
+                    </form>
+
+                    <div class="alert alert-info small">
+                        <h6 class="fw-bold"><i class="bi bi-info-circle"></i> What will be reassigned:</h6>
+                        <ul class="mb-0">
+                            <li id="reassignCourses">Courses: <span class="fw-bold">--</span></li>
+                            <li id="reassignDeptHead">Department Head: <span class="fw-bold">--</span></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-warning" id="confirmReassignBtn">
+                        <i class="bi bi-arrow-left-right"></i> Reassign & Archive
+                        <span class="spinner-border spinner-border-sm ms-2 d-none" id="reassignSpinner"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Enrollment Modal -->

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using University.App.DTOs.Users;
+using University.App.Interfaces;
 using University.App.Interfaces.Courses;
 using University.App.Interfaces.Users;
 using University.App.Services.IServices.Users;
@@ -12,15 +13,17 @@ namespace University.App.Services.Implementations.Users
         private readonly UserManager<AppUser> _userManager;
         private readonly IInstructorRepository _instructorRepository;
         private readonly ICourseRepository _courseRepository;
+        private readonly IDepartmentRepository _departmentRepository;
         
         public InstructorService(
             IInstructorRepository instructorRepository, 
             UserManager<AppUser> userManager,
-            ICourseRepository courseRepository)
+            ICourseRepository courseRepository,IDepartmentRepository departmentRepository)
         {
             _instructorRepository = instructorRepository;
             _userManager = userManager;
             _courseRepository = courseRepository;
+            _departmentRepository = departmentRepository;
         }
         public async Task<InstructorDTO?> GetByIdAsync(int id)
         {
@@ -353,7 +356,7 @@ namespace University.App.Services.Implementations.Users
         }
 
         /// <summary>
-        /// Reassign all courses from one instructor to another before deletion
+        /// Reassign all courses from one instructor to another before Archiving
         /// </summary>
         public async Task<int> ReassignCoursesToInstructorAsync(int fromInstructorId, int toInstructorId)
         {
@@ -361,15 +364,23 @@ namespace University.App.Services.Implementations.Users
             var fromInstructor = await _instructorRepository.GetByIdWithDetailsAsync(fromInstructorId);
             if (fromInstructor == null)
                 throw new InvalidOperationException("Source instructor not found.");
-
             var toInstructor = await _instructorRepository.GetByIdWithDetailsAsync(toInstructorId);
             if (toInstructor == null)
                 throw new InvalidOperationException("Target instructor not found.");
 
+            // Ensure both instructors are in the same department
+            if (fromInstructor.DepartmentId != toInstructor.DepartmentId)
+            {
+                throw new InvalidOperationException(
+                    "Both instructors must be in the same department to reassign courses.");
+            }
+
+            // Check if source instructor is a department head
+            var isHead = await _instructorRepository.IsHeadOfAnyDepartmentAsync(fromInstructorId);
+
             // Get active courses for source instructor
             var courses = await _courseRepository.GetCoursesByInstructorId(fromInstructorId);
             var activeCourses = courses.Where(c => !c.IsDeleted).ToList();
-
             if (activeCourses.Count == 0)
                 return 0;
 
@@ -385,7 +396,6 @@ namespace University.App.Services.Implementations.Users
                     $"Target instructor already has {targetActiveCount} course(s). " +
                     $"Cannot exceed 2 courses per instructor.");
             }
-
             var sourceCredits = activeCourses.Sum(c => c.Credits);
             if (targetCredits + sourceCredits > 12)
             {
@@ -401,6 +411,17 @@ namespace University.App.Services.Implementations.Users
                 course.InstructorId = toInstructorId;
                 await _courseRepository.UpdateCourse(course);
                 reassignedCount++;
+            }
+
+            // Transfer department head role if applicable
+            if (isHead)
+            {
+                var department = await _departmentRepository.GetDepartmentByHeadId(fromInstructorId);
+                if (department != null)
+                {
+                    department.HeadId = toInstructorId;
+                    await _departmentRepository.UpdateDepartment(department);
+                }
             }
 
             return reassignedCount;
@@ -430,6 +451,94 @@ namespace University.App.Services.Implementations.Users
             var exists = allInstructors.Any(i => i.ContactNumber == normalizedPhone && !i.IsDeleted);
 
             return !exists;
+        }
+
+        public async Task<int> GetInstructorCourseCountAsync(int instructorId)
+        {
+            var instructor = await _instructorRepository.GetByIdWithDetailsAsync(instructorId);
+            if (instructor == null)
+                return 0;
+
+            // Count only active (non-deleted) courses
+            var activeCourses = instructor.Courses?.Where(c => !c.IsDeleted).ToList() ?? new List<Course>();
+            return activeCourses.Count;
+        }
+
+        public async Task<bool> IsHeadOfDepartmentAsync(int instructorId)
+        {
+            return await _instructorRepository.IsHeadOfAnyDepartmentAsync(instructorId);
+        }
+
+        public async Task<int> ReassignCoursesOnlyAsync(int fromInstructorId, int toInstructorId)
+        {
+            // Get source instructor with courses
+            var sourceInstructor = await _instructorRepository.GetByIdWithDetailsAsync(fromInstructorId);
+            if (sourceInstructor == null)
+                throw new InvalidOperationException("Source instructor not found");
+
+            // Get target instructor 
+            var targetInstructor = await _instructorRepository.GetByIdWithDetailsAsync(toInstructorId);
+            if (targetInstructor == null)
+                throw new InvalidOperationException("Target instructor not found");
+
+            // Ensure both are in same department
+            if (sourceInstructor.DepartmentId != targetInstructor.DepartmentId)
+                throw new InvalidOperationException("Instructors must be in the same department for reassignment");
+
+            // Get active courses to reassign
+            var activeCourses = sourceInstructor.Courses?.Where(c => !c.IsDeleted).ToList() ?? new List<Course>();
+            if (activeCourses.Count == 0)
+                return 0; // No courses to reassign
+
+            // Check credit hour limits for target instructor
+            var targetCredits = targetInstructor.Courses?.Where(c => !c.IsDeleted).Sum(c => c.Credits) ?? 0;
+            var sourceCredits = activeCourses.Sum(c => c.Credits);
+
+            if (targetCredits + sourceCredits > 12)
+            {
+                throw new InvalidOperationException(
+                    $"Target instructor has {targetCredits} credit hours. " +
+                    $"Adding {sourceCredits} more would exceed 12-hour limit.");
+            }
+
+            // Reassign courses only
+            int reassignedCount = 0;
+            foreach (var course in activeCourses)
+            {
+                course.InstructorId = toInstructorId;
+                await _courseRepository.UpdateCourse(course);
+                reassignedCount++;
+            }
+
+            return reassignedCount;
+        }
+
+        public async Task<bool> TransferDepartmentHeadRoleAsync(int fromInstructorId, int toInstructorId)
+        {
+            // Check if source is actually a department head
+            var isHead = await _instructorRepository.IsHeadOfAnyDepartmentAsync(fromInstructorId);
+            if (!isHead)
+                return false; // No head role to transfer
+
+            // Get target instructor to ensure they exist and are in same department
+            var targetInstructor = await _instructorRepository.GetByIdWithDetailsAsync(toInstructorId);
+            if (targetInstructor == null)
+                throw new InvalidOperationException("Target instructor not found");
+
+            // Get the department where source is head
+            var department = await _departmentRepository.GetDepartmentByHeadId(fromInstructorId);
+            if (department == null)
+                return false; // No department found
+
+            // Ensure target instructor is in the same department
+            if (targetInstructor.DepartmentId != department.DepartmentId)
+                throw new InvalidOperationException("Target instructor must be in the same department to become head");
+
+            // Transfer head role
+            department.HeadId = toInstructorId;
+            await _departmentRepository.UpdateDepartment(department);
+
+            return true;
         }
 
     }

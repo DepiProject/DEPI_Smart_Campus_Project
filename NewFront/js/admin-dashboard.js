@@ -23,6 +23,9 @@ class AdminDashboard {
         // Student modal buttons
         document.getElementById('saveStudentBtn').addEventListener('click', () => this.saveStudent());
         
+        // Setup real-time validation for student form
+        this.setupStudentFormValidation();
+        
         // Department modal buttons
         document.getElementById('saveDepartmentBtn').addEventListener('click', () => this.saveDepartment());
         
@@ -181,11 +184,11 @@ class AdminDashboard {
                         <button class="btn btn-sm btn-info" onclick="adminDashboard.editInstructor(${instructor.instructorId})" title="Edit">
                             <i class="bi bi-pencil"></i>
                         </button>
-                        <button class="btn btn-sm btn-warning" onclick="adminDashboard.deleteInstructor(${instructor.instructorId})" title="Archive">
-                            <i class="bi bi-archive"></i>
+                        <button class="btn btn-sm btn-success" onclick="adminDashboard.showReassignmentModal(${instructor.instructorId}, ${JSON.stringify(instructor).replace(/"/g, '&quot;')})" title="Reassign Courses & Head Role">
+                            <i class="bi bi-arrow-right-circle"></i>
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="adminDashboard.permanentDeleteInstructor(${instructor.instructorId})" title="Delete Forever">
-                            <i class="bi bi-trash"></i>
+                        <button class="btn btn-sm btn-warning" onclick="adminDashboard.deleteInstructor(${instructor.instructorId})" title="Archive">
+                            <i class="bi bi-archive"></i> 
                         </button>
                     </td>
                 </tr>
@@ -410,6 +413,62 @@ class AdminDashboard {
     }
 
     async deleteInstructor(id) {
+        console.log('🗑️ Archive instructor called for ID:', id);
+        
+        try {
+            // First, get instructor details to check department
+            const instructorResponse = await API.instructor.getById(id);
+            if (!instructorResponse.success || !instructorResponse.data) {
+                this.showToast('Error', 'Failed to load instructor details', 'error');
+                return;
+            }
+            
+            const instructor = instructorResponse.data;
+            console.log('👤 Instructor details:', instructor);
+            
+            // Check if instructor can be archived (has courses or is dept head)
+            const checkResponse = await fetch(`${API.baseURL}/Instructor/${id}/courses-count`, {
+                method: 'GET',
+                headers: API.getHeaders()
+            });
+            
+            let courseCount = 0;
+            let isHead = false;
+            let canCheck = false;
+            
+            if (checkResponse.ok) {
+                const checkData = await checkResponse.json();
+                courseCount = checkData.courseCount || 0;
+                isHead = checkData.isHead || false;
+                canCheck = true;
+                console.log('📊 Check result:', { courseCount, isHead });
+            } else {
+                console.warn('⚠️ Could not check courses/head status, will try direct archive');
+                canCheck = false;
+            }
+            
+            // If instructor has courses or is dept head, show simple message
+            if (canCheck && (courseCount > 0 || isHead)) {
+                console.log('⚠️ Reassignment required - showing alert');
+                let reasons = [];
+                if (courseCount > 0) reasons.push(`${courseCount} active course(s)`);
+                if (isHead) reasons.push('Department Head role');
+                
+                this.showToast('Archive Blocked', 
+                    `❌ Cannot archive instructor with ${reasons.join(' and ')}. Please use the Reassign button first to transfer responsibilities.`, 
+                    'warning', 8000);
+            } else {
+                // No active data or couldn't check, try direct archive (will fail with proper error if has data)
+                console.log('✅ Attempting direct archive');
+                this.proceedWithDirectArchive(id);
+            }
+        } catch (error) {
+            console.error('❌ Error in deleteInstructor:', error);
+            this.showToast('Error', 'Failed to process archive request: ' + error.message, 'error');
+        }
+    }
+    
+    proceedWithDirectArchive(id) {
         this.deleteType = 'instructor';
         this.deleteId = id;
         this.deleteAction = 'archive';
@@ -435,6 +494,274 @@ class AdminDashboard {
         
         const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
         modal.show();
+    }
+
+    async showReassignmentModal(instructorId, instructor = null, courseCount = null, isHead = null, isForArchive = false) {
+        console.log('📋 Showing reassignment modal for instructor:', instructorId);
+        
+        // Store instructor data for reassignment
+        this.reassignFromInstructorId = instructorId;
+        this.isReassignForArchive = isForArchive;
+        
+        // If instructor data not provided (called from Reassign button), fetch it
+        if (!instructor) {
+            const response = await API.instructor.getById(instructorId);
+            if (!response.success) {
+                this.showToast('Error', 'Failed to load instructor details', 'error');
+                return;
+            }
+            instructor = response.data;
+        }
+        
+        this.reassignFromInstructor = instructor;
+        
+        // If course count/head status not provided, fetch them
+        if (courseCount === null || isHead === null) {
+            try {
+                const checkResp = await fetch(`${API.baseURL}/Instructor/${instructorId}/courses-count`, {
+                    method: 'GET',
+                    headers: API.getHeaders()
+                });
+                if (checkResp.ok) {
+                    const checkData = await checkResp.json();
+                    courseCount = checkData.courseCount || 0;
+                    isHead = checkData.isHead || false;
+                }
+            } catch (error) {
+                console.warn('Could not fetch course count/head status:', error);
+                courseCount = 0;
+                isHead = false;
+            }
+        }
+        
+        // Build reassignment reason based on context
+        let reasons = [];
+        if (courseCount > 0) reasons.push(`${courseCount} active course(s)`);
+        if (isHead) reasons.push('Department Head role');
+        
+        const reasonText = isForArchive 
+            ? `This instructor has ${reasons.join(' and ')} that must be reassigned before archiving.`
+            : reasons.length > 0 
+                ? `This instructor has ${reasons.join(' and ')} that can be reassigned to another instructor.`
+                : 'This instructor has no active courses or head role to reassign.';
+        
+        document.getElementById('reassignmentReason').textContent = reasonText;
+        
+        // Update reassignment checkboxes and labels
+        const coursesCheck = document.getElementById('reassignCoursesCheck');
+        const headCheck = document.getElementById('reassignHeadCheck');
+        const coursesLabel = document.getElementById('coursesLabel');
+        const headLabel = document.getElementById('headLabel');
+        
+        // Update labels with current data
+        coursesLabel.textContent = `Courses (${courseCount})`;
+        headLabel.textContent = `Department Head Role (${isHead ? 'Yes' : 'No'})`;
+        
+        // Enable/disable checkboxes based on current data
+        coursesCheck.disabled = courseCount === 0;
+        headCheck.disabled = !isHead;
+        
+        // Check boxes only if there's data to reassign
+        coursesCheck.checked = courseCount > 0;
+        headCheck.checked = isHead;
+        
+        // Update reassignment info (keep existing for summary)
+        document.getElementById('reassignCourses').innerHTML = 
+            `Courses: <span class="fw-bold">${courseCount} course(s) will be transferred</span>`;
+        document.getElementById('reassignDeptHead').innerHTML = 
+            isHead ? `Department Head: <span class="fw-bold text-warning">Will transfer head role</span>` : 
+                     `Department Head: <span class="fw-bold text-muted">Not applicable</span>`;
+        
+        // Update modal title and button based on context
+        const modalTitle = document.querySelector('#reassignInstructorModal .modal-title');
+        const confirmBtn = document.getElementById('confirmReassignBtn');
+        
+        if (isForArchive) {
+            modalTitle.textContent = 'Reassign Before Archive';
+            confirmBtn.innerHTML = '<i class="bi bi-arrow-right-circle me-2"></i>Reassign & Archive';
+        } else {
+            modalTitle.textContent = 'Reassign Courses & Department Head Role';
+            confirmBtn.innerHTML = '<i class="bi bi-arrow-right-circle me-2"></i>Reassign';
+        }
+        
+        // Load instructors from same department
+        await this.loadReplacementInstructors(instructor.departmentId, instructorId);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('reassignInstructorModal'));
+        modal.show();
+        
+        // Setup confirm button handler
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+        
+        newConfirmBtn.addEventListener('click', () => this.executeReassignment());
+    }
+    
+    async loadReplacementInstructors(departmentId, excludeInstructorId) {
+        console.log('👥 Loading replacement instructors for department:', departmentId);
+        
+        const select = document.getElementById('replacementInstructor');
+        select.innerHTML = '<option value="">Loading...</option>';
+        
+        try {
+            const response = await API.instructor.getByDepartment(departmentId);
+            console.log('📥 Department instructors response:', response);
+            
+            if (response.success && response.data) {
+                let instructors = [];
+                if (response.data.data && Array.isArray(response.data.data)) {
+                    instructors = response.data.data;
+                } else if (Array.isArray(response.data)) {
+                    instructors = response.data;
+                }
+                
+                // Filter out the instructor being archived
+                instructors = instructors.filter(i => i.instructorId !== excludeInstructorId);
+                
+                if (instructors.length === 0) {
+                    select.innerHTML = '<option value="">No other instructors in this department</option>';
+                    this.showToast('Warning', 'No other instructors found in the same department. Cannot archive.', 'warning');
+                    return;
+                }
+                
+                select.innerHTML = '<option value="">Select replacement instructor...</option>' + 
+                    instructors.map(inst => 
+                        `<option value="${inst.instructorId}">${inst.fullName || 'Unknown'}</option>`
+                    ).join('');
+                    
+                console.log(`✅ Loaded ${instructors.length} replacement instructor(s)`);
+            } else {
+                select.innerHTML = '<option value="">Failed to load instructors</option>';
+                this.showToast('Error', 'Failed to load replacement instructors', 'error');
+            }
+        } catch (error) {
+            console.error('❌ Error loading replacement instructors:', error);
+            select.innerHTML = '<option value="">Error loading instructors</option>';
+            this.showToast('Error', 'Failed to load replacement instructors', 'error');
+        }
+    }
+    
+    async executeReassignment() {
+        const toInstructorId = document.getElementById('replacementInstructor').value;
+        const reassignCourses = document.getElementById('reassignCoursesCheck').checked;
+        const reassignHead = document.getElementById('reassignHeadCheck').checked;
+        
+        if (!toInstructorId) {
+            this.showToast('Validation', 'Please select a replacement instructor', 'warning');
+            return;
+        }
+        
+        if (!reassignCourses && !reassignHead) {
+            this.showToast('Validation', 'Please select at least one item to reassign', 'warning');
+            return;
+        }
+        
+        const confirmBtn = document.getElementById('confirmReassignBtn');
+        const spinner = document.getElementById('reassignSpinner');
+        const originalText = confirmBtn.innerHTML;
+        
+        try {
+            confirmBtn.disabled = true;
+            if (spinner) spinner.classList.remove('d-none');
+            
+            console.log('🔄 Executing reassignment:', {
+                from: this.reassignFromInstructorId,
+                to: toInstructorId,
+                courses: reassignCourses,
+                head: reassignHead
+            });
+            
+            let results = [];
+            let allSuccess = true;
+            
+            // Reassign courses if selected
+            if (reassignCourses) {
+                try {
+                    const courseResponse = await fetch(`${API.baseURL}/Instructor/${this.reassignFromInstructorId}/reassign-courses-only/${toInstructorId}`, {
+                        method: 'POST',
+                        headers: API.getHeaders()
+                    });
+                    const courseResult = await courseResponse.json();
+                    
+                    if (courseResponse.ok) {
+                        results.push(`✅ ${courseResult.message || courseResult.Message}`);
+                    } else {
+                        results.push(`❌ Courses: ${courseResult.Message || courseResult.message}`);
+                        allSuccess = false;
+                    }
+                } catch (error) {
+                    results.push(`❌ Courses: ${error.message}`);
+                    allSuccess = false;
+                }
+            }
+            
+            // Transfer head role if selected
+            if (reassignHead) {
+                try {
+                    const headResponse = await fetch(`${API.baseURL}/Instructor/${this.reassignFromInstructorId}/transfer-head-role/${toInstructorId}`, {
+                        method: 'POST',
+                        headers: API.getHeaders()
+                    });
+                    const headResult = await headResponse.json();
+                    
+                    if (headResponse.ok) {
+                        results.push(`✅ ${headResult.message || headResult.Message}`);
+                    } else {
+                        results.push(`❌ Head Role: ${headResult.Message || headResult.message}`);
+                        allSuccess = false;
+                    }
+                } catch (error) {
+                    results.push(`❌ Head Role: ${error.message}`);
+                    allSuccess = false;
+                }
+            }
+            
+            // Show results
+            const resultMessage = results.join('\\n');
+            if (allSuccess) {
+                this.showToast('Success', resultMessage, 'success');
+                
+                // Close reassignment modal
+                const reassignModal = bootstrap.Modal.getInstance(document.getElementById('reassignInstructorModal'));
+                reassignModal.hide();
+                
+                // Reload data to reflect changes
+                await this.loadInstructors();
+                await this.loadDashboardData();
+                
+            } else {
+                this.showToast('Partial Success', resultMessage, 'warning');
+            }
+            
+        } catch (error) {
+            console.error('❌ Reassignment error:', error);
+            this.showToast('Error', '❌ Failed to execute reassignment: ' + error.message, 'error');
+        } finally {
+            confirmBtn.disabled = false;
+            if (spinner) spinner.classList.add('d-none');
+        }
+    }
+    
+    async proceedWithArchiveAfterReassignment(instructorId) {
+        console.log('📦 Proceeding with archive after reassignment for ID:', instructorId);
+        
+        try {
+            const response = await API.instructor.archive(instructorId);
+            console.log('📊 Archive response:', response);
+            
+            if (response.success) {
+                this.showToast('Success', '✅ Instructor archived successfully after reassignment!', 'success');
+                await this.loadInstructors();
+                await this.loadDashboardData();
+            } else {
+                const errorMsg = response.data?.Message || response.data?.message || response.error || 'Archive failed';
+                this.showToast('Error', '❌ ' + errorMsg, 'error');
+            }
+        } catch (error) {
+            console.error('❌ Archive error:', error);
+            this.showToast('Error', '❌ Failed to archive instructor: ' + error.message, 'error');
+        }
     }
 
     resetInstructorForm() {
@@ -540,7 +867,7 @@ class AdminDashboard {
         const email = document.getElementById('studentEmail').value.trim();
         const firstName = document.getElementById('studentFirstName').value.trim();
         const lastName = document.getElementById('studentLastName').value.trim();
-        const studentCode = document.getElementById('studentCode').value.trim();
+        // Student code will be auto-generated by backend
         const contactNumber = document.getElementById('studentPhone').value.trim();
         const level = document.getElementById('studentLevel').value;
         const departmentId = document.getElementById('studentDepartment').value;
@@ -622,15 +949,6 @@ class AdminDashboard {
                 hasError = true;
             }
 
-            // Validate student code
-            if (!studentCode) {
-                this.showStudentFieldError('studentCode', 'Student code is required');
-                hasError = true;
-            } else if (!this.validateStudentCode(studentCode)) {
-                this.showStudentFieldError('studentCode', 'Must start with a letter');
-                hasError = true;
-            }
-
             // Validate contact number (optional)
             if (contactNumber) {
                 const validation = this.validateContactNumber(contactNumber);
@@ -680,7 +998,6 @@ class AdminDashboard {
                 password,
                 firstName,
                 lastName,
-                studentCode,
                 contactNumber,
                 level,
                 departmentId: parseInt(departmentId)
@@ -709,15 +1026,18 @@ class AdminDashboard {
     }
 
     async permanentDeleteInstructor(id) {
+        console.log('🔥 PERMANENT DELETE INSTRUCTOR CALLED - ID:', id);
         this.deleteType = 'instructor';
         this.deleteId = id;
         this.deleteAction = 'permanent';
+        
+        console.log('🎯 Set deleteAction to:', this.deleteAction);
         
         const modalTitle = document.getElementById('deleteModalTitle');
         const modalBody = document.getElementById('deleteModalBody');
         const confirmBtn = document.getElementById('confirmDeleteBtn');
         
-        modalTitle.innerHTML = '<i class="bi bi-trash-fill text-danger"></i> Delete Instructor';
+        modalTitle.innerHTML = '<i class="bi bi-trash-fill text-danger"></i> Permanently Delete Instructor';
         modalBody.innerHTML = `
             <div class="alert alert-danger">
                 <h6 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> Permanently Delete Instructor</h6>
@@ -886,6 +1206,7 @@ class AdminDashboard {
         const action = this.deleteAction;
 
         console.log('⚡ EXECUTE DELETE CALLED - Type:', type, 'ID:', id, 'Action:', action);
+        console.log('🔍 Current state:', { deleteType: this.deleteType, deleteId: this.deleteId, deleteAction: this.deleteAction });
 
         if (!id) {
             console.error('❌ No ID to delete!');
@@ -897,8 +1218,35 @@ class AdminDashboard {
             
             // Handle archive (soft delete)
             if (action === 'archive') {
+                console.log('📦 ARCHIVE path - calling archive endpoint');
                 if (type === 'instructor') {
                     response = await API.instructor.archive(id);
+                    
+                    // Check if archive failed due to active courses
+                    if (!response.success && response.status === 400) {
+                        const errorMsg = response.data?.Message || response.data?.message || '';
+                        if (errorMsg.includes('Cannot archive instructor') || errorMsg.includes('active course')) {
+                            console.log('⚠️ Archive blocked - showing reassignment modal');
+                            // Close current modal
+                            const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'));
+                            if (deleteModal) deleteModal.hide();
+                            
+                            // Get instructor details and show reassignment modal
+                            const instrResponse = await API.instructor.getById(id);
+                            if (instrResponse.success) {
+                                // Extract course count from error message or use check endpoint
+                                const checkResp = await fetch(`${API.baseURL}/Instructor/${id}/courses-count`, {
+                                    method: 'GET',
+                                    headers: API.getHeaders()
+                                });
+                                if (checkResp.ok) {
+                                    const checkData = await checkResp.json();
+                                    await this.showReassignmentModal(id, instrResponse.data, checkData.courseCount || 0, checkData.isHead || false);
+                                }
+                            }
+                            return; // Don't proceed with error display
+                        }
+                    }
                 } else if (type === 'student') {
                     response = await API.student.archive(id);
                 } else if (type === 'department') {
@@ -911,8 +1259,11 @@ class AdminDashboard {
             }
             // Handle permanent/hard delete
             else if (action === 'permanent') {
+                console.log('🔥 PERMANENT DELETE path - calling delete/permanent endpoint');
                 if (type === 'instructor') {
+                    console.log('👨‍🏫 Calling API.instructor.delete for ID:', id);
                     response = await API.instructor.delete(id);
+                    console.log('📊 API.instructor.delete response:', response);
                 } else if (type === 'student') {
                     response = await API.student.delete(id);
                 } else if (type === 'department') {
@@ -988,27 +1339,43 @@ class AdminDashboard {
                 
                 this.loadDashboardData();
             } else {
-                // Extract clear error message from response
+                // Extract clear error message from response with detailed information
                 let errorMessage = 'Operation failed';
                 let errorTitle = 'Operation Failed';
+                const httpStatus = response.status ? ` (HTTP ${response.status})` : '';
                 
                 if (response.data && typeof response.data === 'object') {
                     // Check for message property (case insensitive)
-                    errorMessage = response.data.message || response.data.Message || 
-                                  response.data.error || response.data.Error ||
+                    errorMessage = response.data.Message || response.data.message || 
+                                  response.data.Error || response.data.error ||
                                   response.error || errorMessage;
+                    
+                    // If there's additional error details, append them
+                    if (response.data.Error && response.data.Error !== errorMessage) {
+                        errorMessage += ` Details: ${response.data.Error}`;
+                    }
                 } else if (response.error) {
                     errorMessage = response.error;
                 } else if (typeof response.data === 'string') {
                     errorMessage = response.data;
                 }
                 
-                // Customize title based on action
+                // Customize title based on action and type
+                const typeName = type.charAt(0).toUpperCase() + type.slice(1);
                 if (action === 'archive') {
-                    errorTitle = `Cannot Archive ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+                    errorTitle = `❌ Cannot Archive ${typeName}${httpStatus}`;
                 } else if (action === 'permanent') {
-                    errorTitle = `Cannot Delete ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+                    errorTitle = `❌ Cannot Delete ${typeName}${httpStatus}`;
                 }
+                
+                // Log detailed error for debugging
+                console.error('🔴 Operation failed:', {
+                    type,
+                    action,
+                    status: response.status,
+                    errorMessage,
+                    fullResponse: response
+                });
                 
                 // Show clear error notification with detailed message
                 this.showToast(errorTitle, errorMessage, 'error');
@@ -1103,89 +1470,6 @@ class AdminDashboard {
             tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Failed to load departments</td></tr>';
         }
     }
-
-    // async saveDepartment() {
-    //     const btn = document.getElementById('saveDepartmentBtn');
-    //     const btnText = document.getElementById('departmentBtnText');
-    //     const originalText = btnText.textContent;
-
-    //     btn.disabled = true;
-    //     btnText.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
-
-    //     const name = document.getElementById('departmentName').value.trim();
-    //     let building = document.getElementById('departmentBuilding').value;
-    //     const headId = document.getElementById('departmentHead').value;
-
-    //     // Validation
-    //     if (!name || !building) {
-    //         this.showToast('Validation', 'Name and Building are required', 'warning');
-    //         btn.disabled = false;
-    //         btnText.textContent = originalText;
-    //         return;
-    //     }
-
-    //     // Name length validation (3-100 characters)
-    //     if (name.length < 3 || name.length > 100) {
-    //         this.showToast('Validation', '❌ Department name must be 3-100 characters', 'warning');
-    //         btn.disabled = false;
-    //         btnText.textContent = originalText;
-    //         return;
-    //     }
-
-    //     // Name format validation
-    //     if (!/^[a-zA-Z\s\-']+$/.test(name)) {
-    //         this.showToast('Validation', '❌ Name must contain only letters, spaces, hyphens, apostrophes', 'warning');
-    //         btn.disabled = false;
-    //         btnText.textContent = originalText;
-    //         return;
-    //     }
-
-    //     // Building validation - ensure proper format
-    //     if (!building.startsWith('Building ')) {
-    //         this.showToast('Validation', '❌ Please select a valid building', 'warning');
-    //         btn.disabled = false;
-    //         btnText.textContent = originalText;
-    //         return;
-    //     }
-
-    //     const departmentData = { 
-    //         name,
-    //         building,
-    //         headId: headId ? parseInt(headId) : null
-    //     };
-
-    //     try {
-    //         let response;
-    //         if (this.editingId && this.editingType === 'department') {
-    //             response = await API.department.update(this.editingId, departmentData);
-    //             if (response.success) {
-    //                 this.showToast('Success', '✅ Department updated successfully!', 'success');
-    //                 this.logActivity('Department Updated', `Department: ${name} in ${building}`);
-    //             }
-    //         } else {
-    //             response = await API.department.create(departmentData);
-    //             if (response.success) {
-    //                 this.showToast('Success', '✅ Department created successfully!', 'success');
-    //                 this.logActivity('Department Created', `New department: ${name} in ${building}`);
-    //             }
-    //         }
-
-    //         if (response.success) {
-    //             bootstrap.Modal.getInstance(document.getElementById('departmentModal')).hide();
-    //             this.resetDepartmentFormEnhanced();
-    //             this.loadDepartments();
-    //             this.loadDepartmentSelects();
-    //             this.loadDashboardData();
-    //         } else {
-    //             this.showDetailedError('Failed to save department', response.data);
-    //         }
-    //     } catch (error) {
-    //         this.showToast('Error', '❌ Failed to save department: ' + error.message, 'error');
-    //     } finally {
-    //         btn.disabled = false;
-    //         btnText.textContent = originalText;
-    //     }
-    // }
     async saveDepartment() {
     const btn = document.getElementById('saveDepartmentBtn');
     const btnText = document.getElementById('departmentBtnText');
@@ -2215,6 +2499,97 @@ class AdminDashboard {
         this.editingType = null;
     }
 
+    // ===== REAL-TIME FORM VALIDATION =====
+    setupStudentFormValidation() {
+        // Email validation
+        const emailField = document.getElementById('studentEmail');
+        if (emailField) {
+            emailField.addEventListener('blur', () => {
+                const value = emailField.value.trim();
+                if (value && !this.validateEmailFormat(value)) {
+                    this.showStudentFieldError('studentEmail', 'Must be university format (user@institution.edu.eg)');
+                } else if (value) {
+                    this.clearStudentFieldError('studentEmail');
+                }
+            });
+        }
+
+        // First name validation
+        const firstNameField = document.getElementById('studentFirstName');
+        if (firstNameField) {
+            firstNameField.addEventListener('blur', () => {
+                const value = firstNameField.value.trim();
+                if (value && !this.validateNameFormat(value)) {
+                    this.showStudentFieldError('studentFirstName', 'Only letters, spaces, hyphens, apostrophes allowed');
+                } else if (value && value.length < 2) {
+                    this.showStudentFieldError('studentFirstName', 'Must be at least 2 characters');
+                } else if (value) {
+                    this.clearStudentFieldError('studentFirstName');
+                }
+            });
+        }
+
+        // Last name validation
+        const lastNameField = document.getElementById('studentLastName');
+        if (lastNameField) {
+            lastNameField.addEventListener('blur', () => {
+                const value = lastNameField.value.trim();
+                if (value && !this.validateNameFormat(value)) {
+                    this.showStudentFieldError('studentLastName', 'Only letters, spaces, hyphens, apostrophes allowed');
+                } else if (value && value.length < 2) {
+                    this.showStudentFieldError('studentLastName', 'Must be at least 2 characters');
+                } else if (value) {
+                    this.clearStudentFieldError('studentLastName');
+                }
+            });
+        }
+
+        // Contact number validation
+        const phoneField = document.getElementById('studentPhone');
+        if (phoneField) {
+            phoneField.addEventListener('blur', () => {
+                const value = phoneField.value.trim();
+                if (value) {
+                    const validation = this.validateContactNumber(value);
+                    if (!validation.valid) {
+                        this.showStudentFieldError('studentPhone', validation.message);
+                    } else {
+                        this.clearStudentFieldError('studentPhone');
+                    }
+                } else {
+                    this.clearStudentFieldError('studentPhone');
+                }
+            });
+        }
+
+        // Password validation
+        const passwordField = document.getElementById('studentPassword');
+        if (passwordField) {
+            passwordField.addEventListener('input', () => {
+                const value = passwordField.value;
+                if (value) {
+                    if (!this.validatePassword(value)) {
+                        this.showStudentFieldError('studentPassword', 'Min 8 chars, must include: UPPERCASE, lowercase, number, special char (@$!%*?&)');
+                    } else {
+                        this.clearStudentFieldError('studentPassword');
+                    }
+                }
+            });
+        }
+    }
+
+    clearStudentFieldError(fieldId) {
+        const field = document.getElementById(fieldId);
+        const errorDiv = document.getElementById(fieldId + 'Error');
+        if (field) {
+            field.classList.remove('is-invalid');
+            field.classList.add('is-valid');
+        }
+        if (errorDiv) {
+            errorDiv.textContent = '';
+        }
+    }
+
     // ===== VALIDATION METHODS =====
     validateEmailFormat(email) {
         // Must be: letters/numbers@facultyname(letters).edu.eg
@@ -2230,11 +2605,7 @@ class AdminDashboard {
         return nameRegex.test(name);
     }
 
-    validateStudentCode(code) {
-        // Must start with letter, contain only letters and numbers
-        const codeRegex = /^[a-zA-Z][a-zA-Z0-9]*$/;
-        return codeRegex.test(code);
-    }
+
 
     validateContactNumber(number) {
         // Must be exactly 11 digits

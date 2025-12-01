@@ -397,17 +397,20 @@ const API = {
             });
         },
 
-        // Delete instructor permanently (Admin only) - HARD DELETE
-        async delete(id) {
-            return API.request(`/Instructor/${id}`, {
-                method: 'DELETE'
+        // Archive instructor (Admin only) - SOFT DELETE (preserves data)
+        async archive(id) {
+            console.log('📦 API.instructor.archive called for ID:', id);
+            return API.request(`/Instructor/${id}/archive`, {
+                method: 'POST'
             });
         },
 
-        // Archive instructor (Admin only) - SOFT DELETE
-        async archive(id) {
-            return API.request(`/Instructor/${id}/archive`, {
-                method: 'POST'
+        // Delete instructor permanently (Admin only) - HARD DELETE (removes from database)
+        async delete(id) {
+            console.log('🔥 API.instructor.delete (PERMANENT) called for ID:', id);
+            console.log('🌐 Will call endpoint: /Instructor/${id}/permanent with DELETE method');
+            return API.request(`/Instructor/${id}/permanent`, {
+                method: 'DELETE'
             });
         },
 

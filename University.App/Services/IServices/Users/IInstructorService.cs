@@ -30,5 +30,11 @@ namespace University.App.Services.IServices.Users
         
         // Validation operations
         Task<bool> IsPhoneNumberUniqueAsync(string phoneNumber);
+        Task<int> GetInstructorCourseCountAsync(int instructorId);
+        Task<bool> IsHeadOfDepartmentAsync(int instructorId);
+        
+        // Granular reassignment operations
+        Task<int> ReassignCoursesOnlyAsync(int fromInstructorId, int toInstructorId);
+        Task<bool> TransferDepartmentHeadRoleAsync(int fromInstructorId, int toInstructorId);
     }
 }
