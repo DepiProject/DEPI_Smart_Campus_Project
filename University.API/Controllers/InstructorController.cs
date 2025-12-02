@@ -88,14 +88,30 @@ namespace University.API.Controllers
         }
 
         [HttpGet("check-phone/{phoneNumber}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Instructor")]
         public async Task<IActionResult> CheckPhoneUnique(string phoneNumber)
         {
             if (string.IsNullOrWhiteSpace(phoneNumber))
                 return BadRequest(new { isUnique = false, message = "Phone number is required" });
 
-            var isUnique = await _instructorService.IsPhoneNumberUniqueAsync(phoneNumber);
-            return Ok(new { isUnique });
+            try
+            {
+                // Get current user ID to exclude from duplicate check
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                int excludeUserId = 0;
+                
+                if (!string.IsNullOrEmpty(userIdClaim))
+                {
+                    excludeUserId = int.Parse(userIdClaim);
+                }
+
+                var isUnique = await _instructorService.IsPhoneNumberUniqueAsync(phoneNumber, excludeUserId);
+                return Ok(new { isUnique });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { isUnique = false, message = "Error checking phone number", error = ex.Message });
+            }
         }
 
         [HttpGet("{id}/courses-count")]
@@ -251,6 +267,10 @@ namespace University.API.Controllers
             {
                 return NotFound(new { message = ex.Message });
             }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // ========== SOFT DELETE OPERATIONS ==========
@@ -316,11 +336,16 @@ namespace University.API.Controllers
         {
             if (id <= 0)
                 return BadRequest(new { Success = false, Message = "Invalid instructor ID" });
-            var instructor = await _instructorService.GetByIdAsync(id);
-            if (instructor == null)
-                return NotFound(new { Success = false, Message = "Instructor is already deleted or not found" });
+            
             try
             {
+                // Check using GetAllIncludingDeletedAsync to allow checking archived instructors
+                var allInstructors = await _instructorService.GetAllIncludingDeletedAsync();
+                var instructor = allInstructors.FirstOrDefault(i => i.InstructorId == id);
+                
+                if (instructor == null)
+                    return NotFound(new { Success = false, Message = "Instructor not found" });
+                
                 var result = await _instructorService.CanPermanentlyDeleteAsync(id);
                 return Ok(new { Success = true, CanDelete = result.CanDelete, Reason = result.Reason, RelatedData = result.RelatedDataCount });
             }

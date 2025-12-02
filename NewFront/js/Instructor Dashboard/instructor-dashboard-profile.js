@@ -43,6 +43,57 @@ InstructorDashboard.prototype.loadProfile = async function() {
                 form.addEventListener('submit', (e) => this.saveProfile(e));
             }
 
+            // Setup real-time phone validation
+            const phoneInput = document.getElementById('editContactNumber');
+            if (phoneInput && !phoneInput.hasAttribute('data-validation-set')) {
+                phoneInput.setAttribute('data-validation-set', 'true');
+                
+                let validationTimeout;
+                
+                phoneInput.addEventListener('input', async (e) => {
+                    const phone = e.target.value.trim();
+                    const errorDiv = document.getElementById('contactNumberError');
+                    const currentPhone = this.currentProfile?.contactNumber || this.currentProfile?.ContactNumber || '';
+                    
+                    errorDiv.style.display = 'none';
+                    errorDiv.textContent = '';
+                    
+                    if (!phone) return;
+                    
+                    // Format validation
+                    if (!/^\d{11}$/.test(phone)) {
+                        errorDiv.textContent = 'Contact number must be exactly 11 digits';
+                        errorDiv.style.display = 'block';
+                        return;
+                    }
+                    
+                    // Skip duplicate check if same as current
+                    if (phone === currentPhone) return;
+                    
+                    // Debounce duplicate check
+                    clearTimeout(validationTimeout);
+                    validationTimeout = setTimeout(async () => {
+                        try {
+                            // Check phone uniqueness using dedicated endpoint
+                            const checkResponse = await API.request('/Instructor/check-phone/' + encodeURIComponent(phone), {
+                                method: 'GET'
+                            });
+                            
+                            if (checkResponse.success && checkResponse.data) {
+                                const isUnique = checkResponse.data.isUnique;
+                                if (!isUnique) {
+                                    errorDiv.textContent = 'This phone number is already existed';
+                                    errorDiv.style.display = 'block';
+                                }
+                            }
+                        } catch (error) {
+                            console.log('Phone validation check failed:', error);
+                            // Silently handle - validation will happen on submit
+                        }
+                    }, 800);
+                });
+            }
+
             this.showDisplayProfileView();
         } else {
             console.error('❌ Failed to load profile:', response.error);
@@ -70,14 +121,24 @@ InstructorDashboard.prototype.saveProfile = async function(e) {
     e.preventDefault();
     console.log('💾 Saving profile changes...');
 
+    const errorDiv = document.getElementById('contactNumberError');
+    
     try {
-        document.getElementById('contactNumberError').textContent = '';
+        errorDiv.textContent = '';
+        errorDiv.style.display = 'none';
 
         const contactNumber = document.getElementById('editContactNumber').value.trim();
 
         if (contactNumber && !/^\d{11}$/.test(contactNumber)) {
-            document.getElementById('contactNumberError').textContent = 'Contact number must be exactly 11 digits';
+            errorDiv.textContent = 'Contact number must be exactly 11 digits';
+            errorDiv.style.display = 'block';
             return;
+        }
+
+        // Check if there's already a visible error
+        if (errorDiv.style.display === 'block' && errorDiv.textContent) {
+            this.showToast('Error', errorDiv.textContent, 'error');
+            return; // Don't submit if there's an error
         }
 
         const updateData = {
@@ -95,19 +156,19 @@ InstructorDashboard.prototype.saveProfile = async function(e) {
             await this.loadProfile();
             this.showDisplayProfileView();
         } else {
-            let errorMsg = 'Unknown error';
-            if (response.data) {
-                errorMsg = response.data.Message || response.data.message || 
-                          response.data.Error || response.data.error || errorMsg;
-            } else if (response.error) {
-                errorMsg = response.error;
-            }
+            // Extract the actual error message
+            let errorMsg = response.error || 'Failed to update profile';
             
             console.error('❌ Profile update failed:', errorMsg);
-            this.showToast('Error', 'Failed to update profile: ' + errorMsg, 'error');
+            errorDiv.textContent = errorMsg;
+            errorDiv.style.display = 'block';
+            this.showToast('Error', errorMsg, 'error');
         }
     } catch (error) {
         console.error('❌ Exception saving profile:', error);
-        this.showToast('Error', 'An error occurred: ' + error.message, 'error');
+        let errorMsg = error.message || 'An error occurred while updating profile';
+        errorDiv.textContent = errorMsg;
+        errorDiv.style.display = 'block';
+        this.showToast('Error', errorMsg, 'error');
     }
 };

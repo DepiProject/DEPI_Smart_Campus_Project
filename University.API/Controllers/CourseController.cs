@@ -566,6 +566,146 @@ namespace University.API.Controllers
         }
 
         /// <summary>
+        /// Restore a course with instructor reassignment (Admin only)
+        /// VALIDATION ENHANCED: Handles instructor reassignment during restoration
+        /// </summary>
+        [HttpPost("{id}/restore-with-instructor")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult> RestoreCourseWithInstructor(int id, [FromBody] RestoreCourseWithInstructorDTO dto)
+        {
+            if (id <= 0)
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Invalid course ID. ID must be a positive integer."
+                });
+
+            try
+            {
+                var restored = await _courseService.RestoreCourseWithInstructorReassignment(id, dto?.InstructorId);
+                if (!restored)
+                    return NotFound(new
+                    {
+                        Success = false,
+                        Message = "Course not found or is already active"
+                    });
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Course restored successfully with instructor assignment",
+                    CourseId = id,
+                    InstructorId = dto?.InstructorId
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Cannot restore course",
+                    Error = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "An error occurred while restoring the course",
+                    Error = ex.Message
+                });
+            }
+        }
+
+        /// <summary>
+        /// Get available instructors for course restoration (Admin only)
+        /// Returns instructors in the same department who can handle the course
+        /// </summary>
+        [HttpGet("{id}/available-instructors-for-restore")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<ActionResult> GetAvailableInstructorsForRestore(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Invalid course ID"
+                });
+
+            try
+            {
+                var instructors = await _courseService.GetAvailableInstructorsForCourseRestore(id);
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Available instructors retrieved successfully",
+                    CourseId = id,
+                    Count = instructors.Count(),
+                    Data = instructors
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "An error occurred while retrieving instructors",
+                    Error = ex.Message
+                });
+            }
+        }
+
+        /// <summary>
+        /// Debug endpoint: Get all instructors in department with their workload details
+        /// </summary>
+        [HttpGet("{id}/debug-instructor-workload")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<ActionResult> DebugInstructorWorkload(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new { Success = false, Message = "Invalid course ID" });
+
+            try
+            {
+                // Get the archived course
+                var allCourses = await _courseService.GetAllCoursesIncludingDeleted();
+                var course = allCourses.FirstOrDefault(c => c.Id == id);
+                
+                if (course == null)
+                    return NotFound(new { Success = false, Message = "Course not found" });
+
+                // Get diagnostic information directly from the service
+                var debugInfo = await _courseService.GetInstructorWorkloadDebugInfo(id);
+                
+                return Ok(new
+                {
+                    Success = true,
+                    CourseId = id,
+                    CourseName = course.Name,
+                    CourseCredits = course.CreditHours,
+                    DepartmentId = course.DepartmentId,
+                    Data = debugInfo
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "Debug error",
+                    Error = ex.Message,
+                    StackTrace = ex.StackTrace
+                });
+            }
+        }
+
+        /// <summary>
         /// Check if a course can be permanently deleted (Admin only)
         /// Returns true if course has no related data (enrollments, exams, attendance)
         /// </summary>

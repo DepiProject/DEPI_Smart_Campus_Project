@@ -52,6 +52,12 @@ class AdminDashboard {
         document.getElementById('studentModal')?.addEventListener('hidden.bs.modal', () => this.resetStudentFormEnhanced());
         document.getElementById('departmentModal')?.addEventListener('hidden.bs.modal', () => this.resetDepartmentFormEnhanced());
         document.getElementById('courseModal')?.addEventListener('hidden.bs.modal', () => this.resetCourseFormEnhanced());
+        
+        // Course modal setup on show
+        document.getElementById('courseModal')?.addEventListener('shown.bs.modal', () => {
+            console.log('📋 Course modal opened - setting up form listeners');
+            this.setupCourseFormListeners();
+        });
 
         // Delete confirmation
         document.getElementById('confirmDeleteBtn')?.addEventListener('click', () => this.executeDelete());
@@ -420,21 +426,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (selectedSection) {
                     selectedSection.classList.remove('d-none');
                     
-                    // Load data for section
+                    // Load data for section with pagination
                     if (section === 'instructors') {
                         adminDashboard.loadInstructorSelects();
-                        adminDashboard.loadInstructors();
+                        adminDashboard.loadInstructorsWithPagination();
                     }
-                    if (section === 'students') adminDashboard.loadStudents();
+                    if (section === 'students') adminDashboard.loadStudentsWithPagination();
                     if (section === 'departments') {
                         adminDashboard.loadInstructorSelects();
-                        adminDashboard.loadDepartments();
+                        adminDashboard.loadDepartmentsWithPagination();
                     }
                     if (section === 'courses') {
                         adminDashboard.loadDepartmentSelects();
-                        adminDashboard.loadCourses();
+                        adminDashboard.loadCoursesWithPagination();
                     }
-                    if (section === 'enrollments') adminDashboard.loadEnrollments();
+                    if (section === 'enrollments') adminDashboard.loadEnrollmentsWithPagination();
                     if (section === 'profile') adminDashboard.loadAdminProfile();
                 }
 
@@ -446,184 +452,173 @@ document.addEventListener('DOMContentLoaded', () => {
         adminDashboard.loadDepartmentSelects();
         adminDashboard.loadInstructorSelects();
         adminDashboard.setupCourseFormListeners();
-
-        // Setup search and filter listeners
-        setupAdminSearchFilters();
     }
 });
 
 // =====================================================
-// Search and Filter Functions for Admin Dashboard
+// Paginated Load Functions
 // =====================================================
 
-function setupAdminSearchFilters() {
-    // Instructor Search and Department Filter
-    const instructorSearch = document.getElementById('instructorSearchInput');
-    const instructorDeptFilter = document.getElementById('instructorDepartmentFilter');
+AdminDashboard.prototype.loadInstructorsWithPagination = async function() {
+    console.log('👨‍🏫 Loading instructors with pagination...');
+    const response = await API.instructor.getAll(1, 100);
+
+    if (response.success && response.data) {
+        let instructors = response.data.data || response.data;
+        
+        if (!Array.isArray(instructors)) {
+            instructors = [];
+        }
+
+        // Populate department filter dropdown
+        this.populateInstructorDepartmentFilter(instructors);
+
+        // Set data in pagination manager
+        if (adminPaginationManagers.instructors) {
+            adminPaginationManagers.instructors.setData(instructors);
+            adminPaginationManagers.instructors.renderControls('instructorsPaginationControls');
+        }
+    } else {
+        const tbody = document.getElementById('instructorsTableBody');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Failed to load instructors</td></tr>';
+    }
+};
+
+AdminDashboard.prototype.populateInstructorDepartmentFilter = function(instructors) {
+    const filterSelect = document.getElementById('instructorDepartmentFilter');
+    if (!filterSelect) return;
+
+    // Get unique department names
+    const departments = [...new Set(instructors.map(i => i.departmentName).filter(d => d))];
     
-    const filterInstructors = () => {
-        const searchTerm = (instructorSearch?.value || '').toLowerCase();
-        const deptTerm = instructorDeptFilter?.value || '';
-        const rows = document.querySelectorAll('#instructorsTableBody tr');
-        
-        rows.forEach(row => {
-            const matchSearch = row.textContent.toLowerCase().includes(searchTerm);
-            const matchDept = !deptTerm || row.textContent.includes(deptTerm);
-            row.style.display = (matchSearch && matchDept) ? '' : 'none';
-        });
-    };
-
-    if (instructorSearch) {
-        instructorSearch.addEventListener('input', filterInstructors);
-    }
-    if (instructorDeptFilter) {
-        instructorDeptFilter.addEventListener('change', filterInstructors);
-    }
-
-    // Populate instructor department filter
-    const populateInstructorDeptFilter = () => {
-        const deptFilter = document.getElementById('instructorDepartmentFilter');
-        if (!deptFilter) return;
-        
-        const departments = new Set();
-        document.querySelectorAll('#instructorsTableBody tr').forEach(row => {
-            const cells = row.querySelectorAll('td');
-            if (cells.length > 2) {
-                const dept = cells[2].textContent.trim();
-                if (dept && dept !== 'Not Assigned') {
-                    departments.add(dept);
-                }
-            }
-        });
-        
-        const existingOptions = Array.from(deptFilter.options).map(opt => opt.value);
-        departments.forEach(dept => {
-            if (!existingOptions.includes(dept)) {
-                const option = document.createElement('option');
-                option.value = dept;
-                option.textContent = dept;
-                deptFilter.appendChild(option);
-            }
-        });
-    };
-
-    // Call this after instructors are loaded
-    const originalLoadInstructors = adminDashboard?.loadInstructors;
-    if (originalLoadInstructors) {
-        adminDashboard.loadInstructors = async function() {
-            await originalLoadInstructors.call(this);
-            populateInstructorDeptFilter();
-        };
-    }
-
-    // Student Search
-    const studentSearch = document.getElementById('studentSearchInput');
-    const studentLevelFilter = document.getElementById('studentLevelFilter');
+    // Keep current selection
+    const currentValue = filterSelect.value;
     
-    const filterStudents = () => {
-        const searchTerm = (studentSearch?.value || '').toLowerCase();
-        const levelTerm = studentLevelFilter?.value || '';
-        const rows = document.querySelectorAll('#studentsTableBody tr');
-        
-        rows.forEach(row => {
-            const matchSearch = row.textContent.toLowerCase().includes(searchTerm);
-            const matchLevel = !levelTerm || row.textContent.includes(`Level ${levelTerm}`);
-            row.style.display = (matchSearch && matchLevel) ? '' : 'none';
-        });
-    };
-
-    if (studentSearch) {
-        studentSearch.addEventListener('input', filterStudents);
-    }
-    if (studentLevelFilter) {
-        studentLevelFilter.addEventListener('change', filterStudents);
-    }
-
-    // Department Search
-    const departmentSearch = document.getElementById('departmentSearchInput');
-    const departmentBuildingFilter = document.getElementById('departmentBuildingFilter');
+    // Rebuild options
+    let optionsHtml = '<option value="">All Departments</option>';
+    departments.sort().forEach(dept => {
+        optionsHtml += `<option value="${dept}">${dept}</option>`;
+    });
     
-    const filterDepartments = () => {
-        const searchTerm = (departmentSearch?.value || '').toLowerCase();
-        const buildingTerm = departmentBuildingFilter?.value || '';
-        const rows = document.querySelectorAll('#departmentsTableBody tr');
-        
-        rows.forEach(row => {
-            const matchSearch = row.textContent.toLowerCase().includes(searchTerm);
-            const matchBuilding = !buildingTerm || row.textContent.includes(buildingTerm);
-            row.style.display = (matchSearch && matchBuilding) ? '' : 'none';
-        });
-    };
-
-    if (departmentSearch) {
-        departmentSearch.addEventListener('input', filterDepartments);
-    }
-    if (departmentBuildingFilter) {
-        departmentBuildingFilter.addEventListener('change', filterDepartments);
-    }
-
-    // Course Search
-    const courseSearch = document.getElementById('courseSearchInput');
-    const courseDepartmentFilter = document.getElementById('courseDepartmentFilter');
-    const courseCreditFilter = document.getElementById('courseCreditFilter');
+    filterSelect.innerHTML = optionsHtml;
     
-    const filterCourses = () => {
-        const searchTerm = (courseSearch?.value || '').toLowerCase();
-        const deptTerm = courseDepartmentFilter?.value || '';
-        const creditTerm = courseCreditFilter?.value || '';
-        const rows = document.querySelectorAll('#coursesTableBody tr');
-        
-        rows.forEach(row => {
-            const matchSearch = row.textContent.toLowerCase().includes(searchTerm);
-            const matchDept = !deptTerm || row.textContent.includes(deptTerm);
-            const matchCredit = !creditTerm || row.textContent.includes(creditTerm);
-            row.style.display = (matchSearch && matchDept && matchCredit) ? '' : 'none';
-        });
-    };
+    // Restore selection if it still exists
+    if (currentValue && departments.includes(currentValue)) {
+        filterSelect.value = currentValue;
+    }
+};
 
-    if (courseSearch) {
-        courseSearch.addEventListener('input', filterCourses);
-    }
-    if (courseDepartmentFilter) {
-        courseDepartmentFilter.addEventListener('change', filterCourses);
-    }
-    if (courseCreditFilter) {
-        courseCreditFilter.addEventListener('change', filterCourses);
-    }
+AdminDashboard.prototype.loadStudentsWithPagination = async function() {
+    console.log('👨‍🎓 Loading students with pagination...');
+    const response = await API.student.getAll(1, 100);
 
-    // Populate course department filter with departments from table
-    const populateCourseDeptFilter = () => {
-        const deptFilter = document.getElementById('courseDepartmentFilter');
-        if (!deptFilter) return;
+    if (response.success && response.data) {
+        let students = response.data.data || response.data;
         
-        const departments = new Set();
-        document.querySelectorAll('#coursesTableBody tr').forEach(row => {
-            const cells = row.querySelectorAll('td');
-            if (cells.length > 2) {
-                const dept = cells[2].textContent.trim();
-                if (dept && dept !== 'Not Assigned') {
-                    departments.add(dept);
-                }
-            }
-        });
-        
-        const existingOptions = Array.from(deptFilter.options).map(opt => opt.value);
-        departments.forEach(dept => {
-            if (!existingOptions.includes(dept)) {
-                const option = document.createElement('option');
-                option.value = dept;
-                option.textContent = dept;
-                deptFilter.appendChild(option);
-            }
-        });
-    };
+        if (!Array.isArray(students)) {
+            students = [];
+        }
 
-    // Call this after courses are loaded
-    const originalLoadCourses = adminDashboard?.loadCourses;
-    if (originalLoadCourses) {
-        adminDashboard.loadCourses = async function() {
-            await originalLoadCourses.call(this);
-            populateCourseDeptFilter();
-        };
+        // Set data in pagination manager
+        if (adminPaginationManagers.students) {
+            adminPaginationManagers.students.setData(students);
+            adminPaginationManagers.students.renderControls('studentsPaginationControls');
+        }
+    } else {
+        const tbody = document.getElementById('studentsTableBody');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Failed to load students</td></tr>';
     }
-}
+};
+
+AdminDashboard.prototype.loadDepartmentsWithPagination = async function() {
+    console.log('🏢 Loading departments with pagination...');
+    const response = await API.department.getAll(1, 100);
+
+    if (response.success && response.data) {
+        let departments = response.data.data || response.data;
+        
+        if (!Array.isArray(departments)) {
+            departments = [];
+        }
+
+        // Set data in pagination manager
+        if (adminPaginationManagers.departments) {
+            adminPaginationManagers.departments.setData(departments);
+            adminPaginationManagers.departments.renderControls('departmentsPaginationControls');
+        }
+    } else {
+        const tbody = document.getElementById('departmentsTableBody');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Failed to load departments</td></tr>';
+    }
+};
+
+AdminDashboard.prototype.loadCoursesWithPagination = async function() {
+    console.log('📚 Loading courses with pagination...');
+    const response = await API.course.getAll(1, 100);
+
+    if (response.success && response.data) {
+        let courses = response.data.data || response.data;
+        
+        if (!Array.isArray(courses)) {
+            courses = [];
+        }
+
+        // Populate department filter dropdown
+        this.populateCourseDepartmentFilter(courses);
+
+        // Set data in pagination manager
+        if (adminPaginationManagers.courses) {
+            adminPaginationManagers.courses.setData(courses);
+            adminPaginationManagers.courses.renderControls('coursesPaginationControls');
+        }
+    } else {
+        const tbody = document.getElementById('coursesTableBody');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Failed to load courses</td></tr>';
+    }
+};
+
+AdminDashboard.prototype.populateCourseDepartmentFilter = function(courses) {
+    const filterSelect = document.getElementById('courseDepartmentFilter');
+    if (!filterSelect) return;
+
+    // Get unique department names
+    const departments = [...new Set(courses.map(c => c.departmentName).filter(d => d))];
+    
+    // Keep current selection
+    const currentValue = filterSelect.value;
+    
+    // Rebuild options
+    let optionsHtml = '<option value="">All Departments</option>';
+    departments.sort().forEach(dept => {
+        optionsHtml += `<option value="${dept}">${dept}</option>`;
+    });
+    
+    filterSelect.innerHTML = optionsHtml;
+    
+    // Restore selection if it still exists
+    if (currentValue && departments.includes(currentValue)) {
+        filterSelect.value = currentValue;
+    }
+};
+
+AdminDashboard.prototype.loadEnrollmentsWithPagination = async function() {
+    console.log('📝 Loading enrollments with pagination...');
+    const response = await API.enrollment.getAll();
+
+    if (response.success && response.data) {
+        let enrollments = response.data.Data || response.data.data || response.data;
+        
+        if (!Array.isArray(enrollments)) {
+            enrollments = [];
+        }
+
+        // Set data in pagination manager
+        if (adminPaginationManagers.enrollments) {
+            adminPaginationManagers.enrollments.setData(enrollments);
+            adminPaginationManagers.enrollments.renderControls('enrollmentsPaginationControls');
+        }
+    } else {
+        const tbody = document.getElementById('enrollmentsTableBody');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="text-center text-danger">Failed to load enrollments</td></tr>';
+    }
+};

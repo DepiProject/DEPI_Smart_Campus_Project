@@ -270,8 +270,62 @@
         transform: translateY(0px);
     }
     50% {
-        transform: translateY(-15px);
+        transform: translateY(-20px);
     }
+}
+
+/* ==================== CUSTOM NOTIFICATION STYLES ==================== */
+
+/* Mint/Cyan notification for restore actions */
+.notification-info,
+.alert-info {
+    background: linear-gradient(135deg, #d1ecf1 0%, #cff4fc 100%) !important;
+    border-color: #0dcaf0 !important;
+    color: #055160 !important;
+}
+
+.notification-info .bi,
+.alert-info .bi {
+    color: #0dcaf0 !important;
+}
+
+/* Enhanced warning/archive notifications */
+.notification-warning,
+.alert-warning {
+    background: linear-gradient(135deg, #fff8e1 0%, #fef3c7 100%) !important;
+    border-color: #ffc107 !important;
+    color: #856404 !important;
+}
+
+.notification-warning .bi,
+.alert-warning .bi {
+    color: #ffc107 !important;
+}
+
+/* Enhanced success/green notifications */
+.notification-success,
+.alert-success {
+    background: linear-gradient(135deg, #d4edda 0%, #d1e7dd 100%) !important;
+    border-color: #198754 !important;
+    color: #0f5132 !important;
+}
+
+.notification-success .bi,
+.alert-success .bi {
+    color: #198754 !important;
+}
+
+/* Enhanced danger/red notifications */
+.notification-danger,
+.alert-danger {
+    background: linear-gradient(135deg, #ffe6e6 0%, #f8d7da 100%) !important;
+    border-color: #dc3545 !important;
+    color: #842029 !important;
+}
+
+.notification-danger .bi,
+.alert-danger .bi {
+    color: #dc3545 !important;
 }
 
 @keyframes glowPulse {
@@ -665,6 +719,37 @@
 ::-webkit-scrollbar-thumb:hover {
     background: var(--gradient-primary);
     opacity: 0.8;
+}
+
+/* ==================== FORM VALIDATION UX ==================== */
+
+/* Hide static helper text */
+small.text-muted {
+    display: none !important;
+}
+
+/* Hide validation feedback by default */
+.invalid-feedback,
+.valid-feedback {
+    display: none !important;
+}
+
+/* Show error messages only when field is invalid */
+.form-control.is-invalid ~ .invalid-feedback,
+.form-select.is-invalid ~ .invalid-feedback {
+    display: block !important;
+    color: var(--danger-500);
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+/* Show success messages only when field is valid */
+.form-control.is-valid ~ .valid-feedback,
+.form-select.is-valid ~ .valid-feedback {
+    display: block !important;
+    color: var(--success-500);
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
 }
 
 /* ==================== PARTICLE BACKGROUND ==================== */

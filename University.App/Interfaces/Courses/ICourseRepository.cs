@@ -13,6 +13,7 @@ namespace University.App.Interfaces.Courses
         Task<Course?> UpdateCourse(Course course);
         Task<bool> DeleteCourse(int id);           // Soft delete
         Task<bool> RestoreCourse(int id);
+        Task<bool> UpdateCourseInstructor(int courseId, int? instructorId);
         Task<bool> PermanentlyDeleteCourse(int id);
 
         // Course validation / info

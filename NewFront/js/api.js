@@ -82,7 +82,31 @@ const API = {
                 let errorDetails = data;
                 
                 if (typeof data === 'object') {
-                    errorMessage = data.Message || data.message || data.Error || data.error || errorMessage;
+                    // Priority 1: Check for response.data.message field (our custom error format)
+                    if (data.message) {
+                        errorMessage = data.message;
+                    }
+                    // Priority 2: Check for ASP.NET Message field
+                    else if (data.Message) {
+                        errorMessage = data.Message;
+                    }
+                    // Priority 3: Check for ASP.NET validation errors format
+                    else if (data.errors) {
+                        const allErrors = [];
+                        for (const key in data.errors) {
+                            if (Array.isArray(data.errors[key])) {
+                                allErrors.push(...data.errors[key]);
+                            }
+                        }
+                        if (allErrors.length > 0) {
+                            errorMessage = allErrors.join(', ');
+                        }
+                    }
+                    // Priority 4: Check for Error field
+                    else if (data.Error || data.error) {
+                        errorMessage = data.Error || data.error;
+                    }
+                    
                     errorDetails = data;
                 }
                 
@@ -427,13 +451,15 @@ const API = {
         },
 
         async permanentDelete(id) {
-            return API.request(`/Instructor/${id}/permanent`, {
+            const instructorId = parseInt(id, 10);
+            return API.request(`/Instructor/${instructorId}/permanent`, {
                 method: 'DELETE'
             });
         },
 
         async canPermanentlyDelete(id) {
-            return API.request(`/Instructor/${id}/can-permanently-delete`, {
+            const instructorId = parseInt(id, 10);
+            return API.request(`/Instructor/${instructorId}/can-permanently-delete`, {
                 method: 'GET'
             });
         }
@@ -591,6 +617,21 @@ const API = {
         async restore(id) {
             return API.request(`/Course/${id}/restore`, {
                 method: 'POST'
+            });
+        },
+
+        // Restore course with instructor reassignment
+        async restoreWithInstructor(id, instructorId) {
+            return API.request(`/Course/${id}/restore-with-instructor`, {
+                method: 'POST',
+                body: { instructorId }
+            });
+        },
+
+        // Get available instructors for course restoration
+        async getAvailableInstructorsForRestore(id) {
+            return API.request(`/Course/${id}/available-instructors-for-restore`, {
+                method: 'GET'
             });
         },
 

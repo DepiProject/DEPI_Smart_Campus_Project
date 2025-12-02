@@ -4,6 +4,12 @@
 
 // ===== DEPARTMENT CRUD =====
 AdminDashboard.prototype.loadDepartments = async function() {
+    // Redirect to pagination version
+    if (this.loadDepartmentsWithPagination) {
+        return this.loadDepartmentsWithPagination();
+    }
+    
+    // Fallback to non-paginated version if pagination not available
     const response = await API.department.getAll(1, 100);
     const tbody = document.getElementById('departmentsTableBody');
 
@@ -43,6 +49,13 @@ AdminDashboard.prototype.saveDepartment = async function() {
     const btnSpinner = document.getElementById('departmentBtnSpinner');
 
     if (!btn) return;
+
+    // Run validation before proceeding
+    const formValidator = window.adminFormValidator;
+    if (formValidator && !formValidator.validateDepartmentForm()) {
+        this.showToast('Validation Error', 'Please fix the validation errors before submitting', 'warning');
+        return;
+    }
 
     const name = document.getElementById('departmentName').value.trim();
     const building = document.getElementById('departmentBuilding').value;
@@ -109,7 +122,7 @@ AdminDashboard.prototype.saveDepartment = async function() {
         if (response.success) {
             bootstrap.Modal.getInstance(document.getElementById('departmentModal')).hide();
             this.resetDepartmentFormEnhanced();
-            this.loadDepartments();
+            this.loadDepartmentsWithPagination();
             this.loadDepartmentSelects();
             this.loadDashboardData();
         } else {
@@ -162,18 +175,21 @@ AdminDashboard.prototype.deleteDepartment = function(id) {
     this.deleteId = id;
     this.deleteAction = 'archive';
     
-    document.getElementById('deleteModalTitle').innerHTML = '<i class="bi bi-archive"></i> Archive Department';
+    document.getElementById('deleteModalTitle').innerHTML = '<i class="bi bi-archive text-warning"></i> Archive Department';
     document.getElementById('deleteModalBody').innerHTML = `
-        <p>This will make the department <strong>INACTIVE</strong>.</p>
-        <ul>
-            <li>Not appear in active lists</li>
-            <li>Cannot accept new students/instructors</li>
-            <li>All data preserved</li>
-        </ul>
-        <p class="text-success"><i class="bi bi-check-circle"></i> Can be restored from archived departments page</p>
+        <div class="alert alert-warning border-warning" style="border-left: 5px solid #ffc107; background-color: #fff8e1;">
+            <h6 class="text-warning mb-3"><i class="bi bi-info-circle-fill"></i> <strong>Archive Confirmation</strong></h6>
+            <p class="mb-2">This will make the department <strong>INACTIVE</strong>:</p>
+            <ul class="mb-2">
+                <li>Will not appear in active lists</li>
+                <li>Cannot accept new students/instructors</li>
+                <li>All data will be preserved</li>
+            </ul>
+            <p class="mb-0 text-success"><i class="bi bi-arrow-counterclockwise"></i> <strong>Can be restored</strong> from archived departments page</p>
+        </div>
     `;
-    document.getElementById('confirmDeleteBtn').textContent = 'Archive';
-    document.getElementById('confirmDeleteBtn').className = 'btn btn-warning';
+    document.getElementById('confirmDeleteBtn').textContent = '📦 Archive Department';
+    document.getElementById('confirmDeleteBtn').className = 'btn btn-warning px-4';
     
     new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show();
 };
@@ -183,15 +199,16 @@ AdminDashboard.prototype.permanentDeleteDepartment = function(id) {
     this.deleteId = id;
     this.deleteAction = 'permanent';
     
-    document.getElementById('deleteModalTitle').innerHTML = '<i class="bi bi-exclamation-triangle"></i> Permanent Delete';
+    document.getElementById('deleteModalTitle').innerHTML = '<i class="bi bi-exclamation-triangle text-danger"></i> Permanent Delete';
     document.getElementById('deleteModalBody').innerHTML = `
-        <div class="alert alert-danger">
-            <h6><i class="bi bi-exclamation-circle"></i> This will PERMANENTLY delete the department.</h6>
-            <p class="mb-0"><strong>ALL data will be LOST</strong></p>
+        <div class="alert alert-danger border-danger" style="border-left: 5px solid #dc3545; background-color: #ffe6e6;">
+            <h6 class="text-danger mb-3"><i class="bi bi-exclamation-circle-fill"></i> <strong>This will PERMANENTLY delete the department</strong></h6>
+            <p class="text-danger fw-bold mb-2">⛔ ALL data will be LOST!</p>
+            <p class="mb-0"><small>This action cannot be undone. All department information will be erased.</small></p>
         </div>
     `;
-    document.getElementById('confirmDeleteBtn').textContent = 'Delete Forever';
-    document.getElementById('confirmDeleteBtn').className = 'btn btn-danger';
+    document.getElementById('confirmDeleteBtn').textContent = '🗑️ Delete Forever';
+    document.getElementById('confirmDeleteBtn').className = 'btn btn-danger px-4';
     
     new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show();
 };
@@ -202,7 +219,13 @@ AdminDashboard.prototype.resetDepartmentFormEnhanced = function() {
         form.reset();
         form.classList.remove('was-validated');
         form.querySelectorAll('.is-invalid, .is-valid').forEach(el => {
-            el.classList.remove('is-invalid', 'is-valid');
+            el.classList.remove('is-invalid', 'is-valid', 'user-touched');
+            // Clear error messages
+            const errorElement = document.getElementById(el.id + 'Error');
+            if (errorElement) {
+                errorElement.textContent = '';
+                errorElement.style.display = 'none';
+            }
         });
     }
 
@@ -222,6 +245,12 @@ AdminDashboard.prototype.resetDepartmentFormEnhanced = function() {
 
 // ===== ENROLLMENT CRUD =====
 AdminDashboard.prototype.loadEnrollments = async function() {
+    // Redirect to pagination version
+    if (this.loadEnrollmentsWithPagination) {
+        return this.loadEnrollmentsWithPagination();
+    }
+    
+    // Fallback to non-paginated version if pagination not available
     console.log('📋 Loading enrollments...');
     this.allEnrollments = [];
     
@@ -344,8 +373,7 @@ AdminDashboard.prototype.approveEnrollment = async function(enrollmentId) {
         
         if (response.success) {
             this.showToast('Success', 'Enrollment approved successfully!', 'success');
-            await this.loadEnrollments();
-            this.filterEnrollments();
+            await this.loadEnrollmentsWithPagination();
             this.loadDashboardData();
         } else {
             let errorMsg = response.error || response.data?.Message || 'Failed to approve';
@@ -362,8 +390,7 @@ AdminDashboard.prototype.rejectEnrollment = async function(enrollmentId) {
         
         if (response.success) {
             this.showToast('Success', 'Enrollment rejected successfully!', 'success');
-            await this.loadEnrollments();
-            this.filterEnrollments();
+            await this.loadEnrollmentsWithPagination();
             this.loadDashboardData();
         } else {
             let errorMsg = response.error || response.data?.Message || 'Failed to reject';
@@ -396,22 +423,48 @@ AdminDashboard.prototype.executeDelete = async function() {
 
     if (!id) return;
 
+    console.log(`🗑️ Executing ${action} for ${type} with ID: ${id}`);
+    
     try {
         let response;
         
         if (action === 'archive') {
-            if (type === 'instructor') response = await API.instructor.archive(id);
-            else if (type === 'student') response = await API.student.archive(id);
-            else if (type === 'department') response = await API.department.delete(id);
-            else if (type === 'course') response = await API.course.delete(id);
-            else if (type === 'enrollment') response = await API.enrollment.softDelete(id);
+            if (type === 'instructor') {
+                console.log('📤 Calling API.instructor.archive...');
+                response = await API.instructor.archive(id);
+            } else if (type === 'student') {
+                console.log('📤 Calling API.student.archive...');
+                response = await API.student.archive(id);
+            } else if (type === 'department') {
+                console.log('📤 Calling API.department.delete...');
+                response = await API.department.delete(id);
+            } else if (type === 'course') {
+                console.log('📤 Calling API.course.delete (archive)...');
+                response = await API.course.delete(id);
+            } else if (type === 'enrollment') {
+                console.log('📤 Calling API.enrollment.softDelete...');
+                response = await API.enrollment.softDelete(id);
+            }
         } else if (action === 'permanent') {
-            if (type === 'instructor') response = await API.instructor.delete(id);
-            else if (type === 'student') response = await API.student.delete(id);
-            else if (type === 'department') response = await API.department.permanentDelete(id);
-            else if (type === 'course') response = await API.course.permanentDelete(id);
-            else if (type === 'enrollment') response = await API.enrollment.hardDelete(id);
+            if (type === 'instructor') {
+                console.log('📤 Calling API.instructor.delete (permanent)...');
+                response = await API.instructor.delete(id);
+            } else if (type === 'student') {
+                console.log('📤 Calling API.student.delete (permanent)...');
+                response = await API.student.delete(id);
+            } else if (type === 'department') {
+                console.log('📤 Calling API.department.permanentDelete...');
+                response = await API.department.permanentDelete(id);
+            } else if (type === 'course') {
+                console.log('📤 Calling API.course.permanentDelete...');
+                response = await API.course.permanentDelete(id);
+            } else if (type === 'enrollment') {
+                console.log('📤 Calling API.enrollment.hardDelete...');
+                response = await API.enrollment.hardDelete(id);
+            }
         }
+        
+        console.log(`📥 ${type} ${action} response:`, response);
         
         // Close modal
         const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'));
@@ -423,33 +476,116 @@ AdminDashboard.prototype.executeDelete = async function() {
         document.body.style.removeProperty('overflow');
         
         if (response.success) {
-            let successMessage = action === 'archive' 
-                ? `✅ ${type} archived successfully!` 
-                : `✅ ${type} permanently deleted!`;
+            let successMessage;
+            let toastType;
             
-            this.showToast('Success', successMessage, 'success');
+            if (action === 'archive') {
+                toastType = 'warning';
+                if (type === 'course') {
+                    successMessage = '📦 Course archived successfully! Can be restored from archived courses.';
+                } else if (type === 'student') {
+                    successMessage = '📦 Student archived successfully! Can be restored from archived students.';
+                } else if (type === 'instructor') {
+                    successMessage = '📦 Instructor archived successfully! Can be restored from archived instructors.';
+                } else if (type === 'department') {
+                    successMessage = '📦 Department archived successfully! Can be restored from archived departments.';
+                } else {
+                    successMessage = `📦 ${type} archived successfully!`;
+                }
+            } else {
+                toastType = 'error';
+                successMessage = `🗑️ ${type.charAt(0).toUpperCase() + type.slice(1)} permanently deleted!`;
+            }
+            
+            this.showToast(action === 'archive' ? 'Archived' : 'Deleted', successMessage, toastType);
             
             await new Promise(resolve => setTimeout(resolve, 300));
             
             // Reload appropriate section
-            if (type === 'instructor') this.loadInstructors();
-            else if (type === 'student') this.loadStudents();
-            else if (type === 'department') this.loadDepartments();
-            else if (type === 'course') this.loadCourses();
-            else if (type === 'enrollment') this.loadEnrollments();
+            if (type === 'instructor') this.loadInstructorsWithPagination();
+            else if (type === 'student') this.loadStudentsWithPagination();
+            else if (type === 'department') this.loadDepartmentsWithPagination();
+            else if (type === 'course') this.loadCoursesWithPagination();
+            else if (type === 'enrollment') this.loadEnrollmentsWithPagination();
             
             this.loadDashboardData();
         } else {
             let errorMessage = 'Operation failed';
-            if (response.data && typeof response.data === 'object') {
-                errorMessage = response.data.Message || response.data.message || 
-                              response.data.Error || response.error || errorMessage;
+            let errorTitle = 'Archive Failed';
+            
+            // Specific error messages for department operations
+            if (type === 'department') {
+                if (action === 'archive') {
+                    errorTitle = '📦 Cannot Archive Department';
+                    
+                    errorMessage = '❌ This department has active data that must be cleared first:\n\n' +
+                                 '• Department Head\n' +
+                                 '• Instructors\n' +
+                                 '• Students\n' +
+                                 '• Courses\n\n' +
+                                 '📋 Steps:\n' +
+                                 '1. Remove or reassign the Department Head\n' +
+                                 '2. Move Instructors to another department\n' +
+                                 '3. Move Students to another department\n' +
+                                 '4. Archive all Courses in this department\n' +
+                                 '5. Then try archiving the department again';
+                }
+            } else if (type === 'course') {
+                // Specific error messages for course operations
+                if (action === 'archive') {
+                    errorTitle = '📦 Cannot Archive Course';
+                    if (response.status === 400) {
+                        errorMessage = '❌ Cannot archive course. It may have active enrollments or other dependencies.';
+                    } else if (response.status === 404) {
+                        errorMessage = '❌ Course not found or already archived.';
+                    } else {
+                        errorMessage = '❌ Failed to archive course. Please try again.';
+                    }
+                }
+            } else if (type === 'student') {
+                if (action === 'archive') {
+                    errorTitle = '📦 Cannot Archive Student';
+                    errorMessage = response.data?.Message || response.data?.message || 
+                                 '❌ Failed to archive student. The student may have active enrollments.';
+                }
+            } else if (type === 'instructor') {
+                if (action === 'archive') {
+                    errorTitle = '📦 Cannot Archive Instructor';
+                    errorMessage = response.data?.Message || response.data?.message || 
+                                 '❌ Failed to archive instructor. The instructor may have active courses or be a department head.';
+                }
+            } else {
+                // Default error handling for other types
+                if (response.data && typeof response.data === 'object') {
+                    errorMessage = response.data.Message || response.data.message || 
+                                  response.data.Error || response.error || errorMessage;
+                }
             }
             
-            this.showToast('Operation Failed', errorMessage, 'error');
+            this.showToast(errorTitle, errorMessage, 'error');
         }
     } catch (error) {
-        this.showToast('Error', error.message, 'error');
+        console.error(`❌ Error during ${type} ${action}:`, error);
+        
+        let errorMessage = 'An unexpected error occurred';
+        let errorTitle = 'Operation Error';
+        
+        if (type === 'department' && action === 'archive') {
+            errorTitle = '📦 Archive Error';
+            errorMessage = '❌ An error occurred while trying to archive the department.\n\n' +
+                         'Possible causes:\n' +
+                         '• The department has active students or instructors\n' +
+                         '• Network connection issue\n' +
+                         '• Server error\n\n' +
+                         'Please check and try again.';
+        } else if (type === 'course' && action === 'archive') {
+            errorTitle = '📦 Archive Error';
+            errorMessage = '❌ Failed to archive course. Please check if the course has active enrollments.';
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        
+        this.showToast(errorTitle, errorMessage, 'error');
     } finally {
         this.deleteId = null;
         this.deleteType = null;

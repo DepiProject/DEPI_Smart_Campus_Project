@@ -3,6 +3,12 @@
 // =====================================================
 
 AdminDashboard.prototype.loadInstructors = async function() {
+    // Redirect to pagination version
+    if (this.loadInstructorsWithPagination) {
+        return this.loadInstructorsWithPagination();
+    }
+    
+    // Fallback to non-paginated version if pagination not available
     console.log('👨‍🏫 Loading instructors...');
     const response = await API.instructor.getAll(1, 100);
     const tbody = document.getElementById('instructorsTableBody');
@@ -48,6 +54,13 @@ AdminDashboard.prototype.saveInstructor = async function() {
     const btn = document.getElementById('saveInstructorBtn');
     const btnText = document.getElementById('instructorBtnText');
     const btnSpinner = document.getElementById('instructorBtnSpinner');
+
+    // Run validation before proceeding
+    const formValidator = window.adminFormValidator;
+    if (formValidator && !formValidator.validateInstructorForm()) {
+        this.showToast('Validation Error', 'Please fix the validation errors before submitting', 'warning');
+        return;
+    }
 
     const email = document.getElementById('instructorEmail').value.trim();
     const firstName = document.getElementById('instructorFirstName').value.trim();
@@ -141,7 +154,7 @@ AdminDashboard.prototype.saveInstructor = async function() {
                 this.addActivity(`New instructor added: ${fullName}`, 'sage');
                 bootstrap.Modal.getInstance(document.getElementById('instructorModal')).hide();
                 this.resetEditState();
-                await this.loadInstructors();
+                await this.loadInstructorsWithPagination();
                 await this.loadInstructorSelects();
                 await this.loadDashboardData();
             } else {
@@ -170,8 +183,14 @@ AdminDashboard.prototype.editInstructor = async function(id) {
         document.getElementById('instructorPhone').value = instructor.contactNumber || '';
         document.getElementById('instructorDepartment').value = instructor.departmentId || '';
         
-        document.getElementById('instructorPasswordField').style.display = 'none';
-        document.getElementById('instructorPassword').required = false;
+        const passwordField = document.getElementById('instructorPasswordField');
+        if (passwordField) {
+            passwordField.style.display = 'none';
+        }
+        const passwordInput = document.getElementById('instructorPassword');
+        if (passwordInput) {
+            passwordInput.required = false;
+        }
         
         const businessRules = document.getElementById('instructorBusinessRules');
         const editInfo = document.getElementById('instructorEditInfo');
@@ -184,19 +203,29 @@ AdminDashboard.prototype.editInstructor = async function(id) {
         // Make fields readonly except department
         ['instructorEmail', 'instructorFirstName', 'instructorLastName', 'instructorPhone'].forEach(id => {
             const field = document.getElementById(id);
-            field.readOnly = true;
-            field.style.backgroundColor = '#e9ecef';
-            field.style.cursor = 'not-allowed';
+            if (field) {
+                field.readOnly = true;
+                field.style.backgroundColor = '#e9ecef';
+                field.style.cursor = 'not-allowed';
+            }
         });
         
-        document.getElementById('instructorEmailNote').innerHTML = '<i class="bi bi-lock"></i> Personal details locked';
-        document.getElementById('instructorModalTitle').innerHTML = '<i class="bi bi-pencil-square"></i> Edit Instructor - Change Department';
-        document.getElementById('instructorBtnText').textContent = 'Update Instructor';
+        const modalTitle = document.getElementById('instructorModalTitle');
+        if (modalTitle) {
+            modalTitle.innerHTML = '<i class="bi bi-pencil-square"></i> Edit Instructor - Change Department';
+        }
+        const btnText = document.getElementById('instructorBtnText');
+        if (btnText) {
+            btnText.textContent = 'Update Instructor';
+        }
         
         this.editingId = id;
         this.editingType = 'instructor';
         
-        new bootstrap.Modal(document.getElementById('instructorModal')).show();
+        const modalElement = document.getElementById('instructorModal');
+        if (modalElement) {
+            new bootstrap.Modal(modalElement).show();
+        }
     } else {
         this.showToast('Error', 'Failed to load instructor data', 'error');
     }
@@ -247,20 +276,22 @@ AdminDashboard.prototype.proceedWithDirectArchive = function(id) {
     const modalBody = document.getElementById('deleteModalBody');
     const confirmBtn = document.getElementById('confirmDeleteBtn');
     
-    modalTitle.innerHTML = '<i class="bi bi-archive"></i> Archive Instructor';
+    modalTitle.innerHTML = '<i class="bi bi-archive text-warning"></i> Archive Instructor';
     modalBody.innerHTML = `
-        <p>This will make the instructor <strong>INACTIVE</strong>.</p>
-        <p>The instructor will:</p>
-        <ul>
-            <li>No longer be able to log in</li>
-            <li>Not appear in active lists</li>
-            <li>Keep all teaching records</li>
-        </ul>
-        <p class="text-success"><i class="bi bi-check-circle"></i> Can be restored from Archived Instructors page</p>
+        <div class="alert alert-warning border-warning" style="border-left: 5px solid #ffc107; background-color: #fff8e1;">
+            <h6 class="text-warning mb-3"><i class="bi bi-info-circle-fill"></i> <strong>Archive Confirmation</strong></h6>
+            <p class="mb-2">This will make the instructor <strong>INACTIVE</strong>:</p>
+            <ul class="mb-2">
+                <li>No longer able to log in</li>
+                <li>Will not appear in active lists</li>
+                <li>All teaching records will be kept</li>
+            </ul>
+            <p class="mb-0 text-success"><i class="bi bi-arrow-counterclockwise"></i> <strong>Can be restored</strong> from Archived Instructors page</p>
+        </div>
     `;
-    confirmBtn.textContent = 'Archive';
+    confirmBtn.textContent = '📦 Archive Instructor';
     confirmBtn.classList.remove('btn-danger');
-    confirmBtn.classList.add('btn-warning');
+    confirmBtn.classList.add('btn-warning', 'px-4');
     
     new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show();
 };
@@ -290,7 +321,13 @@ AdminDashboard.prototype.resetInstructorFormEnhanced = function() {
         form.reset();
         form.classList.remove('was-validated');
         form.querySelectorAll('.is-invalid, .is-valid').forEach(el => {
-            el.classList.remove('is-invalid', 'is-valid');
+            el.classList.remove('is-invalid', 'is-valid', 'user-touched');
+            // Clear error messages
+            const errorElement = document.getElementById(el.id + 'Error');
+            if (errorElement) {
+                errorElement.textContent = '';
+                errorElement.style.display = 'none';
+            }
         });
     }
 
@@ -489,9 +526,9 @@ AdminDashboard.prototype.executeReassignment = async function() {
         
         const resultMessage = results.join('\\n');
         if (allSuccess) {
-            this.showToast('Success', resultMessage, 'success');
+            this.showToast('✅ Reassignment Complete', resultMessage, 'success');
             bootstrap.Modal.getInstance(document.getElementById('reassignInstructorModal')).hide();
-            await this.loadInstructors();
+            await this.loadInstructorsWithPagination();
             await this.loadDashboardData();
         } else {
             this.showToast('Partial Success', resultMessage, 'warning');

@@ -421,23 +421,49 @@ AdminDashboard.prototype.initializeCharts = function() {
 };
 
 AdminDashboard.prototype.loadChartData = async function() {
+    console.log('📊 Starting to load chart data...');
     try {
+        // Load enrollments for trend chart
         const enrollmentsResponse = await API.enrollment.getAll(1, 1000);
+        console.log('📊 Enrollments Response:', enrollmentsResponse);
         if (enrollmentsResponse.success && enrollmentsResponse.data) {
-            const enrollments = enrollmentsResponse.data.data || enrollmentsResponse.data;
+            const enrollments = enrollmentsResponse.data.Data || enrollmentsResponse.data.data || enrollmentsResponse.data;
+            console.log('📊 Enrollments for trend chart:', enrollments);
             this.updateEnrollmentTrendChart(enrollments);
         }
 
+        // Load departments for pie chart
         const departmentsResponse = await API.department.getAll(1, 100);
+        console.log('📊 Departments Response:', departmentsResponse);
         if (departmentsResponse.success && departmentsResponse.data) {
             const departments = departmentsResponse.data.data || departmentsResponse.data;
             await this.updateDepartmentChart(departments);
         }
 
+        // Load courses for bar chart - MUST load courses first before calling the chart update
         const coursesResponse = await API.course.getAll(1, 100);
+        console.log('📊 Courses Response (full):', coursesResponse);
+        
         if (coursesResponse.success && coursesResponse.data) {
-            const courses = coursesResponse.data.data || coursesResponse.data;
+            let courses = coursesResponse.data.data || coursesResponse.data;
+            
+            // Ensure courses is an array
+            if (!Array.isArray(courses)) {
+                console.warn('⚠️ Courses data is not an array, attempting to convert:', courses);
+                courses = [];
+            }
+            
+            console.log('📊 Calling updateCourseStatsChart with courses array:', courses);
+            console.log('📊 Number of courses:', courses.length);
+            
+            // Log first course for structure inspection
+            if (courses.length > 0) {
+                console.log('📊 Sample course structure:', courses[0]);
+            }
+            
             await this.updateCourseStatsChart(courses);
+        } else {
+            console.error('❌ Failed to load courses - response not successful');
         }
 
         this.addActivity('Charts loaded successfully', 'sage');
@@ -499,40 +525,98 @@ AdminDashboard.prototype.updateDepartmentChart = async function(departments) {
 };
 
 AdminDashboard.prototype.updateCourseStatsChart = async function(courses) {
-    if (!this.charts.courseStats || !Array.isArray(courses)) return;
+    if (!this.charts.courseStats) {
+        console.log('📊 Course Stats - Chart not initialized');
+        return;
+    }
+    
+    if (!Array.isArray(courses)) {
+        console.log('📊 Course Stats - Invalid courses (not an array)');
+        // Set empty data
+        this.charts.courseStats.data.labels = ['No Data'];
+        this.charts.courseStats.data.datasets[0].data = [0];
+        this.charts.courseStats.update('active');
+        return;
+    }
     
     const labels = [];
     const data = [];
     
-    const enrollmentsResponse = await API.enrollment.getAll(1, 1000);
-    
-    if (enrollmentsResponse.success && enrollmentsResponse.data) {
-        const enrollments = enrollmentsResponse.data.data || enrollmentsResponse.data;
+    try {
+        const enrollmentsResponse = await API.enrollment.getAll(1, 1000);
+        console.log('📊 Course Stats - Enrollments Response:', enrollmentsResponse);
         
-        const courseEnrollments = {};
-        enrollments.forEach(e => {
-            const courseId = e.courseId || e.CourseId;
-            if (courseId) {
-                courseEnrollments[courseId] = (courseEnrollments[courseId] || 0) + 1;
+        if (enrollmentsResponse.success && enrollmentsResponse.data) {
+            let enrollments = enrollmentsResponse.data.Data || enrollmentsResponse.data.data || enrollmentsResponse.data;
+            
+            if (!Array.isArray(enrollments)) {
+                console.warn('⚠️ Enrollments is not an array:', enrollments);
+                enrollments = [];
             }
-        });
-        
-        const topCourses = Object.entries(courseEnrollments)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 5);
-        
-        topCourses.forEach(([courseId, count]) => {
-            const course = courses.find(c => c.id == courseId);
-            if (course) {
-                labels.push(course.name || `Course ${courseId}`);
+            
+            // Filter only enrolled/active enrollments
+            enrollments = enrollments.filter(e => {
+                const status = e.status || e.Status;
+                return status === 'Enrolled' || status === 'Pending';
+            });
+            
+            console.log('📊 Course Stats - Active Enrollments:', enrollments);
+            console.log('📊 Course Stats - Available Courses:', courses);
+            
+            // Log first enrollment to see structure
+            if (enrollments.length > 0) {
+                console.log('📊 Sample Enrollment Object:', enrollments[0]);
+                console.log('📊 Enrollment Keys:', Object.keys(enrollments[0]));
+            }
+            
+            // Count enrollments by course name (since courseId is not in the DTO)
+            const courseEnrollments = {};
+            enrollments.forEach((e, index) => {
+                // Get course name from the enrollment
+                const courseName = e.courseName || e.CourseName || e.course_name || e.Course_Name;
+                
+                console.log(`📊 Enrollment ${index + 1} - CourseName found:`, courseName);
+                
+                if (courseName) {
+                    courseEnrollments[courseName] = (courseEnrollments[courseName] || 0) + 1;
+                } else {
+                    console.warn('⚠️ No courseName found in enrollment:', e);
+                }
+            });
+            
+            console.log('📊 Course Stats - Course Enrollments Map (by name):', courseEnrollments);
+            
+            // Get all courses sorted by enrollment count (show all, not just top 5)
+            const topCourses = Object.entries(courseEnrollments)
+                .sort((a, b) => b[1] - a[1]);
+            
+            console.log('📊 Course Stats - All Courses with Enrollments:', topCourses);
+            
+            // Add to chart data
+            topCourses.forEach(([courseName, count]) => {
+                labels.push(courseName);
                 data.push(count);
-            }
-        });
+                console.log(`📊 Added to chart: ${courseName} - ${count} students`);
+            });
+            
+            console.log('📊 Course Stats - Final Chart Data:', { labels, data });
+        }
+    } catch (error) {
+        console.error('❌ Error updating course stats chart:', error);
     }
     
-    this.charts.courseStats.data.labels = labels;
-    this.charts.courseStats.data.datasets[0].data = data;
+    // If no data, show a placeholder
+    if (labels.length === 0 || data.length === 0) {
+        console.log('⚠️ No enrollment data available for chart');
+        this.charts.courseStats.data.labels = ['No Data'];
+        this.charts.courseStats.data.datasets[0].data = [0];
+    } else {
+        this.charts.courseStats.data.labels = labels;
+        this.charts.courseStats.data.datasets[0].data = data;
+    }
+    
     this.charts.courseStats.update('active');
+    console.log('📊 Course Stats Chart Updated - Labels:', this.charts.courseStats.data.labels, 'Data:', this.charts.courseStats.data.datasets[0].data);
 };
 
 AdminDashboard.prototype.refreshCharts = function() {

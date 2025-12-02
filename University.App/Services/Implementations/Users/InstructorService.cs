@@ -14,16 +14,20 @@ namespace University.App.Services.Implementations.Users
         private readonly IInstructorRepository _instructorRepository;
         private readonly ICourseRepository _courseRepository;
         private readonly IDepartmentRepository _departmentRepository;
+        private readonly IStudentRepository _studentRepository;
         
         public InstructorService(
             IInstructorRepository instructorRepository, 
             UserManager<AppUser> userManager,
-            ICourseRepository courseRepository,IDepartmentRepository departmentRepository)
+            ICourseRepository courseRepository,
+            IDepartmentRepository departmentRepository,
+            IStudentRepository studentRepository)
         {
             _instructorRepository = instructorRepository;
             _userManager = userManager;
             _courseRepository = courseRepository;
             _departmentRepository = departmentRepository;
+            _studentRepository = studentRepository;
         }
         public async Task<InstructorDTO?> GetByIdAsync(int id)
         {
@@ -251,6 +255,20 @@ namespace University.App.Services.Implementations.Users
                 throw new KeyNotFoundException("Instructor profile not found for the current user.");
             }
 
+            // Validate phone uniqueness if changed
+            if (!string.IsNullOrWhiteSpace(dto.ContactNumber))
+            {
+                var normalizedPhone = dto.ContactNumber.Trim();
+                if (normalizedPhone != instructor.ContactNumber)
+                {
+                    var isUnique = await IsPhoneNumberUniqueForAllUsersAsync(normalizedPhone, userId);
+                    if (!isUnique)
+                    {
+                        throw new InvalidOperationException("This phone number is already existed");
+                    }
+                }
+            }
+
             // Instructors can only update contact number
             // Names are fixed identity information tied to academic records
             instructor.ContactNumber = dto.ContactNumber;
@@ -451,6 +469,46 @@ namespace University.App.Services.Implementations.Users
             var exists = allInstructors.Any(i => i.ContactNumber == normalizedPhone && !i.IsDeleted);
 
             return !exists;
+        }
+
+        public async Task<bool> IsPhoneNumberUniqueAsync(string phoneNumber, int excludeUserId)
+        {
+            return await IsPhoneNumberUniqueForAllUsersAsync(phoneNumber, excludeUserId);
+        }
+
+        private async Task<bool> IsPhoneNumberUniqueForAllUsersAsync(string phoneNumber, int? excludeUserId)
+        {
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+                return true;
+
+            var normalizedPhone = phoneNumber.Trim();
+
+            // Materialize lists to prevent DbContext threading issues
+            var allStudents = (await _studentRepository.GetAllStudentsAsync()).ToList();
+            var studentExists = allStudents.Any(s => 
+                s.ContactNumber == normalizedPhone && 
+                !s.IsDeleted &&
+                (!excludeUserId.HasValue || s.UserId != excludeUserId.Value));
+
+            if (studentExists)
+                return false;
+
+            var allInstructors = (await _instructorRepository.GetAllInstructorsAsync()).ToList();
+            var instructorExists = allInstructors.Any(i => 
+                i.ContactNumber == normalizedPhone && 
+                !i.IsDeleted &&
+                (!excludeUserId.HasValue || i.UserId != excludeUserId.Value));
+
+            if (instructorExists)
+                return false;
+
+            // Check admins
+            var allUsers = _userManager.Users.ToList();
+            var adminExists = allUsers.Any(u => 
+                u.PhoneNumber == normalizedPhone &&
+                (!excludeUserId.HasValue || u.Id != excludeUserId.Value));
+
+            return !adminExists;
         }
 
         public async Task<int> GetInstructorCourseCountAsync(int instructorId)

@@ -231,6 +231,26 @@ namespace University.App.Services.Implementations.Users
 
             // ========== STUDENT UPDATE: Only Contact Number ==========
             // Do NOT update name, email, code, level, or department
+            
+            // Validate phone uniqueness if changed
+            if (!string.IsNullOrWhiteSpace(dto.ContactNumber))
+            {
+                var normalizedPhone = dto.ContactNumber.Trim();
+                if (normalizedPhone != student.ContactNumber)
+                {
+                    var allStudents = (await _studentRepository.GetAllStudentsAsync()).ToList();
+                    var phoneExists = allStudents.Any(s => 
+                        s.ContactNumber == normalizedPhone && 
+                        !s.IsDeleted && 
+                        s.UserId != userId);
+                    
+                    if (phoneExists)
+                    {
+                        throw new InvalidOperationException("This phone number is already existed");
+                    }
+                }
+            }
+            
             student.ContactNumber = dto.ContactNumber?.Trim();
             student.UpdatedAt = DateTime.UtcNow;
 

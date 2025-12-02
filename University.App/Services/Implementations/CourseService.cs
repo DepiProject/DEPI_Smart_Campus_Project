@@ -198,6 +198,7 @@
 //    }
 //}
 using University.App.DTOs;
+using University.App.DTOs.Users;
 using University.App.Interfaces;
 using University.App.Interfaces.Courses;
 using University.App.Interfaces.Users;
@@ -209,7 +210,7 @@ namespace University.App.Services.Implementations
     public class CourseService : ICourseService
     {
         private readonly ICourseRepository _courseRepo;
-
+        private readonly IEnrollmentService _enrollmentService;
         private readonly IInstructorRepository _instructorRepo;
         private readonly IStudentRepository _studentRepo;
 
@@ -222,8 +223,8 @@ namespace University.App.Services.Implementations
         private const int MIN_STUDENTS_TO_RUN_COURSE = 5;
 
         // VALIDATION ENHANCED: Maximum courses per instructor workload limit
-        // Business rule: No instructor can teach more than 2 courses simultaneously
-        private const int MAX_COURSES_PER_INSTRUCTOR = 2;
+        // Business rule: No instructor can teach more than 4 courses simultaneously
+        private const int MAX_COURSES_PER_INSTRUCTOR = 4;
 
         // VALIDATION ENHANCED: Maximum credit hours per instructor teaching load
         // Business rule: No instructor can teach more than 12 credit hours total
@@ -233,11 +234,12 @@ namespace University.App.Services.Implementations
         // Business rule: Students can only enroll in courses from their own department
         private const bool ENFORCE_DEPARTMENT_RESTRICTION = true;
 
-        public CourseService(ICourseRepository courseRepo, IStudentRepository studentRepo, IInstructorRepository instructorRepo)
+        public CourseService(ICourseRepository courseRepo, IStudentRepository studentRepo, IInstructorRepository instructorRepo, IEnrollmentService enrollmentService)
         {
             _courseRepo = courseRepo;
             _studentRepo = studentRepo;
             _instructorRepo = instructorRepo;
+            _enrollmentService = enrollmentService;
         }
 
         // ================= COURSE MANAGEMENT =================
@@ -459,11 +461,40 @@ namespace University.App.Services.Implementations
 
         /// <summary>
         /// Soft delete a course (marks as deleted, preserves data)
-        /// VALIDATION ENHANCED: Soft delete pattern maintains referential integrity
+        /// VALIDATION ENHANCED: Prevents archiving courses with active enrollments
+        /// Removes course from instructor's course list when archived
         /// Related enrollments, exams, and attendance records remain intact
         /// </summary>
         public async Task<bool> DeleteCourse(int id)
         {
+            // Get the course first to check instructor assignment
+            var course = await _courseRepo.GetCourseById(id);
+            if (course == null)
+                throw new InvalidOperationException("Course not found.");
+            
+            // VALIDATION ENHANCED: Check for active enrollments before archiving
+            // Only count enrollments that are "Enrolled" or "In Progress" - exclude rejected and pending
+            var activeEnrollments = await _enrollmentService.GetEnrollmentStudentsByCourseID(id);
+            var activeEnrollmentsList = activeEnrollments
+                .Where(e => (e.Status == "Enrolled" || e.Status == "In Progress") && e.IsCourseActive)
+                .ToList();
+            
+            if (activeEnrollmentsList.Any())
+            {
+                throw new InvalidOperationException($"Cannot archive course. There are {activeEnrollmentsList.Count} active student enrollments. Please ensure all students have completed, dropped, or been withdrawn from the course before archiving.");
+            }
+            
+            // Remove course from instructor's assignment if instructor exists
+            if (course.InstructorId.HasValue)
+            {
+                // Update the course to remove instructor assignment
+                var updateResult = await _courseRepo.UpdateCourseInstructor(id, null);
+                if (!updateResult)
+                {
+                    throw new InvalidOperationException("Failed to remove course from instructor assignment during archival.");
+                }
+            }
+            
             // VALIDATION ENHANCED: Repository handles soft delete (sets DeletedAt)
             // Related records are NOT deleted, maintaining referential integrity
             // Audit trail maintained for compliance
@@ -479,6 +510,227 @@ namespace University.App.Services.Implementations
             // VALIDATION ENHANCED: Repository handles restoration (clears DeletedAt)
             // Only deleted courses can be restored (active courses cannot be restored)
             return await _courseRepo.RestoreCourse(id);
+        }
+
+        /// <summary>
+        /// Restore a soft-deleted course with instructor reassignment
+        /// VALIDATION ENHANCED: Handles instructor reassignment during restoration
+        /// </summary>
+        public async Task<bool> RestoreCourseWithInstructorReassignment(int courseId, int? newInstructorId = null)
+        {
+            // Get the deleted course first to check its current state
+            var allCourses = await _courseRepo.GetAllCoursesIncludingDeleted();
+            var course = allCourses.FirstOrDefault(c => c.CourseId == courseId && c.DeletedAt.HasValue);
+            
+            if (course == null)
+                throw new InvalidOperationException("Course not found or is not deleted.");
+                
+            if (!course.DepartmentId.HasValue)
+                throw new InvalidOperationException("Course does not have an assigned department.");
+
+            // If no new instructor specified, check if the current instructor is still available
+            if (newInstructorId == null)
+            {
+                if (course.InstructorId.HasValue)
+                {
+                    // Check if the current instructor is still in the same department and available
+                    var currentInstructor = await _instructorRepo.GetInstructorByIdAsync(course.InstructorId.Value);
+                    if (currentInstructor != null && !currentInstructor.IsDeleted && currentInstructor.DepartmentId == course.DepartmentId)
+                    {
+                        // Current instructor is still available, check BOTH workload constraints
+                        var currentCourses = await GetCoursesByInstructorId(currentInstructor.InstructorId);
+                        var coursesList = currentCourses.ToList();
+                        var totalCredits = coursesList.Sum(c => c.CreditHours);
+                        var courseCount = coursesList.Count;
+                        
+                        // Check both MAX_COURSES_PER_INSTRUCTOR (2) and MAX_CREDIT_HOURS_PER_INSTRUCTOR (12)
+                        if (courseCount < MAX_COURSES_PER_INSTRUCTOR && (totalCredits + course.Credits) <= MAX_CREDIT_HOURS_PER_INSTRUCTOR)
+                        {
+                            // Current instructor can handle the course
+                            return await _courseRepo.RestoreCourse(courseId);
+                        }
+                    }
+                }
+                
+                // Need to find a new instructor in the same department
+                var availableInstructors = await _instructorRepo.GetByDepartmentAsync((int)course.DepartmentId);
+                var activeInstructors = availableInstructors.Where(i => !i.IsDeleted).ToList();
+                
+                if (activeInstructors.Count == 0)
+                    throw new InvalidOperationException($"No active instructors found in department {course.Department?.Name ?? "Unknown"}.");
+                
+                foreach (var instructor in activeInstructors)
+                {
+                    var instructorCourses = await GetCoursesByInstructorId(instructor.InstructorId);
+                    var coursesList = instructorCourses.ToList();
+                    var totalCredits = coursesList.Sum(c => c.CreditHours);
+                    var courseCount = coursesList.Count;
+                    
+                    // Check both MAX_COURSES_PER_INSTRUCTOR (2) and MAX_CREDIT_HOURS_PER_INSTRUCTOR (12)
+                    if (courseCount < MAX_COURSES_PER_INSTRUCTOR && (totalCredits + course.Credits) <= MAX_CREDIT_HOURS_PER_INSTRUCTOR)
+                    {
+                        newInstructorId = instructor.InstructorId;
+                        break;
+                    }
+                }
+                
+                if (newInstructorId == null)
+                    throw new InvalidOperationException($"No available instructor found in {course.Department?.Name ?? "this department"}. All instructors have reached their maximum workload (2 courses or 12 credit hours).");
+            }
+            else
+            {
+                // Validate the specified instructor
+                var newInstructor = await _instructorRepo.GetInstructorByIdAsync(newInstructorId.Value);
+                if (newInstructor == null || newInstructor.IsDeleted)
+                    throw new InvalidOperationException("Specified instructor not found or is inactive.");
+                    
+                if (newInstructor.DepartmentId != course.DepartmentId)
+                    throw new InvalidOperationException("Instructor must be from the same department as the course.");
+                    
+                // Check BOTH instructor workload constraints
+                var instructorCourses = await GetCoursesByInstructorId(newInstructorId.Value);
+                var coursesList = instructorCourses.ToList();
+                var totalCredits = coursesList.Sum(c => c.CreditHours);
+                var courseCount = coursesList.Count;
+                
+                // Check both MAX_COURSES_PER_INSTRUCTOR (2) and MAX_CREDIT_HOURS_PER_INSTRUCTOR (12)
+                if (courseCount >= MAX_COURSES_PER_INSTRUCTOR)
+                    throw new InvalidOperationException($"Instructor has already reached maximum course limit ({MAX_COURSES_PER_INSTRUCTOR} courses).");
+                    
+                if ((totalCredits + course.Credits) > MAX_CREDIT_HOURS_PER_INSTRUCTOR)
+                    throw new InvalidOperationException($"Instructor would exceed maximum credit hours ({MAX_CREDIT_HOURS_PER_INSTRUCTOR}).");
+            }
+
+            // Update course with new instructor and restore
+            var updateResult = await _courseRepo.UpdateCourseInstructor(courseId, newInstructorId.Value);
+            if (!updateResult)
+                throw new InvalidOperationException("Failed to update course instructor.");
+                
+            return await _courseRepo.RestoreCourse(courseId);
+        }
+
+        /// <summary>
+        /// Get available instructors for course restoration
+        /// Returns instructors in the same department who can handle the course
+        /// </summary>
+        public async Task<IEnumerable<InstructorAvailabilityDTO>> GetAvailableInstructorsForCourseRestore(int courseId)
+        {
+            // Get the deleted course
+            var allCourses = await _courseRepo.GetAllCoursesIncludingDeleted();
+            var course = allCourses.FirstOrDefault(c => c.CourseId == courseId && c.DeletedAt.HasValue);
+            
+            if (course == null)
+                throw new InvalidOperationException("Course not found or is not deleted.");
+
+            // Validate department exists
+            if (!course.DepartmentId.HasValue || course.DepartmentId.Value <= 0)
+                throw new InvalidOperationException("Course does not have a valid department assignment.");
+
+            // Get all active instructors in the same department
+            var departmentInstructors = await _instructorRepo.GetByDepartmentAsync(course.DepartmentId.Value);
+            var activeInstructors = departmentInstructors.Where(i => !i.IsDeleted && i.DeletedAt == null).ToList();
+            
+            var availableInstructors = new List<InstructorAvailabilityDTO>();
+            
+            foreach (var instructor in activeInstructors)
+            {
+                // Get ALL active courses for this instructor (using repository which already filters !IsDeleted)
+                var instructorCourses = await _courseRepo.GetCoursesByInstructorId(instructor.InstructorId);
+                var activeCoursesList = instructorCourses.ToList();
+                
+                // Calculate current workload from ACTIVE courses only
+                var totalCredits = activeCoursesList.Sum(c => c.Credits);
+                var currentCourseCount = activeCoursesList.Count;
+                
+                // VALIDATION: Check both constraints
+                // 1. MAX_COURSES_PER_INSTRUCTOR = 2 (cannot teach more than 2 courses)
+                // 2. MAX_CREDIT_HOURS_PER_INSTRUCTOR = 12 (cannot exceed 12 credit hours)
+                bool hasCoursesCapacity = currentCourseCount < MAX_COURSES_PER_INSTRUCTOR;
+                bool hasCreditHoursCapacity = (totalCredits + course.Credits) <= MAX_CREDIT_HOURS_PER_INSTRUCTOR;
+                
+                if (hasCoursesCapacity && hasCreditHoursCapacity)
+                {
+                    availableInstructors.Add(new InstructorAvailabilityDTO
+                    {
+                        InstructorId = instructor.InstructorId,
+                        FullName = instructor.FullName,
+                        Email = instructor.User?.Email ?? string.Empty,
+                        DepartmentName = instructor.Department?.Name ?? "Unknown",
+                        ContactNumber = instructor.ContactNumber,
+                        CurrentCreditHours = totalCredits,
+                        MaxCreditHours = MAX_CREDIT_HOURS_PER_INSTRUCTOR,
+                        CourseCreditHours = course.Credits,
+                        TotalAfterAssignment = totalCredits + course.Credits,
+                        CurrentCourseCount = currentCourseCount,
+                        MaxCourseCount = MAX_COURSES_PER_INSTRUCTOR
+                    });
+                }
+            }
+            
+            return availableInstructors;
+        }
+
+        /// <summary>
+        /// Debug method to get detailed workload information for all instructors in a course's department
+        /// </summary>
+        public async Task<object> GetInstructorWorkloadDebugInfo(int courseId)
+        {
+            // Get the deleted course
+            var allCourses = await _courseRepo.GetAllCoursesIncludingDeleted();
+            var course = allCourses.FirstOrDefault(c => c.CourseId == courseId);
+            
+            if (course == null)
+                throw new InvalidOperationException("Course not found.");
+
+            if (!course.DepartmentId.HasValue)
+                return new { Message = "Course has no department assignment", Instructors = new List<object>() };
+
+            // Get all active instructors in the same department
+            var departmentInstructors = await _instructorRepo.GetByDepartmentAsync(course.DepartmentId.Value);
+            var activeInstructors = departmentInstructors.Where(i => !i.IsDeleted && i.DeletedAt == null).ToList();
+            
+            var workloadDetails = new List<object>();
+            
+            foreach (var instructor in activeInstructors)
+            {
+                var instructorCourses = await GetCoursesByInstructorId(instructor.InstructorId);
+                var coursesList = instructorCourses.ToList();
+                var totalCredits = coursesList.Sum(c => c.CreditHours);
+                
+                workloadDetails.Add(new
+                {
+                    InstructorId = instructor.InstructorId,
+                    FullName = instructor.FullName,
+                    Email = instructor.User?.Email ?? "N/A",
+                    DepartmentName = instructor.Department?.Name ?? "N/A",
+                    CurrentCourses = coursesList.Select(c => new 
+                    { 
+                        CourseName = c.CourseName, 
+                        CourseCode = c.CourseCode, 
+                        CreditHours = c.CreditHours 
+                    }).ToList(),
+                    CurrentCourseCount = coursesList.Count,
+                    CurrentCreditHours = totalCredits,
+                    MaxCreditHours = MAX_CREDIT_HOURS_PER_INSTRUCTOR,
+                    CourseCreditHours = course.Credits,
+                    TotalAfterAssignment = totalCredits + course.Credits,
+                    RemainingCapacity = MAX_CREDIT_HOURS_PER_INSTRUCTOR - totalCredits,
+                    WouldExceedLimit = (totalCredits + course.Credits) > MAX_CREDIT_HOURS_PER_INSTRUCTOR,
+                    IsAvailable = (totalCredits + course.Credits) <= MAX_CREDIT_HOURS_PER_INSTRUCTOR
+                });
+            }
+            
+            return new
+            {
+                CourseName = course.Name,
+                CourseCode = course.CourseCode,
+                CourseCredits = course.Credits,
+                DepartmentId = course.DepartmentId.Value,
+                TotalInstructorsInDepartment = activeInstructors.Count,
+                AvailableInstructors = workloadDetails.Count(w => (bool)((dynamic)w).IsAvailable),
+                OverloadedInstructors = workloadDetails.Count(w => (bool)((dynamic)w).WouldExceedLimit),
+                InstructorDetails = workloadDetails
+            };
         }
 
         /// <summary>
@@ -611,6 +863,7 @@ namespace University.App.Services.Implementations
             var courses = await _courseRepo.GetCoursesByInstructorId(instructorId);
             return courses.Select(c => new InstructorCoursesDTO
             {
+                CourseId = c.CourseId,
                 InstructorID = c.InstructorId ?? 0,
                 InstructorName = c.Instructor?.FullName ?? "Unknown",
                 CourseName = c.Name,

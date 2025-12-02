@@ -35,6 +35,115 @@
                 display: none;
             }
         }
+
+        /* Enhanced Form Validation Styles */
+        .form-control.is-valid,
+        .form-select.is-valid {
+            border-color: #198754;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='m2.3 6.73.8-.77-.8-.77-1.5 1.5L.83 5.2v1.5l1.5 1.5z'/%3e%3c/svg%3e");
+            animation: validPulse 0.3s ease-in-out;
+        }
+
+        .form-control.is-invalid,
+        .form-select.is-invalid {
+            border-color: #dc3545;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23dc3545' d='M7.4 6.3l-1.1 1.1L4 5.1 1.7 7.4.6 6.3 2.9 4 .6 1.7 1.7.6 4 2.9 6.3.6 7.4 1.7 5.1 4l2.3 2.3z'/%3e%3c/svg%3e");
+            animation: invalidShake 0.3s ease-in-out;
+        }
+
+        @keyframes validPulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(25, 135, 84, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(25, 135, 84, 0);
+            }
+        }
+
+        @keyframes invalidShake {
+
+            0%,
+            20%,
+            40%,
+            60%,
+            80% {
+                transform: translateX(-2px);
+            }
+
+            10%,
+            30%,
+            50%,
+            70%,
+            90% {
+                transform: translateX(2px);
+            }
+
+            100% {
+                transform: translateX(0);
+            }
+        }
+
+        .invalid-feedback {
+            display: none;
+            font-size: 0.875em;
+            margin-top: 0.25rem;
+            color: #dc3545;
+            font-weight: 500;
+        }
+
+        .form-control.is-invalid~.invalid-feedback,
+        .form-select.is-invalid~.invalid-feedback {
+            display: block;
+        }
+
+        .valid-feedback {
+            display: none !important;
+        }
+
+        /* Password strength indicator */
+        .password-strength .progress {
+            height: 6px !important;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .password-strength .progress-bar {
+            transition: width 0.3s ease, background-color 0.3s ease;
+        }
+
+        /* Validation icons in input groups */
+        .input-group .form-control.is-valid~.input-group-text {
+            border-color: #198754;
+            background-color: rgba(25, 135, 84, 0.1);
+        }
+
+        .input-group .form-control.is-invalid~.input-group-text {
+            border-color: #dc3545;
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+
+        /* Real-time validation feedback */
+        .form-label.required::after {
+            content: " *";
+            color: #dc3545;
+        }
+
+        .validation-success-icon {
+            color: #198754;
+            margin-left: 8px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .form-control.is-valid~.validation-success-icon,
+        .form-select.is-valid~.validation-success-icon {
+            opacity: 1;
+        }
     </style>
 </head>
 
@@ -347,6 +456,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="instructorsPaginationControls" class="mt-3"></div>
             </div>
 
             <!-- Users Section -->
@@ -404,6 +514,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="studentsPaginationControls" class="mt-3"></div>
             </div>
 
             <!-- Departments Section -->
@@ -459,6 +570,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="departmentsPaginationControls" class="mt-3"></div>
             </div>
 
             <!-- Courses Section -->
@@ -522,6 +634,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="coursesPaginationControls" class="mt-3"></div>
             </div>
 
             <!-- Enrollments Section -->
@@ -569,6 +682,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="enrollmentsPaginationControls" class="mt-3"></div>
             </div>
 
             <!-- Profile Section -->
@@ -700,7 +814,7 @@
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Contact Number</label>
                                     <input type="tel" class="form-control" id="profileContactNumber"
-                                        placeholder="01012345678" maxlength="11" pattern="^(010|011|012|015)\\d{8}$">
+                                        placeholder="01012345678" maxlength="11">
                                     <small class="text-muted">Must start with 010, 011, 012, or 015 (optional)</small>
                                     <div id="contactNumberError" class="text-danger small mt-1"></div>
                                 </div>
@@ -795,12 +909,9 @@
                                     <span class="input-group-text"><i class="bi bi-envelope"></i></span>
                                     <input type="email" class="form-control" id="instructorEmail" required
                                         placeholder="instructor@university.edu.eg"
-                                        pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$">
-                                    <div class="invalid-feedback" id="instructorEmailError">Please enter a valid
-                                        university email</div>
+                                        pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(edu|ac)\.[a-zA-Z]{2,}$">
                                 </div>
-                                <small class="text-muted" id="instructorEmailNote">Must be university email
-                                    format</small>
+                                <div class="invalid-feedback" id="instructorEmailError"></div>
                             </div>
 
                             <!-- Department -->
@@ -812,8 +923,8 @@
                                     <select class="form-select" id="instructorDepartment" required>
                                         <option value="">Select Department</option>
                                     </select>
-                                    <div class="invalid-feedback">Please select a department</div>
                                 </div>
+                                <div class="invalid-feedback" id="instructorDepartmentError"></div>
                             </div>
                         </div>
 
@@ -826,9 +937,8 @@
                                     <span class="input-group-text"><i class="bi bi-person"></i></span>
                                     <input type="text" class="form-control" id="instructorFirstName" required
                                         placeholder="John" maxlength="50" pattern="^[a-zA-Z\s\-']+$">
-                                    <div class="invalid-feedback" id="instructorFirstNameError">Letters only (max 50
-                                        chars)</div>
                                 </div>
+                                <div class="invalid-feedback" id="instructorFirstNameError"></div>
                             </div>
 
                             <!-- Last Name -->
@@ -839,9 +949,8 @@
                                     <span class="input-group-text"><i class="bi bi-person"></i></span>
                                     <input type="text" class="form-control" id="instructorLastName" required
                                         placeholder="Smith" maxlength="50" pattern="^[a-zA-Z\s\-']+$">
-                                    <div class="invalid-feedback" id="instructorLastNameError">Letters only (max 50
-                                        chars)</div>
                                 </div>
+                                <div class="invalid-feedback" id="instructorLastNameError"></div>
                             </div>
                         </div>
 
@@ -854,11 +963,8 @@
                                     <span class="input-group-text"><i class="bi bi-phone"></i></span>
                                     <input type="tel" class="form-control" id="instructorPhone"
                                         placeholder="01012345678" maxlength="11" pattern="^(010|011|012|015)\d{8}$">
-                                    <div class="invalid-feedback" id="instructorPhoneError">Must start with 010, 011,
-                                        012, or 015</div>
                                 </div>
-                                <small class="text-muted">Must start with 010, 011, 012, or 015 (last 8 digits cannot be
-                                    all same)</small>
+                                <div class="invalid-feedback" id="instructorPhoneError"></div>
                             </div>
 
                             <!-- Password (Create mode only) -->
@@ -873,15 +979,11 @@
                                         id="toggleInstructorPassword">
                                         <i class="bi bi-eye"></i>
                                     </button>
-                                    <div class="invalid-feedback" id="instructorPasswordError">Min 8 chars, uppercase,
-                                        lowercase, number, special (@$!%*?&)</div>
                                 </div>
                                 <div class="password-strength mt-1" id="instructorPasswordStrength">
                                     <div class="progress" style="height: 4px;">
                                         <div class="progress-bar" role="progressbar" style="width: 0%"></div>
                                     </div>
-                                    <small class="text-muted">Password strength: <span
-                                            id="strengthText">-</span></small>
                                 </div>
                             </div>
                         </div>
@@ -942,11 +1044,9 @@
                                     <span class="input-group-text"><i class="bi bi-envelope"></i></span>
                                     <input type="email" class="form-control" id="studentEmail" required
                                         placeholder="student@university.edu.eg"
-                                        pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$">
+                                        pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(edu|ac)\.[a-zA-Z]{2,}$">
                                 </div>
-                                <small class="text-muted" id="studentEmailNote">Must be university email format</small>
-                                <div class="invalid-feedback" id="studentEmailError">Please enter a valid university
-                                    email</div>
+                                <div class="invalid-feedback" id="studentEmailError"></div>
                             </div>
 
                             <!-- Department -->
@@ -959,8 +1059,7 @@
                                         <option value="">Select Department</option>
                                     </select>
                                 </div>
-                                <div class="invalid-feedback" id="studentDepartmentError">Please select a department
-                                </div>
+                                <div class="invalid-feedback" id="studentDepartmentError"></div>
                             </div>
                         </div>
 
@@ -1001,10 +1100,7 @@
                                     <input type="tel" class="form-control" id="studentPhone" placeholder="01012345678"
                                         maxlength="11" pattern="^(010|011|012|015)\d{8}$">
                                 </div>
-                                <small class="text-muted">Must start with 010, 011, 012, or 015 (last 8 digits cannot be
-                                    all same)</small>
-                                <div class="invalid-feedback" id="studentPhoneError">Must start with 010, 011, 012, or
-                                    015</div>
+                                <div class="invalid-feedback" id="studentPhoneError"></div>
                             </div>
 
                             <!-- Level -->
@@ -1035,8 +1131,6 @@
                                     <button class="btn btn-outline-secondary" type="button" id="toggleStudentPassword">
                                         <i class="bi bi-eye"></i>
                                     </button>
-                                    <div class="invalid-feedback" id="studentPasswordError">Min 8 chars, uppercase,
-                                        lowercase, number, special (@$!%*?&)</div>
                                 </div>
                                 <div class="password-strength mt-1" id="studentPasswordStrength">
                                     <div class="progress" style="height: 4px;">
@@ -1205,7 +1299,6 @@
                                     <select class="form-select" id="courseDepartment" required>
                                         <option value="">Select Department</option>
                                     </select>
-                                    <div class="invalid-feedback">Please select department</div>
                                 </div>
                                 <small class="text-muted">Determines course availability for students</small>
                             </div>
@@ -1333,8 +1426,10 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="alert alert-warning">
-                        <h6 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Reassignment Required</h6>
+                    <div class="alert alert-warning border-warning"
+                        style="border-left: 5px solid #ffc107; background-color: #fff8e1;">
+                        <h6 class="alert-heading text-warning"><i class="bi bi-exclamation-triangle-fill"></i>
+                            Reassignment Required</h6>
                         <p class="mb-0" id="reassignmentReason">This instructor has active data that must be reassigned
                             before archiving.</p>
                     </div>
@@ -1385,8 +1480,10 @@
                         </div>
                     </form>
 
-                    <div class="alert alert-info small">
-                        <h6 class="fw-bold"><i class="bi bi-info-circle"></i> What will be reassigned:</h6>
+                    <div class="alert alert-info border-info small"
+                        style="border-left: 5px solid #0dcaf0; background-color: #d1ecf1;">
+                        <h6 class="fw-bold text-info"><i class="bi bi-info-circle-fill"></i> What will be reassigned:
+                        </h6>
                         <ul class="mb-0">
                             <li id="reassignCourses">Courses: <span class="fw-bold">--</span></li>
                             <li id="reassignDeptHead">Department Head: <span class="fw-bold">--</span></li>
@@ -1397,7 +1494,7 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <i class="bi bi-x-lg"></i> Cancel
                     </button>
-                    <button type="button" class="btn btn-warning" id="confirmReassignBtn">
+                    <button type="button" class="btn btn-warning px-4" id="confirmReassignBtn">
                         <i class="bi bi-arrow-left-right"></i> Reassign & Archive
                         <span class="spinner-border spinner-border-sm ms-2 d-none" id="reassignSpinner"></span>
                     </button>
@@ -1460,11 +1557,13 @@
     <script src="../js/dashboard.js?v=20251128011"></script>
     <script src="../js/admin-dashboard.js?v=20251128014"></script>
     <!-- Admin Dashboard - Split Files (Load in Order) -->
+    <script src="../js/Admin Dashboard/admin-form-validation.js"></script>
     <script src="../js/Admin Dashboard/admin-dashboard-core.js"></script>
     <script src="../js/Admin Dashboard/admin-validation-charts.js"></script>
     <script src="../js/Admin Dashboard/admin-crud-instructors.js"></script>
     <script src="../js/Admin Dashboard/admin-crud-students-courses.js"></script>
     <script src="../js/Admin Dashboard/admin-crud-departments-enrollments.js"></script>
+    <script src="../js/Admin Dashboard/admin-pagination.js"></script>
     <!-- Mobile Navigation Toggle -->
     <button class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Toggle Navigation">
         <i class="bi bi-list"></i>

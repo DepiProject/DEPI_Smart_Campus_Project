@@ -350,6 +350,7 @@ namespace University.App.DTOs
     // Courses taught by Instructor
     public class InstructorCoursesDTO
     {
+        public int CourseId { get; set; }
         public int InstructorID { get; set; }
         public string InstructorName { get; set; } = string.Empty;
         public string CourseName { get; set; } = string.Empty;

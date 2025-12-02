@@ -1023,6 +1023,291 @@ main h1 {
     border-radius: 10px;
 }
 
+/* ==================== PAGINATION CONTROLS ==================== */
+.pagination {
+    gap: 6px;
+    margin: 0;
+}
+
+.page-item {
+    margin: 0;
+}
+
+.page-link {
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-weight: 600;
+    padding: 8px 14px;
+    margin: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 42px;
+    height: 42px;
+    position: relative;
+    overflow: hidden;
+    background: white;
+}
+
+.page-link:hover {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.05));
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+.page-link:focus {
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+    z-index: 2;
+}
+
+.page-item.active .page-link {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    font-weight: 700;
+}
+
+.page-item.disabled .page-link {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #cbd5e1;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.page-item.disabled .page-link:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+/* First/Last page buttons */
+.page-link[data-page="first"],
+.page-link[data-page="last"] {
+    font-weight: 700;
+}
+
+/* Prev/Next buttons with icons */
+.page-link i {
+    font-size: 14px;
+}
+
+/* Pagination info text */
+.pagination-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.pagination-info i {
+    color: var(--primary-color);
+    font-size: 16px;
+}
+
+/* Items per page selector */
+.pagination .form-select {
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 8px 48px 8px 16px;
+    font-weight: 600;
+    font-size: 14px;
+    height: 42px;
+    min-width: 160px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: white;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%23476247' d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    background-size: 14px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.pagination .form-select:hover {
+    border-color: var(--primary-color);
+    background-color: #fafafa;
+    box-shadow: 0 2px 8px rgba(71, 98, 71, 0.15);
+}
+
+.pagination .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(71, 98, 71, 0.1);
+    outline: none;
+    background-color: white;
+}
+
+/* Dropdown options styling */
+.pagination .form-select option {
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    background-color: white;
+}
+
+.pagination .form-select option:hover {
+    background-color: #e8f0e8;
+    color: var(--primary-dark);
+}
+
+.pagination .form-select option:checked {
+    background-color: #4a90e2;
+    color: white;
+    font-weight: 600;
+}
+
+/* Pagination container wrapper */
+[id$="PaginationControls"] {
+    background: white;
+    padding: 20px 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border-color);
+}
+
+/* Responsive pagination */
+@media (max-width: 992px) {
+    [id$="PaginationControls"] > div {
+        flex-direction: column;
+        gap: 16px !important;
+    }
+    
+    .pagination-info {
+        order: -1;
+        width: 100%;
+        justify-content: center;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    [id$="PaginationControls"] > div > div:last-child {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .pagination .form-select {
+        width: auto;
+        min-width: 140px;
+    }
+}
+
+@media (max-width: 768px) {
+    [id$="PaginationControls"] {
+        padding: 16px;
+    }
+    
+    .page-link {
+        padding: 6px 10px;
+        font-size: 13px;
+        min-width: 36px;
+        height: 36px;
+    }
+    
+    .pagination .form-select {
+        padding: 6px 32px 6px 10px;
+        font-size: 13px;
+        height: 36px;
+    }
+    
+    .pagination-info {
+        font-size: 13px;
+    }
+    
+    /* Hide some page numbers on mobile */
+    .pagination .page-item:not(.active):not(:first-child):not(:last-child):not(:nth-child(2)):not(:nth-last-child(2)) {
+        display: none;
+    }
+}
+
+@media (max-width: 576px) {
+    [id$="PaginationControls"] {
+        padding: 12px;
+    }
+    
+    .page-link {
+        padding: 5px 8px;
+        font-size: 12px;
+        min-width: 32px;
+        height: 32px;
+    }
+    
+    .pagination .form-select {
+        font-size: 12px;
+        height: 32px;
+        min-width: 120px;
+    }
+    
+    .pagination-info {
+        font-size: 12px;
+    }
+    
+    /* Show only essential navigation on very small screens */
+    .pagination .page-link[data-page="first"],
+    .pagination .page-link[data-page="last"] {
+        display: none;
+    }
+    
+    .pagination {
+        gap: 4px;
+    }
+}
+
+/* Pagination animation */
+@keyframes pageSlide {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+[id$="PaginationControls"] {
+    animation: pageSlide 0.3s ease-out;
+}
+
+/* Loading state for pagination */
+[id$="PaginationControls"].loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+[id$="PaginationControls"].loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 24px;
+    height: 24px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
 /* ==================== STAT ICONS IN CARDS ==================== */
 .stat-icon {
     width: 60px;

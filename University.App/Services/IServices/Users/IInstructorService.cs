@@ -30,6 +30,7 @@ namespace University.App.Services.IServices.Users
         
         // Validation operations
         Task<bool> IsPhoneNumberUniqueAsync(string phoneNumber);
+        Task<bool> IsPhoneNumberUniqueAsync(string phoneNumber, int excludeUserId);
         Task<int> GetInstructorCourseCountAsync(int instructorId);
         Task<bool> IsHeadOfDepartmentAsync(int instructorId);
         

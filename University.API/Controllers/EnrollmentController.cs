@@ -7,7 +7,7 @@ namespace University.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    //[Authorize]
+    [Authorize]
     public class EnrollmentController : ControllerBase
     {
         private readonly IEnrollmentService _enrollmentService;
@@ -133,7 +133,7 @@ namespace University.API.Controllers
         /// Get all enrollments for a specific student
         /// </summary>
         [HttpGet("student/{studentId}")]
-
+        [Authorize(Roles = "Instructor,Student")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<StudentEnrollmentDTO>>> GetEnrollmentsByStudentId(int studentId)
         {

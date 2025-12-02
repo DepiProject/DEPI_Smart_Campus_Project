@@ -3,6 +3,11 @@
 // Handles course management, students, exams, and enrollments
 // =====================================================
 
+// Ensure InstructorDashboard is defined before adding methods
+if (typeof InstructorDashboard === 'undefined') {
+    console.error('❌ InstructorDashboard class not found! Make sure instructor-dashboard-main.js is loaded first.');
+}
+
 // ===== COURSES SECTION =====
 InstructorDashboard.prototype.loadCourses = async function() {
     console.log('📚 Loading instructor courses...');
@@ -31,8 +36,16 @@ InstructorDashboard.prototype.loadCourses = async function() {
 
         console.log('📥 Courses Response:', response);
 
-        if (response.success && response.data?.data) {
-            const courses = response.data.data;
+        if (response.success && response.data) {
+            // Handle both Data and data properties
+            const courses = response.data.Data || response.data.data || response.data;
+            
+            if (!Array.isArray(courses)) {
+                console.error('❌ Expected array but got:', typeof courses);
+                coursesList.innerHTML = '<div class="col-12"><div class="alert alert-danger">Invalid response format</div></div>';
+                return;
+            }
+            
             console.log('✅ Found', courses.length, 'courses');
 
             if (courses.length === 0) {
@@ -443,31 +456,46 @@ InstructorDashboard.prototype.filterEnrollments = async function() {
                 return;
             }
 
-            tbody.innerHTML = enrollments.map(enroll => {
-                const studentCode = enroll.StudentCode || enroll.studentCode || '-';
-                const studentName = enroll.StudentName || enroll.studentName || 'N/A';
-                const studentEmail = enroll.StudentEmail || enroll.studentEmail || '-';
-                const credits = enroll.CreditHours || enroll.creditHours || '-';
-                const status = enroll.Status || enroll.status || 'Enrolled';
-                const finalGrade = enroll.FinalGrade || enroll.finalGrade;
-                const gradeLetter = enroll.GradeLetter || enroll.gradeLetter;
-                const enrollDate = enroll.EnrollmentDate || enroll.enrollmentDate;
+            // Log first enrollment to debug
+            if (enrollments.length > 0) {
+                console.log('📋 First enrollment data:', enrollments[0]);
+            }
+
+            tbody.innerHTML = enrollments.map((enroll, index) => {
+                // Log every enrollment to check email property
+                if (index === 0) {
+                    console.log('🔍 Enrollment properties:', Object.keys(enroll));
+                    console.log('📧 StudentEmail:', enroll.StudentEmail);
+                    console.log('📧 studentEmail:', enroll.studentEmail);
+                }
+
+                const studentCode = enroll.studentCode || enroll.StudentCode || 'N/A';
+                const studentName = enroll.studentName || enroll.StudentName || 'N/A';
+                const studentEmail = enroll.studentEmail || enroll.StudentEmail || 'No email';
+                const credits = enroll.creditHours || enroll.CreditHours || 'N/A';
+                const status = enroll.status || enroll.Status || 'Enrolled';
+                const finalGrade = enroll.finalGrade || enroll.FinalGrade;
+                const gradeLetter = enroll.gradeLetter || enroll.GradeLetter;
+                const enrollDate = enroll.enrollmentDate || enroll.EnrollmentDate;
                 
-                const statusBadge = status === 'Enrolled' ? 'bg-primary' : 
-                                   status === 'Completed' ? 'bg-success' : 'bg-secondary';
-                const gradeDisplay = finalGrade ? 
-                    `${finalGrade.toFixed(1)}% (${gradeLetter || '-'})` : '-';
-                const dateDisplay = enrollDate ? new Date(enrollDate).toLocaleDateString() : '-';
+                const statusBadge = status === 'Enrolled' || status === 'Approved' ? 'bg-success' : 
+                                   status === 'Completed' ? 'bg-primary' : 
+                                   status === 'Pending' ? 'bg-warning' : 'bg-secondary';
+                const gradeDisplay = finalGrade && finalGrade > 0 ? 
+                    `${finalGrade.toFixed(1)}% ${gradeLetter ? '(' + gradeLetter + ')' : ''}` : 'Not graded yet';
+                const dateDisplay = enrollDate ? new Date(enrollDate).toLocaleDateString('en-US', {
+                    year: 'numeric', month: 'short', day: 'numeric'
+                }) : 'No date';
                 
                 return `
-                <tr>
+                <tr style="transition: background-color 0.2s ease;">
                     <td><strong>${studentCode}</strong></td>
                     <td>${studentName}</td>
-                    <td><small>${studentEmail}</small></td>
+                    <td>${studentEmail}</td>
                     <td>${credits}</td>
                     <td><span class="badge ${statusBadge}">${status}</span></td>
-                    <td><small>${gradeDisplay}</small></td>
-                    <td><small>${dateDisplay}</small></td>
+                    <td>${gradeDisplay}</td>
+                    <td>${dateDisplay}</td>
                 </tr>
             `}).join('');
         } else {

@@ -208,7 +208,11 @@ class StudentDashboard {
                         const studentEnrollments = enrollmentsResponse.data.Data || 
                                                   enrollmentsResponse.data.data || 
                                                   enrollmentsResponse.data;
-                        const count = Array.isArray(studentEnrollments) ? studentEnrollments.length : 0;
+                        // Count only enrolled courses (not pending or rejected)
+                        const enrolledOnly = Array.isArray(studentEnrollments) 
+                            ? studentEnrollments.filter(e => (e.Status || e.status || '').toLowerCase() === 'enrolled')
+                            : [];
+                        const count = enrolledOnly.length;
                         
                         const enrolledCoursesEl = document.getElementById('totalEnrolledCourses');
                         if (enrolledCoursesEl) {
@@ -316,9 +320,12 @@ class StudentDashboard {
                                                   enrollmentsResponse.data.data || 
                                                   enrollmentsResponse.data;
                         
-                        // Calculate total credits from enrolled courses
+                        // Calculate total credits from enrolled courses only
                         if (Array.isArray(studentEnrollments)) {
-                            const totalCredits = studentEnrollments.reduce((sum, e) => {
+                            const enrolledOnly = studentEnrollments.filter(e => 
+                                (e.Status || e.status || '').toLowerCase() === 'enrolled'
+                            );
+                            const totalCredits = enrolledOnly.reduce((sum, e) => {
                                 const credits = e.creditHours || e.CreditHours || 0;
                                 return sum + credits;
                             }, 0);
@@ -353,7 +360,7 @@ class StudentDashboard {
                         } else {
                             const gpaEl = document.getElementById('studentGPA');
                             if (gpaEl) {
-                                gpaEl.textContent = '1.1';
+                                gpaEl.textContent = '0.0';
                             }
                         }
                     }
@@ -361,7 +368,7 @@ class StudentDashboard {
                     console.error('❌ Error loading GPA/Credits:', error);
                     const gpaEl = document.getElementById('studentGPA');
                     if (gpaEl) {
-                        gpaEl.textContent = '1.1';
+                        gpaEl.textContent = '0.0';
                     }
                     const creditsEl = document.getElementById('studentCredits');
                     if (creditsEl) {
@@ -813,25 +820,54 @@ class StudentDashboard {
                         allEnrollments = [];
                     }
                     
-                    const enrolledCourseIds = allEnrollments.map(e => {
-                        return e.CourseId || e.courseId;
+                    // Create a map of course enrollments with their status
+                    const enrollmentMap = new Map();
+                    allEnrollments.forEach(e => {
+                        const courseId = e.CourseId || e.courseId;
+                        const status = (e.Status || e.status || '').toLowerCase();
+                        enrollmentMap.set(courseId, status);
                     });
 
-                    // Separate available and enrolled courses
-                    const availableCourses = deptCourses.filter(c => {
-                        const courseId = c.id || c.Id || c.CourseId || c.courseId;
-                        return !enrolledCourseIds.includes(courseId);
-                    });
+                    // Show all department courses
+                    const availableCourses = deptCourses;
 
                     if (availableCourses.length === 0) {
-                        container.innerHTML = '<div class="col-12 text-muted">You are enrolled in all available courses!</div>';
+                        container.innerHTML = '<div class="col-12 text-muted">No courses available in your department.</div>';
                         return;
                     }
 
-                    // Display available courses as cards
-                    const courseCards = availableCourses.map(course => `
+                    // Display all courses as cards (show enrollment status)
+                    const courseCards = availableCourses.map(course => {
+                        const courseId = course.id || course.Id || course.CourseId || course.courseId;
+                        const enrollmentStatus = enrollmentMap.get(courseId);
+                        
+                        let statusBadge = '';
+                        let buttonHtml = '';
+                        let cardBorder = '';
+                        
+                        if (enrollmentStatus === 'enrolled') {
+                            statusBadge = '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Enrolled</span>';
+                            buttonHtml = '<button class="btn btn-sm btn-secondary w-100" disabled><i class="bi bi-check"></i> Already Enrolled</button>';
+                            cardBorder = 'border-success';
+                        } else if (enrollmentStatus === 'pending') {
+                            statusBadge = '<span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Pending</span>';
+                            buttonHtml = '<button class="btn btn-sm btn-warning w-100" disabled><i class="bi bi-clock"></i> Pending Approval</button>';
+                            cardBorder = 'border-warning';
+                        } else if (enrollmentStatus === 'rejected') {
+                            statusBadge = '<span class="badge bg-danger"><i class="bi bi-x-circle"></i> Rejected</span>';
+                            buttonHtml = '<button class="btn btn-sm btn-danger w-100" disabled><i class="bi bi-x-circle"></i> Enrollment Rejected</button>';
+                            cardBorder = 'border-danger';
+                        } else {
+                            buttonHtml = `<button class="btn btn-sm btn-primary w-100" 
+                                                onclick="studentDashboard.quickEnrollCourse(${course.id}, '${course.name.replace(/'/g, "\\'")}')"
+                                                title="Enroll in this course">
+                                            <i class="bi bi-plus-lg"></i> Enroll
+                                        </button>`;
+                        }
+                        
+                        return `
                         <div class="col-md-6 col-lg-4 mb-3">
-                            <div class="card h-100 border-0 shadow-sm">
+                            <div class="card h-100 border-0 shadow-sm ${cardBorder}">
                                 <div class="card-body">
                                     <h6 class="card-title">${course.name}</h6>
                                     <small class="text-muted d-block mb-2">
@@ -841,17 +877,15 @@ class StudentDashboard {
                                         <i class="bi bi-person"></i> ${course.instructorName || 'Unknown'}<br>
                                         <i class="bi bi-book"></i> ${course.creditHours} Credits
                                     </p>
+                                    ${statusBadge}
                                 </div>
                                 <div class="card-footer bg-white border-top-0">
-                                    <button class="btn btn-sm btn-primary w-100" 
-                                            onclick="studentDashboard.quickEnrollCourse(${course.id}, '${course.name.replace(/'/g, "\\'")}')"
-                                            title="Enroll in this course">
-                                        <i class="bi bi-plus-lg"></i> Enroll
-                                    </button>
+                                    ${buttonHtml}
                                 </div>
                             </div>
                         </div>
-                    `).join('');
+                        `;
+                    }).join('');
                     
                     container.innerHTML = courseCards;
                 } catch (enrollError) {
@@ -1472,9 +1506,56 @@ class StudentDashboard {
         document.getElementById('profileStudentCode').style.cursor = 'not-allowed';
         
         // Contact number is the only editable field
-        document.getElementById('profileContactNumber').readOnly = false;
-        document.getElementById('profileContactNumber').style.backgroundColor = '';
-        document.getElementById('profileContactNumber').style.cursor = '';
+        const contactNumberInput = document.getElementById('profileContactNumber');
+        contactNumberInput.readOnly = false;
+        contactNumberInput.style.backgroundColor = '';
+        contactNumberInput.style.cursor = '';
+        
+        // Add real-time validation for phone number
+        let validationTimeout;
+        const currentPhone = this.currentProfile?.contactNumber || '';
+        
+        contactNumberInput.addEventListener('input', async (e) => {
+            const phone = e.target.value.trim();
+            const errorEl = document.getElementById('contactNumberError');
+            
+            // Clear previous errors
+            errorEl.style.display = 'none';
+            errorEl.textContent = '';
+            
+            if (!phone) return;
+            
+            // Format validation (11 digits)
+            if (!/^\d{11}$/.test(phone)) {
+                errorEl.textContent = 'Contact number must be exactly 11 digits';
+                errorEl.style.display = 'block';
+                errorEl.classList.add('text-danger');
+                errorEl.classList.remove('text-success');
+                return;
+            }
+            
+            // Skip check if same as current
+            if (phone === currentPhone) {
+                return;
+            }
+            
+            // Debounced duplicate check (800ms delay)
+            clearTimeout(validationTimeout);
+            validationTimeout = setTimeout(async () => {
+                try {
+                    const response = await API.student.updateMyProfile({ contactNumber: phone });
+                    if (!response.success) {
+                        errorEl.textContent = 'This phone number is already existed';
+                        errorEl.style.display = 'block';
+                        errorEl.classList.add('text-danger');
+                        errorEl.classList.remove('text-success');
+                    }
+                } catch (error) {
+                    // Silently handle - will validate on submit
+                    console.log('Phone validation check failed:', error);
+                }
+            }, 800);
+        });
         
         document.getElementById('profileDisplayView').classList.add('d-none');
         document.getElementById('profileEditView').classList.remove('d-none');
@@ -1484,10 +1565,20 @@ class StudentDashboard {
         const contactNumber = document.getElementById('profileContactNumber').value;
 
         // ========== STUDENT UPDATE: Only Contact Number ==========
-        // Contact number validation (exactly 11 digits if provided)
+        // Contact number validation (Egyptian phone format)
         if (contactNumber && !this.validateContactNumber(contactNumber)) {
-            this.showToast('Validation', '❌ Contact number must be EXACTLY 11 digits (e.g., 01234567890)', 'warning');
+            const errorEl = document.getElementById('contactNumberError');
+            if (errorEl) {
+                errorEl.textContent = 'Contact number must start with 010, 011, 012, or 015 and last 8 digits cannot be all the same';
+            }
+            this.showToast('Validation', '❌ Invalid contact number format. Must start with 010, 011, 012, or 015 and be exactly 11 digits', 'warning');
             return;
+        }
+        
+        // Clear error if valid
+        const errorEl = document.getElementById('contactNumberError');
+        if (errorEl) {
+            errorEl.textContent = '';
         }
 
         const updateData = {
@@ -1506,22 +1597,56 @@ class StudentDashboard {
                 await this.loadStudentProfile();
                 this.showDisplayProfileView();
             } else {
-                // Extract error message from various possible locations
-                let errorMsg = 'Unknown error';
-                if (response.data) {
-                    errorMsg = response.data.Message || response.data.message || 
-                              response.data.Error || response.data.error || errorMsg;
-                } else if (response.error) {
-                    errorMsg = response.error;
-                } else if (response.Message) {
-                    errorMsg = response.Message;
+                const errorMsg = response.error || 'Failed to update profile';
+                const errorEl = document.getElementById('contactNumberError');
+                if (errorEl) {
+                    errorEl.textContent = errorMsg;
+                    errorEl.classList.add('text-danger');
+                    errorEl.style.display = 'block';
                 }
-                console.error('❌ Update failed:', errorMsg);
-                this.showToast('Error', `Failed to update contact number: ${errorMsg}`, 'error');
+                this.showToast('Error', errorMsg, 'error');
             }
         } catch (error) {
             console.error('❌ Error saving profile:', error);
-            this.showToast('Error', `❌ Failed to save profile: ${error.message}`, 'error');
+            console.error('❌ Error details:', error.response);
+            
+            // Check if error response contains validation message
+            let errorMsg = 'Failed to update profile';
+            
+            if (error.response && error.response.data) {
+                // Check for errors array (ASP.NET validation errors format)
+                if (error.response.data.errors) {
+                    if (typeof error.response.data.errors === 'object' && !Array.isArray(error.response.data.errors)) {
+                        const allErrors = [];
+                        for (const key in error.response.data.errors) {
+                            const errors = error.response.data.errors[key];
+                            if (Array.isArray(errors)) {
+                                allErrors.push(...errors);
+                            }
+                        }
+                        if (allErrors.length > 0) {
+                            errorMsg = allErrors.join(', ');
+                        }
+                    } else if (Array.isArray(error.response.data.errors)) {
+                        errorMsg = error.response.data.errors.map(e => e.message || e).join(', ');
+                    }
+                } else if (error.response.data.message) {
+                    errorMsg = error.response.data.message;
+                } else if (error.response.data.Message) {
+                    errorMsg = error.response.data.Message;
+                }
+            } else if (error.message) {
+                errorMsg = error.message;
+            }
+            
+            const errorEl = document.getElementById('contactNumberError');
+            if (errorEl) {
+                errorEl.textContent = errorMsg;
+                errorEl.classList.add('text-danger');
+                errorEl.style.display = 'block';
+            }
+            
+            this.showToast('Error', `${errorMsg}`, 'error');
         }
     }
 
@@ -1533,9 +1658,30 @@ class StudentDashboard {
     }
 
     validateContactNumber(number) {
-        // Must be exactly 11 digits
-        const numberRegex = /^\d{11}$/;
-        return numberRegex.test(number);
+        // Must be exactly 11 digits and start with Egyptian prefix
+        if (!number || number.trim() === '') return true; // Optional field
+        
+        const trimmedNumber = number.trim();
+        
+        // Check if exactly 11 digits
+        if (trimmedNumber.length !== 11 || !/^\d{11}$/.test(trimmedNumber)) {
+            return false;
+        }
+        
+        // Check if starts with valid Egyptian prefixes
+        const prefix = trimmedNumber.substring(0, 3);
+        if (prefix !== '010' && prefix !== '011' && prefix !== '012' && prefix !== '015') {
+            return false;
+        }
+        
+        // Check if last 8 digits are not all the same
+        const last8Digits = trimmedNumber.substring(3);
+        const allSame = last8Digits.split('').every(digit => digit === last8Digits[0]);
+        if (allSame) {
+            return false;
+        }
+        
+        return true;
     }
 
     // ===== LOGOUT =====

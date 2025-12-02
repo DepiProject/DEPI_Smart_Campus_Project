@@ -154,8 +154,17 @@ class InstructorDashboard {
                 method: 'GET'
             });
             
-            if (coursesResponse.success && coursesResponse.data?.data) {
-                const myCourses = coursesResponse.data.data;
+            console.log('📦 Courses Response:', coursesResponse);
+            
+            if (coursesResponse.success && coursesResponse.data) {
+                // Handle both Data and data properties
+                const myCourses = coursesResponse.data.Data || coursesResponse.data.data || coursesResponse.data;
+                
+                if (!Array.isArray(myCourses)) {
+                    console.error('❌ Expected array of courses but got:', typeof myCourses, myCourses);
+                    return;
+                }
+                
                 const courseCount = myCourses.length;
                 document.querySelector('[data-stat="courses"]').textContent = courseCount;
                 
@@ -173,23 +182,15 @@ class InstructorDashboard {
                 
                 for (const course of myCourses) {
                     try {
+                        // Get course ID directly from the response
+                        const courseId = course.id || course.Id || course.courseId || course.CourseId;
                         const courseCode = course.courseCode || course.CourseCode;
                         
-                        if (!courseCode) {
-                            console.warn('⚠️ Course code is undefined, skipping:', course);
+                        if (!courseId) {
+                            console.warn('⚠️ Course ID is undefined, skipping:', course);
                             continue;
                         }
                         
-                        const courseDetailsResponse = await API.request(`/Course/code/${courseCode}`, {
-                            method: 'GET'
-                        });
-                        
-                        if (!courseDetailsResponse.success || !courseDetailsResponse.data?.data) {
-                            console.warn('⚠️ Could not fetch course details for:', courseCode);
-                            continue;
-                        }
-                        
-                        const courseId = courseDetailsResponse.data.data.id || courseDetailsResponse.data.data.Id;
                         console.log('📚 Checking enrollments for course:', courseCode, 'ID:', courseId);
                         
                         const enrollmentsResponse = await API.request(`/Enrollment/course/${courseId}`, {
@@ -217,14 +218,12 @@ class InstructorDashboard {
                             
                             enrollments.forEach(enrollment => {
                                 const grade = enrollment.finalGrade || enrollment.grade || enrollment.Grade || enrollment.FinalGrade;
+                                const status = (enrollment.status || enrollment.Status || '').toLowerCase();
                                 
                                 if (grade !== null && grade !== undefined && grade > 0) {
                                     allGrades.push(grade);
-                                } else {
-                                    const status = (enrollment.status || enrollment.Status || '').toLowerCase();
-                                    if (status === 'enrolled' || status === 'pending' || status === 'approved') {
-                                        pendingCount++;
-                                    }
+                                } else if (status === 'pending') {
+                                    pendingCount++;
                                 }
                             });
                         }
@@ -241,8 +240,8 @@ class InstructorDashboard {
                     document.querySelector('[data-stat="avgGrade"]').textContent = avgGrade + '%';
                     console.log('📈 Average grade:', avgGrade + '%');
                 } else {
-                    document.querySelector('[data-stat="avgGrade"]').textContent = '30%';
-                    console.log('⚠️ No grades to calculate average, showing default 30%');
+                    document.querySelector('[data-stat="avgGrade"]').textContent = '0%';
+                    console.log('⚠️ No grades to calculate average, showing default 0%');
                 }
                 
                 document.querySelector('[data-stat="pending"]').textContent = pendingCount;

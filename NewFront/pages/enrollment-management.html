@@ -253,7 +253,7 @@
             await loadEnrollments();
 
             document.getElementById('logoutBtn').addEventListener('click', () => {
-                API.logout();
+                API.auth.logout();
                 window.location.href = '../index.html';
             });
         });
@@ -271,8 +271,9 @@
                     document.getElementById('totalApproved').textContent = approvedToday;
                     document.getElementById('totalEnrollments').textContent = allEnrollments.length;
 
-                    const courses = [...new Set(allEnrollments.map(e => e.courseId))].length;
-                    document.getElementById('totalCourses').textContent = courses;
+                    // Count unique courses using CourseCode (case-insensitive)
+                    const uniqueCourses = [...new Set(allEnrollments.map(e => (e.courseCode || e.CourseCode || '').toLowerCase()))].filter(code => code);
+                    document.getElementById('totalCourses').textContent = uniqueCourses.length;
 
                     renderEnrollments(allEnrollments);
                 }
@@ -350,12 +351,6 @@
                                             <i class="bi bi-x-lg me-1"></i>Reject
                                         </button>
                                     </div>
-                                ` : enrollment.status === 'Rejected' ? `
-                                    <button onclick="approveEnrollment(${enrollment.enrollmentId})" 
-                                            class="btn btn-success btn-sm" 
-                                            style="border-radius: 8px; font-weight: 600; padding: 0.5rem 1rem;">
-                                        <i class="bi bi-arrow-counterclockwise me-1"></i>Approve Now
-                                    </button>
                                 ` : `
                                     <span style="color: var(--gray-400); font-size: 0.875rem;">
                                         <i class="bi bi-check-circle-fill me-1" style="color: var(--accent-success);"></i>

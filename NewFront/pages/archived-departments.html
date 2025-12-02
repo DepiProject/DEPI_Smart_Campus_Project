@@ -237,7 +237,7 @@
                 console.log('Restore response:', response);
 
                 if (response.success || (response.Success !== undefined ? response.Success : response.success)) {
-                    notifications.success('Success', 'Department restored successfully!');
+                    notifications.show('Restored', '✅ Department restored successfully! Back to active status.', 'info', 5000);
                     restoredToday++;
                     await loadArchivedDepartments();
                 } else {
@@ -253,9 +253,10 @@
         window.confirmDelete = function (id) {
             const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
             document.getElementById('deleteMessage').innerHTML = `
-                <div class="alert alert-danger">
-                    <h6 class="fw-bold mb-3">⚠️ WARNING!</h6>
-                    <p class="mb-0">This will permanently delete the department. Continue?</p>
+                <div class="alert alert-danger border-danger" style="border-left: 5px solid #dc3545; background-color: #ffe6e6;">
+                    <h6 class="text-danger fw-bold mb-3"><i class="bi bi-exclamation-triangle-fill"></i> WARNING!</h6>
+                    <p class="text-danger fw-bold mb-2">⛔ This will permanently delete the department!</p>
+                    <p class="mb-0"><small>This action cannot be undone. All department data will be lost.</small></p>
                 </div>
             `;
             window.deleteDeptId = id;

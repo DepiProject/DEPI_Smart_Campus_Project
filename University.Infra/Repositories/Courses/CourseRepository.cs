@@ -89,7 +89,7 @@ namespace University.Infra.Repositories.Courses
             return await _context.Courses
                 .Include(c => c.Instructor)
                 .Include(c => c.Department)
-                .Include(c => c.Enrollments) // Include enrollments for GetEnrollmentStudentsByCourseID
+                .Include(c => c.Enrollments.Where(e => !e.IsDeleted && e.Status != "Rejected")) // Explicitly filter enrollments
                     .ThenInclude(e => e.Student)
                         .ThenInclude(s => s.User) // Include User to get email
                 .Where(c => !c.IsDeleted) // Filter out soft-deleted courses
@@ -186,16 +186,33 @@ namespace University.Infra.Repositories.Courses
             return true;
         }
 
+        public async Task<bool> UpdateCourseInstructor(int courseId, int? instructorId)
+        {
+            var course = await _context.Courses
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(c => c.CourseId == courseId);
+
+            if (course == null)
+                return false;
+
+            course.InstructorId = instructorId;
+            course.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<bool> PermanentlyDeleteCourse(int id)
         {
             var course = await _context.Courses
                 .IgnoreQueryFilters()
+                .AsNoTracking() // Don't track to avoid navigation property issues
                 .FirstOrDefaultAsync(c => c.CourseId == id);
 
             if (course == null)
                 return false;
 
-            // Cascade delete: Remove all related data first
+            // Cascade delete: Remove all related data first using direct delete operations
             // 1. Delete exam submissions related to this course's exams
             var examIds = await _context.Exams
                 .IgnoreQueryFilters()
@@ -205,37 +222,44 @@ namespace University.Infra.Repositories.Courses
 
             if (examIds.Any())
             {
-                var submissions = await _context.ExamSubmissions
+                await _context.ExamSubmissions
                     .IgnoreQueryFilters()
                     .Where(s => s.ExamId.HasValue && examIds.Contains(s.ExamId.Value))
-                    .ToListAsync();
-                _context.ExamSubmissions.RemoveRange(submissions);
+                    .ExecuteDeleteAsync();
             }
 
-            // 2. Delete exams
-            var exams = await _context.Exams
+            // 2. Delete exam questions
+            if (examIds.Any())
+            {
+                await _context.ExamQuestions
+                    .IgnoreQueryFilters()
+                    .Where(q => examIds.Contains(q.ExamId))
+                    .ExecuteDeleteAsync();
+            }
+
+            // 3. Delete exams
+            await _context.Exams
                 .IgnoreQueryFilters()
                 .Where(e => e.CourseId == id)
-                .ToListAsync();
-            _context.Exams.RemoveRange(exams);
+                .ExecuteDeleteAsync();
 
-            // 3. Delete enrollments
-            var enrollments = await _context.Enrollments
+            // 4. Delete enrollments
+            await _context.Enrollments
                 .IgnoreQueryFilters()
                 .Where(e => e.CourseId == id)
-                .ToListAsync();
-            _context.Enrollments.RemoveRange(enrollments);
+                .ExecuteDeleteAsync();
 
-            // 4. Delete attendance records
-            var attendances = await _context.Attendances
+            // 5. Delete attendance records
+            await _context.Attendances
                 .IgnoreQueryFilters()
                 .Where(a => a.CourseId == id)
-                .ToListAsync();
-            _context.Attendances.RemoveRange(attendances);
+                .ExecuteDeleteAsync();
 
-            // 5. Finally, delete the course itself
-            _context.Courses.Remove(course);
-            await _context.SaveChangesAsync();
+            // 6. Finally, delete the course itself
+            await _context.Courses
+                .IgnoreQueryFilters()
+                .Where(c => c.CourseId == id)
+                .ExecuteDeleteAsync();
 
             return true;
         }
@@ -248,7 +272,8 @@ namespace University.Infra.Repositories.Courses
         {
             return await _context.Enrollments
                 .IgnoreQueryFilters() // Include soft-deleted enrollments
-                .CountAsync(e => e.CourseId == courseId);
+                .CountAsync(e => e.CourseId == courseId && 
+                               (e.Status == "Enrolled" || e.Status == "Pending"));
         }
 
         public async Task<IEnumerable<Course>> GetCoursesByInstructorId(int instructorId)

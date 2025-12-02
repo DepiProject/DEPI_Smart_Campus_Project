@@ -44,7 +44,7 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
             transition: left 0.6s;
         }
 
@@ -269,26 +269,24 @@
             <div class="row mb-4" id="searchContainer" style="display: none;">
                 <div class="col-md-8">
                     <div class="position-relative">
-                        <i class="bi bi-search position-absolute" style="left: 1.25rem; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 1.25rem; z-index: 10;"></i>
-                        <input type="text" 
-                               class="form-control" 
-                               id="studentSearch" 
-                               placeholder="🔍 Search by name, code, or email..."
-                               style="border: 2px solid #e5e7eb; border-radius: 50px; padding: 1rem 1.5rem 1rem 3.5rem; font-size: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: all 0.3s ease;"
-                               onfocus="this.style.borderColor='var(--sage-500)'; this.style.boxShadow='0 8px 24px rgba(88, 129, 87, 0.15)'; this.style.transform='scale(1.02)'"
-                               onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)'; this.style.transform='scale(1)'">
+                        <i class="bi bi-search position-absolute"
+                            style="left: 1.25rem; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 1.25rem; z-index: 10;"></i>
+                        <input type="text" class="form-control" id="studentSearch"
+                            placeholder="Search by name, code, or email..."
+                            style="border: 2px solid #e5e7eb; border-radius: 50px; padding: 1rem 1.5rem 1rem 3.5rem; font-size: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: all 0.3s ease;"
+                            onfocus="this.style.borderColor='var(--sage-500)'; this.style.boxShadow='0 8px 24px rgba(88, 129, 87, 0.15)'; this.style.transform='scale(1.02)'"
+                            onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)'; this.style.transform='scale(1)'">
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <select class="form-select" 
-                            id="statusFilter"
-                            style="border: 2px solid #e5e7eb; border-radius: 50px; padding: 1rem 1.5rem; font-size: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: all 0.3s ease; cursor: pointer;"
-                            onfocus="this.style.borderColor='var(--sage-500)'; this.style.boxShadow='0 8px 24px rgba(88, 129, 87, 0.15)'"
-                            onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)'">
-                        <option value="">📋 All Status</option>
-                        <option value="Enrolled">✅ Enrolled</option>
-                        <option value="Pending">⏳ Pending</option>
-                        <option value="Approved">✓ Approved</option>
+                    <select class="form-select" id="statusFilter"
+                        style="border: 2px solid #e5e7eb; border-radius: 50px; padding: 1rem 1.5rem; font-size: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: all 0.3s ease; cursor: pointer;"
+                        onfocus="this.style.borderColor='var(--sage-500)'; this.style.boxShadow='0 8px 24px rgba(88, 129, 87, 0.15)'"
+                        onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)'">
+                        <option value="">All Status</option>
+                        <option value="Enrolled">Enrolled</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Approved">Approved</option>
                     </select>
                 </div>
             </div>
@@ -305,19 +303,28 @@
 
             <!-- Students Container -->
             <div id="studentsContainer" class="d-none">
-                <div class="card border-0" style="border-radius: 1.5rem; overflow: hidden; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);">
+                <div class="card border-0"
+                    style="border-radius: 1.5rem; overflow: hidden; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);">
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table mb-0" style="border-collapse: separate; border-spacing: 0;">
-                                <thead style="background: linear-gradient(135deg, var(--sage-600), var(--sage-700)); color: white; position: sticky; top: 0; z-index: 10;">
+                                <thead
+                                    style="background: linear-gradient(135deg, var(--sage-600), var(--sage-700)); color: white; position: sticky; top: 0; z-index: 10;">
                                     <tr>
-                                        <th class="px-4 py-3" style="border: none; font-weight: 700; letter-spacing: 0.5px;">#</th>
-                                        <th class="py-3" style="border: none; font-weight: 700; letter-spacing: 0.5px;">STUDENT</th>
-                                        <th class="py-3" style="border: none; font-weight: 700; letter-spacing: 0.5px;">CODE</th>
-                                        <th class="py-3" style="border: none; font-weight: 700; letter-spacing: 0.5px;">EMAIL</th>
-                                        <th class="py-3" style="border: none; font-weight: 700; letter-spacing: 0.5px;">STATUS</th>
-                                        <th class="py-3" style="border: none; font-weight: 700; letter-spacing: 0.5px;">ENROLLMENT DATE</th>
-                                        <th class="py-3" style="border: none; font-weight: 700; letter-spacing: 0.5px;">GRADE</th>
+                                        <th class="px-4 py-3"
+                                            style="border: none; font-weight: 700; letter-spacing: 0.5px;">#</th>
+                                        <th class="py-3" style="border: none; font-weight: 700; letter-spacing: 0.5px;">
+                                            STUDENT</th>
+                                        <th class="py-3" style="border: none; font-weight: 700; letter-spacing: 0.5px;">
+                                            CODE</th>
+                                        <th class="py-3" style="border: none; font-weight: 700; letter-spacing: 0.5px;">
+                                            EMAIL</th>
+                                        <th class="py-3" style="border: none; font-weight: 700; letter-spacing: 0.5px;">
+                                            STATUS</th>
+                                        <th class="py-3" style="border: none; font-weight: 700; letter-spacing: 0.5px;">
+                                            ENROLLMENT DATE</th>
+                                        <th class="py-3" style="border: none; font-weight: 700; letter-spacing: 0.5px;">
+                                            GRADE</th>
                                     </tr>
                                 </thead>
                                 <tbody id="studentsList">
@@ -356,8 +363,8 @@
 
         // Load user name
         const loadUserName = () => {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            const userName = user.firstName || user.UserName || 'Instructor';
+            const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+            const userName = userInfo.FirstName || userInfo.firstName || userInfo.UserName || 'Instructor';
             document.getElementById('userName').textContent = userName;
         };
 
@@ -384,6 +391,10 @@
                 document.getElementById('courseCredits').textContent = `${course.creditHours || course.credits || 0} Credits`;
                 document.getElementById('courseDepartment').textContent = course.departmentName || 'Unknown Department';
 
+                // Update description with instructor name if available
+                const instructorName = course.instructorName || course.InstructorName || 'Unknown Instructor';
+                document.getElementById('courseDescription').textContent = `Instructor: ${instructorName} • View all enrolled students and their information`;
+
                 const courseId = course.id || course.Id || course.courseId || course.CourseId;
 
                 if (courseId) {
@@ -404,7 +415,16 @@
         const loadStudents = async (courseId) => {
             try {
                 const response = await API.request(`/Enrollment/course/${courseId}`, { method: 'GET' });
-                allEnrollments = response.data?.data || [];
+                console.log('📦 Full enrollment response:', response);
+                console.log('📦 Response data:', response.data);
+
+                // Handle both Data (PascalCase from C#) and data (camelCase)
+                allEnrollments = response.data?.Data || response.data?.data || [];
+
+                console.log('✅ Parsed enrollments array:', allEnrollments);
+                if (allEnrollments.length > 0) {
+                    console.log('📋 First enrollment object:', allEnrollments[0]);
+                }
 
                 document.getElementById('loadingState').classList.add('d-none');
 
@@ -423,7 +443,7 @@
                 const gradesWithValues = allEnrollments.filter(e => e.finalGrade && e.finalGrade > 0);
                 const avgGrade = gradesWithValues.length > 0
                     ? (gradesWithValues.reduce((sum, e) => sum + e.finalGrade, 0) / gradesWithValues.length).toFixed(1)
-                    : '--';
+                    : '0';
 
                 // Update statistics
                 document.getElementById('totalStudents').textContent = totalStudents;
@@ -447,7 +467,7 @@
         // Render students table
         const renderStudentsTable = (enrollments) => {
             const studentsList = document.getElementById('studentsList');
-            
+
             if (enrollments.length === 0) {
                 studentsList.innerHTML = `
                     <tr>
@@ -461,14 +481,44 @@
             }
 
             studentsList.innerHTML = enrollments.map((enrollment, index) => {
+                // Log enrollment data for debugging
+                if (index === 0) {
+                    console.log('🔍 First enrollment object:', enrollment);
+                    console.log('📧 studentEmail value:', enrollment.studentEmail);
+                    console.log('📧 StudentEmail value:', enrollment.StudentEmail);
+                    console.log('📅 enrollmentDate value:', enrollment.enrollmentDate);
+                    console.log('📅 EnrollmentDate value:', enrollment.EnrollmentDate);
+                }
+
                 const initials = enrollment.studentName ? enrollment.studentName.split(' ').map(n => n[0]).join('').toUpperCase() : 'S';
                 const statusClass = enrollment.status === 'Enrolled' || enrollment.status === 'Approved' ? 'bg-success' :
                     enrollment.status === 'Pending' ? 'bg-warning' : 'bg-secondary';
-                const grade = enrollment.finalGrade && enrollment.finalGrade > 0 ? enrollment.finalGrade.toFixed(1) : '30.0';
-                const gradeLetter = enrollment.gradeLetter || (grade === '30.0' ? 'F' : '--');
-                const studentCode = enrollment.studentCode || 'N/A';
 
-                return `
+                // Handle all possible property name variations (camelCase and PascalCase)
+                const studentCode = enrollment.studentCode || enrollment.StudentCode || 'N/A';
+                const studentEmail = enrollment.studentEmail || enrollment.StudentEmail || 'No email';
+                const studentName = enrollment.studentName || enrollment.StudentName || 'Unknown Student';
+
+                // Handle enrollment date
+                const enrollmentDate = enrollment.enrollmentDate || enrollment.EnrollmentDate || enrollment.enrolledAt;
+                const enrollDateFormatted = enrollmentDate ? new Date(enrollmentDate).toLocaleDateString('en-US', {
+                    year: 'numeric', month: 'short', day: 'numeric'
+                }) : 'No date';
+
+                // Log extracted values
+                if (index === 0) {
+                    console.log('✅ Extracted studentEmail:', studentEmail);
+                    console.log('✅ Extracted enrollDateFormatted:', enrollDateFormatted);
+                    console.log('✅ Will render in template:', { studentEmail, enrollDateFormatted });
+                }
+
+                // Handle grade with proper fallback
+                const finalGrade = enrollment.finalGrade || enrollment.FinalGrade;
+                const hasGrade = finalGrade !== null && finalGrade !== undefined && finalGrade > 0;
+                const grade = hasGrade ? finalGrade.toFixed(1) : 'Not graded yet';
+                const gradeLetter = enrollment.gradeLetter || enrollment.GradeLetter || '';
+
+                const rowHTML = `
                     <tr style="border-left: 4px solid var(--sage-500); transition: all 0.3s ease; cursor: pointer;"
                         onmouseover="this.style.backgroundColor='#f3f4f6'; this.style.transform='scale(1.01)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)'"
                         onmouseout="this.style.backgroundColor=''; this.style.transform=''; this.style.boxShadow=''">
@@ -478,32 +528,34 @@
                             </div>
                         </td>
                         <td class="py-3" style="border-bottom: 1px solid #e5e7eb;">
-                            <div class="fw-bold text-dark" style="font-size: 1rem;">${enrollment.studentName || 'Unknown Student'}</div>
+                            <div class="fw-bold text-dark" style="font-size: 1rem;">${studentName}</div>
                         </td>
                         <td class="py-3" style="border-bottom: 1px solid #e5e7eb;">
                             <span class="badge" style="background: linear-gradient(135deg, var(--sage-500), var(--sage-600)); color: white; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.85rem;">${studentCode}</span>
                         </td>
                         <td class="py-3" style="border-bottom: 1px solid #e5e7eb;">
-                            <small class="text-muted" style="font-size: 0.9rem;">
-                                <i class="bi bi-envelope"></i> ${enrollment.studentEmail || 'No email'}
-                            </small>
+                            ${studentEmail}
                         </td>
                         <td class="py-3" style="border-bottom: 1px solid #e5e7eb;">
                             <span class="badge ${statusClass}" style="padding: 0.5rem 1rem; border-radius: 20px; font-weight: 600;">${enrollment.status || 'Enrolled'}</span>
                         </td>
                         <td class="py-3" style="border-bottom: 1px solid #e5e7eb;">
-                            <small class="text-muted" style="font-size: 0.9rem;">
-                                <i class="bi bi-calendar3"></i> ${enrollment.enrollmentDate ? new Date(enrollment.enrollmentDate).toLocaleDateString() : 'N/A'}
-                            </small>
+                            ${enrollDateFormatted}
                         </td>
                         <td class="py-3" style="border-bottom: 1px solid #e5e7eb;">
                             <div class="d-flex align-items-center gap-2">
-                                <strong class="text-info" style="font-size: 1.1rem;">${grade}</strong>
-                                <span class="badge bg-light text-dark border" style="font-size: 0.75rem;">${gradeLetter}</span>
+                                ${hasGrade ? `<strong class="text-info" style="font-size: 1.1rem;">${grade}</strong>
+                                <span class="badge bg-light text-dark border" style="font-size: 0.75rem;">${gradeLetter}</span>` : `<small class="text-muted" style="font-size: 0.85rem;">${grade}</small>`}
                             </div>
                         </td>
                     </tr>
                 `;
+
+                if (index === 0) {
+                    console.log('🎨 First row HTML:', rowHTML);
+                }
+
+                return rowHTML;
             }).join('');
         };
 
@@ -517,7 +569,7 @@
                 const statusValue = statusFilter.value;
 
                 const filtered = allEnrollments.filter(enrollment => {
-                    const matchesSearch = !searchTerm || 
+                    const matchesSearch = !searchTerm ||
                         (enrollment.studentName && enrollment.studentName.toLowerCase().includes(searchTerm)) ||
                         (enrollment.studentCode && enrollment.studentCode.toLowerCase().includes(searchTerm)) ||
                         (enrollment.studentEmail && enrollment.studentEmail.toLowerCase().includes(searchTerm));
