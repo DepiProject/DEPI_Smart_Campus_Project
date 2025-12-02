@@ -317,7 +317,10 @@ class AdminDashboard {
     }
 
     async loadDepartmentSelects() {
+        console.log('🔄 loadDepartmentSelects called');
         const response = await API.department.getAll(1, 100);
+        console.log('📥 Department API response:', response);
+        
         const selectElements = [
             document.getElementById('courseDepartment'),
             document.getElementById('studentDepartment'),
@@ -328,17 +331,36 @@ class AdminDashboard {
             let departments = response.data.data || response.data;
             if (!Array.isArray(departments)) departments = [];
 
-            const optionsHtml = departments.map(dept => 
-                `<option value="${dept.id || dept.departmentId}">${dept.name}</option>`
-            ).join('');
+            console.log('📋 Departments array:', departments);
+            console.log('📊 Total departments:', departments.length);
+
+            const optionsHtml = departments.map(dept => {
+                const deptId = dept.id || dept.departmentId;
+                const deptName = dept.name;
+                console.log('  - Dept:', deptId, deptName);
+                return `<option value="${deptId}">${deptName}</option>`;
+            }).join('');
 
             selectElements.forEach(select => {
                 if (select) {
                     const currentValue = select.value;
+                    const elementName = select.id;
+                    console.log(`📝 Populating ${elementName}, current value: ${currentValue}`);
+                    
                     select.innerHTML = '<option value="">Select Department</option>' + optionsHtml;
-                    if (currentValue) select.value = currentValue;
+                    
+                    if (currentValue) {
+                        select.value = currentValue;
+                        console.log(`✅ Restored value for ${elementName}: ${select.value}`);
+                    }
+                    
+                    console.log(`📋 ${elementName} final HTML:`, select.innerHTML.substring(0, 200) + '...');
                 }
             });
+            
+            console.log('✅ All department selects populated');
+        } else {
+            console.error('❌ Failed to load departments:', response);
         }
     }
 

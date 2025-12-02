@@ -190,6 +190,10 @@
             <i class="bi bi-clipboard-data"></i>
             <span>Grades</span>
         </a>
+        <a href="#exams" data-section="exams" class="icon-sidebar-item">
+            <i class="bi bi-file-earmark-text"></i>
+            <span>Exams</span>
+        </a>
         <a href="#profile" data-section="profile" class="icon-sidebar-item">
             <i class="bi bi-person-circle"></i>
             <span>Profile</span>
@@ -475,28 +479,147 @@
 
             <!-- Exams Section -->
             <div id="exams" class="section d-none">
-                <h2 class="mb-4">Exams & Grades</h2>
-                <button class="btn btn-primary mb-3"><i class="bi bi-plus-lg"></i> Create Exam</button>
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle"></i> Grades are automatically calculated from exam submissions
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="mb-0"><i class="bi bi-file-earmark-text-fill text-primary me-2"></i>Exam Management</h2>
+                    <button class="btn btn-primary btn-icon" data-bs-toggle="modal" data-bs-target="#createExamModal">
+                        <i class="bi bi-plus-lg"></i> Create New Exam
+                    </button>
                 </div>
-                <div class="table-responsive mt-4">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Course</th>
-                                <th>Exam Title</th>
-                                <th>Submissions</th>
-                                <th>Average Score</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="examsTableBody">
-                            <tr>
-                                <td colspan="5" class="text-center text-muted">Loading exams...</td>
-                            </tr>
-                        </tbody>
-                    </table>
+
+                <!-- Stats Cards -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <div class="stat-icon stat-icon-primary mx-auto mb-2">
+                                    <i class="bi bi-file-earmark-text"></i>
+                                </div>
+                                <h6 class="text-muted text-uppercase small">Total Exams</h6>
+                                <h2 class="text-primary mb-0" id="totalExamsCount">0</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <div class="stat-icon stat-icon-success mx-auto mb-2">
+                                    <i class="bi bi-clipboard-check"></i>
+                                </div>
+                                <h6 class="text-muted text-uppercase small">Submissions</h6>
+                                <h2 class="text-success mb-0" id="totalSubmissionsCount">0</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <div class="stat-icon stat-icon-warning mx-auto mb-2">
+                                    <i class="bi bi-graph-up"></i>
+                                </div>
+                                <h6 class="text-muted text-uppercase small">Average Score</h6>
+                                <h2 class="text-warning mb-0" id="averageExamScore">0%</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Exams Table -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0 py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="bi bi-list-ul text-primary me-2"></i>My Exams</h5>
+                            <div class="search-box" style="width: 300px;">
+                                <i class="bi bi-search"></i>
+                                <input type="text" id="examsSearchInput" class="form-control"
+                                    placeholder="Search exams...">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover modern-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th><i class="bi bi-book me-2"></i>Course</th>
+                                        <th><i class="bi bi-file-text me-2"></i>Exam Title</th>
+                                        <th><i class="bi bi-clock me-2"></i>Duration</th>
+                                        <th><i class="bi bi-question-circle me-2"></i>Questions</th>
+                                        <th><i class="bi bi-people me-2"></i>Submissions</th>
+                                        <th><i class="bi bi-percent me-2"></i>Avg Score</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="examsTableBody">
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted py-4">Loading exams...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create Exam Modal -->
+            <div class="modal fade" id="createExamModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Create New Exam</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="createExamForm">
+                                <div class="row">
+                                    <div class="col-md-12 mb-3">
+                                        <label class="form-label">Select Course <span
+                                                class="text-danger">*</span></label>
+                                        <select class="form-select" id="examCourseSelect" required>
+                                            <option value="">Choose a course...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-8 mb-3">
+                                        <label class="form-label">Exam Title <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="examTitle" required
+                                            placeholder="e.g., Midterm Exam">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Duration (minutes) <span
+                                                class="text-danger">*</span></label>
+                                        <input type="number" class="form-control" id="examDuration" required min="1"
+                                            placeholder="60">
+                                    </div>
+                                    <div class="col-md-12 mb-3">
+                                        <label class="form-label">Description</label>
+                                        <textarea class="form-control" id="examDescription" rows="2"
+                                            placeholder="Exam description (optional)"></textarea>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Passing Score (%) <span
+                                                class="text-danger">*</span></label>
+                                        <input type="number" class="form-control" id="examPassingScore" required min="0"
+                                            max="100" placeholder="50">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Total Marks <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control" id="examTotalMarks" required min="1"
+                                            placeholder="100">
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i> <strong>Note:</strong> After creating the exam,
+                                    you'll be able to add questions to it.
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" onclick="instructorDashboard.createExam()">
+                                <i class="bi bi-check-lg"></i> Create Exam
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -992,6 +1115,7 @@
     <script src="../js/Instructor Dashboard/instructor-dashboard-main.js?v=2.6"></script>
     <script src="../js/Instructor Dashboard/instructor-dashboard-courses.js?v=2.6"></script>
     <script src="../js/Instructor Dashboard/instructor-dashboard-attendance.js?v=2.6"></script>
+    <script src="../js/Instructor Dashboard/instructor-dashboard-exams.js?v=2.6"></script>
     <script src="../js/Instructor Dashboard/instructor-dashboard-profile.js?v=2.6"></script>
     <!-- Mobile Navigation Toggle -->
     <button class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Toggle Navigation">

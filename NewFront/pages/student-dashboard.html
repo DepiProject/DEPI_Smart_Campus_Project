@@ -217,6 +217,10 @@
             <i class="bi bi-trophy"></i>
             <span>Grades</span>
         </a>
+        <a href="#exams" data-section="exams" class="icon-sidebar-item">
+            <i class="bi bi-file-earmark-text"></i>
+            <span>Exams</span>
+        </a>
         <a href="#profile" data-section="profile" class="icon-sidebar-item">
             <i class="bi bi-person-circle"></i>
             <span>Profile</span>
@@ -473,6 +477,72 @@
                         <!-- Pagination Controls -->
                         <div class="card-footer bg-white border-0 py-3">
                             <div id="gradesPaginationControls"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Exams Section -->
+            <div id="exams" class="section d-none">
+                <h2 class="text-gradient mb-4">
+                    <i class="bi bi-file-earmark-text-fill me-2"></i>My Exams
+                </h2>
+
+                <!-- Available Exams Table -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="mb-0">
+                            <i class="bi bi-list-check me-2 text-primary"></i>Available Exams
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover modern-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th><i class="bi bi-book"></i> Course</th>
+                                        <th><i class="bi bi-file-text"></i> Exam Title</th>
+                                        <th><i class="bi bi-clock"></i> Duration</th>
+                                        <th><i class="bi bi-trophy"></i> Passing Score</th>
+                                        <th><i class="bi bi-award"></i> Total Marks</th>
+                                        <th class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="examsTableBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-4">Loading exams...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Completed Exams Table -->
+                <div class="card border-0 shadow-sm mt-4">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="mb-0">
+                            <i class="bi bi-check-circle me-2 text-success"></i>Completed Exams
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover modern-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Course</th>
+                                        <th>Exam Title</th>
+                                        <th>Submitted Date</th>
+                                        <th>Score</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="completedExamsTableBody">
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">No completed exams yet</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>

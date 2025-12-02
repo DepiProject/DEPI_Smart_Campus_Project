@@ -440,15 +440,18 @@ class FormValidator {
             if (field.value) {
                 this.showSuccess(field);
                 
-                // Clear instructor selection when department changes
+                // Only clear instructor selection when department changes in CREATE mode
+                // Don't clear in edit mode (when field has pointer-events: none)
                 const instructorField = document.getElementById('courseInstructor');
-                if (instructorField) {
+                const isEditMode = field.style.pointerEvents === 'none';
+                
+                if (instructorField && !isEditMode) {
                     instructorField.innerHTML = '<option value="">Loading instructors...</option>';
                     this.clearValidation(instructorField);
                 }
                 
                 return true;
-            } else if (field.classList.contains('user-touched')) {
+            } else if (field.hasAttribute('required')) {
                 this.showError(field, 'Please select a department');
                 return false;
             }
@@ -744,7 +747,10 @@ class FormValidator {
                         }
                         break;
                     case 'courseDepartment':
-                        if (!field.value) {
+                        // Skip validation if field is hidden (edit mode - using display input instead)
+                        if (field.style.display === 'none') {
+                            fieldValid = true;
+                        } else if (!field.value) {
                             this.showError(field, 'Please select a department');
                             fieldValid = false;
                         } else {

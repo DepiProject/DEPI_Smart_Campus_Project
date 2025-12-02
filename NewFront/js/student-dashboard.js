@@ -117,6 +117,9 @@ class StudentDashboard {
                 case 'grades':
                     this.loadGrades();
                     break;
+                case 'exams':
+                    this.loadExams();
+                    break;
                 case 'profile':
                     this.loadStudentProfile();
                     break;
@@ -1717,6 +1720,156 @@ class StudentDashboard {
         toastElement.addEventListener('hidden.bs.toast', () => {
             toastElement.remove();
         });
+    }
+
+    // ===== EXAMS =====
+    async loadExams() {
+        console.log('📝 Loading exams for student...');
+        
+        const examsTableBody = document.getElementById('examsTableBody');
+        const completedExamsTableBody = document.getElementById('completedExamsTableBody');
+        
+        try {
+            // Load all enrolled courses first
+            const coursesResponse = await API.enrollment.getByStudentId(this.studentId);
+            const enrollments = coursesResponse.success && coursesResponse.data ? 
+                (coursesResponse.data.Data || coursesResponse.data.data || coursesResponse.data || []) : [];
+            
+            const enrolledCourseIds = enrollments.map(e => e.CourseId || e.courseId);
+            console.log('📚 Enrolled course IDs:', enrolledCourseIds);
+            
+            // Load all exams
+            const examsResponse = await API.exam.getAll(1, 100);
+            
+            if (examsResponse.success && examsResponse.data) {
+                const allExams = examsResponse.data.Data || examsResponse.data.data || examsResponse.data || [];
+                console.log('📝 All exams:', allExams);
+                
+                // Filter exams for enrolled courses only
+                const availableExams = allExams.filter(exam => {
+                    const courseId = exam.CourseId || exam.courseId;
+                    return enrolledCourseIds.includes(courseId);
+                });
+                
+                console.log('✅ Available exams for student:', availableExams);
+                
+                // Render available exams
+                if (availableExams.length === 0) {
+                    examsTableBody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+                                <p class="mt-2">No exams available yet</p>
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    examsTableBody.innerHTML = availableExams.map(exam => {
+                        const courseId = exam.CourseId || exam.courseId;
+                        const enrollment = enrollments.find(e => 
+                            (e.CourseId || e.courseId) === courseId
+                        );
+                        const courseName = enrollment ? 
+                            (enrollment.CourseName || enrollment.courseName || 'Unknown Course') : 
+                            'Unknown Course';
+                        
+                        const title = exam.Title || exam.title || 'Untitled Exam';
+                        const duration = exam.Duration || exam.duration || 0;
+                        const passingScore = exam.PassingScore || exam.passingScore || 0;
+                        const totalMarks = exam.TotalMarks || exam.totalMarks || 0;
+                        const examId = exam.ExamId || exam.examId || exam.Id || exam.id;
+                        
+                        return `
+                            <tr>
+                                <td><strong class="text-primary">${courseName}</strong></td>
+                                <td>
+                                    <strong>${title}</strong><br>
+                                    <small class="text-muted">${exam.Description || exam.description || ''}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">
+                                        <i class="bi bi-clock"></i> ${duration} min
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-warning text-dark">
+                                        ${passingScore}%
+                                    </span>
+                                </td>
+                                <td>
+                                    <strong class="text-success">${totalMarks}</strong>
+                                </td>
+                                <td class="text-center">
+                                    <a href="exam.html?examId=${examId}" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-play-circle"></i> Start Exam
+                                    </a>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            } else {
+                examsTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Failed to load exams</td></tr>';
+            }
+            
+            // Load completed exams (submissions)
+            const submissionsResponse = await API.request(`/Submission/student/${this.studentId}`, {
+                method: 'GET'
+            });
+            
+            if (submissionsResponse.success && submissionsResponse.data) {
+                const submissions = submissionsResponse.data.Data || submissionsResponse.data.data || submissionsResponse.data || [];
+                console.log('✅ Student submissions:', submissions);
+                
+                if (submissions.length === 0) {
+                    completedExamsTableBody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">
+                                No completed exams yet
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    completedExamsTableBody.innerHTML = submissions.map(submission => {
+                        const examTitle = submission.ExamTitle || submission.examTitle || 'Exam';
+                        const courseName = submission.CourseName || submission.courseName || 'Unknown Course';
+                        const submittedDate = submission.SubmittedAt || submission.submittedAt || submission.CreatedAt || submission.createdAt;
+                        const score = submission.Score || submission.score || 0;
+                        const totalMarks = submission.TotalMarks || submission.totalMarks || 100;
+                        const percentage = totalMarks > 0 ? ((score / totalMarks) * 100).toFixed(1) : 0;
+                        const passingScore = submission.PassingScore || submission.passingScore || 50;
+                        const passed = percentage >= passingScore;
+                        
+                        const formattedDate = submittedDate ? new Date(submittedDate).toLocaleString() : 'N/A';
+                        
+                        return `
+                            <tr>
+                                <td><strong>${courseName}</strong></td>
+                                <td>${examTitle}</td>
+                                <td>${formattedDate}</td>
+                                <td>
+                                    <strong class="${percentage >= passingScore ? 'text-success' : 'text-danger'}">
+                                        ${score}/${totalMarks} (${percentage}%)
+                                    </strong>
+                                </td>
+                                <td>
+                                    <span class="badge ${passed ? 'bg-success' : 'bg-danger'}">
+                                        <i class="bi ${passed ? 'bi-check-circle' : 'bi-x-circle'}"></i>
+                                        ${passed ? 'Passed' : 'Failed'}
+                                    </span>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            } else {
+                completedExamsTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No submissions found</td></tr>';
+            }
+        } catch (error) {
+            console.error('❌ Error loading exams:', error);
+            examsTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error loading exams</td></tr>';
+            completedExamsTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error loading submissions</td></tr>';
+        }
     }
 
     showToast(title, message, type = 'info') {

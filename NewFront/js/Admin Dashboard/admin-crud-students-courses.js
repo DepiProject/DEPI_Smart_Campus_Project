@@ -567,10 +567,24 @@ AdminDashboard.prototype.saveCourse = async function() {
     btn.disabled = true;
     btnText.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
 
-    const name = document.getElementById('courseName')?.value?.trim() || '';
-    const departmentId = document.getElementById('courseDepartment')?.value || '';
-    const instructorId = document.getElementById('courseInstructor')?.value || '';
-    const credits = document.getElementById('courseCredits')?.value || '';
+    const nameField = document.getElementById('courseName');
+    const deptField = document.getElementById('courseDepartment');
+    const instField = document.getElementById('courseInstructor');
+    const creditsField = document.getElementById('courseCredits');
+    
+    console.log('🔍 Department field state:', {
+        exists: !!deptField,
+        value: deptField?.value,
+        display: deptField?.style.display,
+        lockedValue: deptField?.getAttribute('data-locked-value'),
+        innerHTML: deptField?.innerHTML.substring(0, 100)
+    });
+
+    const name = nameField?.value?.trim() || '';
+    // Use locked value if field is hidden (edit mode), otherwise use current value
+    const departmentId = deptField?.getAttribute('data-locked-value') || deptField?.value || '';
+    const instructorId = instField?.value || '';
+    const credits = creditsField?.value || '';
     
     console.log('📝 Course form data collected:', {
         name,
@@ -737,38 +751,98 @@ AdminDashboard.prototype.editCourse = async function(id) {
         let course = response.data?.data || response.data;
         
         if (response.success && course) {
-            // Reset and populate form safely
+            console.log('📋 Course loaded successfully:', course);
+            
+            // Reset form first
             const form = document.getElementById('courseForm');
             if (form) {
                 form.reset();
+                console.log('✅ Form reset complete');
             }
             
-            // Safely set form values
+            // Load departments to populate the dropdown
+            if (this.loadDepartmentSelects) {
+                console.log('🔄 Loading department selects...');
+                await this.loadDepartmentSelects();
+                console.log('✅ Department selects loaded');
+            }
+            
+            // Get form fields
             const nameField = document.getElementById('courseName');
             const creditsField = document.getElementById('courseCredits');
             const deptField = document.getElementById('courseDepartment');
+            const deptId = course.departmentId || course.DepartmentId || '';
             
+            console.log('📝 Department ID from course:', deptId);
+            console.log('📝 Department field element:', deptField);
+            console.log('📝 Department field options:', deptField ? deptField.innerHTML : 'Field not found');
+            
+            // Set course name (read-only)
             if (nameField) {
                 nameField.value = course.name || course.Name || '';
                 nameField.readOnly = true;
                 nameField.style.backgroundColor = '#e9ecef';
                 nameField.style.cursor = 'not-allowed';
+                console.log('✅ Course name set:', nameField.value);
             }
             
+            // Set credit hours (editable)
             if (creditsField) {
                 creditsField.value = course.creditHours || course.CreditHours || '';
-                // Keep credit hours editable in edit mode
                 creditsField.readOnly = false;
                 creditsField.style.backgroundColor = '';
                 creditsField.style.cursor = '';
+                console.log('✅ Credit hours set:', creditsField.value);
             }
             
-            const deptId = course.departmentId || course.DepartmentId || '';
-            if (deptField) {
-                deptField.value = deptId;
-                deptField.disabled = true;
-                deptField.style.backgroundColor = '#e9ecef';
-                deptField.style.cursor = 'not-allowed';
+            // Set department (locked but visible)
+            if (deptField && deptId) {
+                console.log('⏳ Setting department value in 100ms...');
+                // Set value after a small delay to ensure options are loaded
+                setTimeout(() => {
+                    console.log('🔄 Attempting to set department value:', deptId);
+                    console.log('📋 Available options before setting:', Array.from(deptField.options).map(o => `${o.value}: ${o.text}`));
+                    
+                    deptField.value = deptId;
+                    
+                    // Store department ID as data attribute for retrieval later
+                    deptField.setAttribute('data-locked-value', deptId);
+                    
+                    console.log('📋 Department field value after setting:', deptField.value);
+                    const selectedText = deptField.selectedOptions[0]?.text || 'None selected';
+                    console.log('📋 Selected option text:', selectedText);
+                    
+                    // Hide the select and show the selected value as readonly text
+                    deptField.style.display = 'none';
+                    
+                    // Create or update a readonly input to display the department name
+                    let displayInput = document.getElementById('courseDepartmentDisplay');
+                    if (!displayInput) {
+                        displayInput = document.createElement('input');
+                        displayInput.type = 'text';
+                        displayInput.id = 'courseDepartmentDisplay';
+                        displayInput.className = 'form-control';
+                        deptField.parentNode.insertBefore(displayInput, deptField);
+                    }
+                    
+                    displayInput.value = selectedText;
+                    displayInput.readOnly = true;
+                    displayInput.style.backgroundColor = '#e9ecef';
+                    displayInput.style.cursor = 'not-allowed';
+                    displayInput.style.display = 'block';
+                    
+                    // Remove any validation errors
+                    deptField.classList.remove('is-invalid');
+                    deptField.classList.add('is-valid');
+                    const errorElement = document.getElementById(deptField.id + 'Error');
+                    if (errorElement) {
+                        errorElement.style.display = 'none';
+                    }
+                    
+                    console.log('✅ Department field styled and locked');
+                }, 100);
+            } else {
+                console.warn('⚠️ Department field or ID missing:', { deptField: !!deptField, deptId });
             }
             
             // Load instructors for the department
@@ -965,6 +1039,13 @@ AdminDashboard.prototype.resetCourseFormEnhanced = function() {
         deptField.disabled = false;
         deptField.style.backgroundColor = '';
         deptField.style.cursor = '';
+        deptField.style.display = ''; // Show the select field
+        
+        // Hide/remove the display input if it exists
+        const displayInput = document.getElementById('courseDepartmentDisplay');
+        if (displayInput) {
+            displayInput.style.display = 'none';
+        }
     }
     
     if (instField) {
