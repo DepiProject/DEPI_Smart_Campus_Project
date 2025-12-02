@@ -656,15 +656,7 @@ The API returns standard HTTP status codes:
 
 ## 👥 Contributors
 
-- Alyaa Gamal Ahmed - Authentication, Users Management, Department, and Exam
-- Youssef Mohamed - Submission
+- Alyaa Gamal - Authentication,Users Management,and Department
+- Youssef Mohamed - Exam and Submission 
 - Menna Mahmoud - Course and Enrollment
-- Mahmoud Alaa - Attendance
-
-## Updated distribution.
-
-- Alyaa Gamal Ahmed - Authentication, Users Management, and Department (Validation Frontend & Backend) 
-- Youssef Mohamed - Submission (Validation Frontend & Backend)
-- Menna Mahmoud - Course and Enrollment (Validation Frontend & Backend)
-- Mahmoud Alaa - Attendance (Validation Frontend & Backend)
-- Sara Reda - Exam (Validation Frontend & Backend) 
+- Mahmoud Alaa - Attendance 
