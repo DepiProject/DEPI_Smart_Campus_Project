@@ -734,20 +734,6 @@
                             <div class="card-body">
                                 <!-- Filter Controls -->
                                 <div class="row g-2 mb-3">
-                                    <div class="col-md-12 mb-2">
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-white">
-                                                <i class="bi bi-search"></i>
-                                            </span>
-                                            <input type="text" class="form-control" id="attendanceSearchInput"
-                                                placeholder="Search by student name, course, or status..."
-                                                onkeyup="instructorDashboard.searchAttendanceRecords()">
-                                            <button class="btn btn-outline-secondary" type="button"
-                                                onclick="instructorDashboard.clearAttendanceSearch()">
-                                                <i class="bi bi-x-lg"></i> Clear
-                                            </button>
-                                        </div>
-                                    </div>
                                     <div class="col-md-4">
                                         <input type="date" class="form-control" id="filterFromDate"
                                             placeholder="From Date">
@@ -758,7 +744,7 @@
                                     <div class="col-md-4">
                                         <button class="btn btn-primary w-100"
                                             onclick="instructorDashboard.loadAttendanceRecords()">
-                                            <i class="bi bi-funnel me-2"></i>Filter by Date
+                                            <i class="bi bi-funnel me-2"></i>Filter
                                         </button>
                                     </div>
                                 </div>
@@ -771,12 +757,12 @@
                                                 <th>Course</th>
                                                 <th>Date</th>
                                                 <th>Status</th>
-                                                <!-- <th>Actions</th> -->
+                                                <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody id="attendanceRecordsBody">
                                             <tr>
-                                                <td colspan="4" class="text-center text-muted">No records found</td>
+                                                <td colspan="5" class="text-center text-muted">No records found</td>
                                             </tr>
                                         </tbody>
                                     </table>

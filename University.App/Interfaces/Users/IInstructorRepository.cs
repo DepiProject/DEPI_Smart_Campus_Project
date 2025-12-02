@@ -17,6 +17,7 @@ namespace University.App.Interfaces.Users
         Task<Instructor?> GetByIdWithDetailsAsync(int id);
         Task<Instructor?> GetByUserIdAsync(int userId);
         Task<IEnumerable<Instructor>> GetByDepartmentAsync(int departmentId);
+        Task<Instructor?> GetFirstInstructorByDepartmentAsync(int departmentId);
         Task<bool> IsHeadOfAnyDepartmentAsync(int instructorId);
         Task<bool> HasActiveCoursesWithEnrollmentsAsync(int instructorId);
 

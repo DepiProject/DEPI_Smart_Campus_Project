@@ -7,21 +7,19 @@ class MarkAttendancePage {
     constructor() {
         this.instructorId = null;
         this.selectedCourseForAttendance = null;
+        this.instructorCourses = [];
         this.init();
     }
 
     async init() {
         console.log('🚀 Initializing Mark Attendance Page...');
         
-        // Get instructor info from JWT
         const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
         console.log('🔐 User Info:', userInfo);
         
-        // Update navbar
         const userName = userInfo.FirstName || userInfo.firstName || 'Instructor';
         document.getElementById('userName').textContent = userName;
         
-        // Fetch instructor profile to get ID
         try {
             const profileResponse = await API.instructor.getMyProfile();
             console.log('📦 Profile response:', profileResponse);
@@ -40,6 +38,8 @@ class MarkAttendancePage {
             if (profile) {
                 this.instructorId = profile.instructorId || profile.InstructorId || profile.id || profile.Id;
                 console.log('✅ Instructor ID:', this.instructorId);
+                
+                await this.loadInstructorCourses();
             } else {
                 console.error('❌ Failed to get instructor profile');
                 this.showToast('Error', 'Failed to load instructor information', 'error');
@@ -49,18 +49,41 @@ class MarkAttendancePage {
             this.showToast('Error', 'Failed to initialize: ' + error.message, 'error');
         }
         
-        // Set today's date
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('attendanceDate').value = today;
         
-        // Load recent activity
         this.loadRecentActivity();
         
-        // Setup logout
         document.getElementById('logoutBtn').addEventListener('click', (e) => {
             e.preventDefault();
             this.logout();
         });
+    }
+    
+    async loadInstructorCourses() {
+        console.log('📚 Loading instructor courses for caching...');
+        
+        try {
+            const coursesResponse = await API.request(`/Course/instructor/${this.instructorId}`, {
+                method: 'GET'
+            });
+
+            if (!coursesResponse.success) {
+                console.error('Failed to load courses');
+                return;
+            }
+
+            let courses = coursesResponse.data?.data || coursesResponse.data?.Data || coursesResponse.data || [];
+            if (!Array.isArray(courses)) {
+                courses = [courses];
+            }
+
+            this.instructorCourses = courses;
+            console.log(`✅ Cached ${this.instructorCourses.length} courses`);
+            
+        } catch (error) {
+            console.error('❌ Error loading courses:', error);
+        }
     }
 
     async searchCourseForAttendance() {
@@ -72,103 +95,107 @@ class MarkAttendancePage {
                 <tr>
                     <td colspan="5" class="text-center text-muted p-4">
                         <i class="bi bi-search" style="font-size: 2rem; opacity: 0.3;"></i>
-                        <p class="mt-2">Search for a course to display enrolled students</p>
+                        <p class="mt-2">Type at least 2 characters to search for a course</p>
                     </td>
                 </tr>
             `;
-            document.getElementById('courseInfo').textContent = 'Search for a course to begin';
-            document.getElementById('markAttendanceBtn').classList.add('d-none');
+            const markBtn = document.getElementById('markAttendanceBtn');
+            if (markBtn) markBtn.classList.add('d-none');
             return;
         }
 
         try {
-            if (!this.instructorId) {
-                this.showToast('Error', 'Instructor ID not available', 'error');
-                return;
+            console.log(`🔍 Searching courses with term: "${searchTerm}"`);
+            
+            if (this.instructorCourses.length === 0) {
+                await this.loadInstructorCourses();
             }
 
-            // Search through instructor's courses
-            const coursesResponse = await API.request(`/Course/instructor/${this.instructorId}`, {
-                method: 'GET'
-            });
-
-            if (!coursesResponse.success) {
-                console.error('Failed to load courses');
-                this.showToast('Error', 'Failed to load courses', 'error');
-                return;
-            }
-
-            let courses = coursesResponse.data?.data || coursesResponse.data?.Data || coursesResponse.data || [];
-            if (!Array.isArray(courses)) {
-                courses = [courses];
-            }
-
-            // Filter courses by search term
-            const matchedCourse = courses.find(course => {
+            const matchedCourse = this.instructorCourses.find(course => {
                 const code = (course.courseCode || course.CourseCode || '').toLowerCase();
                 const name = (course.name || course.Name || course.courseName || course.CourseName || '').toLowerCase();
                 return code.includes(searchTerm) || name.includes(searchTerm);
             });
 
             if (matchedCourse) {
+                console.log('✅ Found matching course:', matchedCourse);
                 this.selectedCourseForAttendance = matchedCourse;
                 await this.loadStudentsForAttendance();
             } else {
+                console.log('❌ No course found matching search term');
                 document.getElementById('attendanceStudentsBody').innerHTML = `
                     <tr>
                         <td colspan="5" class="text-center text-muted p-4">
                             <i class="bi bi-search" style="font-size: 2rem; opacity: 0.3;"></i>
                             <p class="mt-2">No courses found matching "${searchTerm}"</p>
+                            <small class="text-muted">Try searching by course code or name</small>
                         </td>
                     </tr>
                 `;
-                document.getElementById('courseInfo').textContent = 'No courses found';
-                document.getElementById('markAttendanceBtn').classList.add('d-none');
+                const markBtn = document.getElementById('markAttendanceBtn');
+                if (markBtn) markBtn.classList.add('d-none');
             }
 
         } catch (error) {
-            console.error('Error searching courses:', error);
-            this.showToast('Error', 'Failed to search courses', 'error');
+            console.error('❌ Error searching courses:', error);
+            this.showToast('Error', 'Failed to search courses: ' + error.message, 'error');
         }
     }
 
     async loadStudentsForAttendance() {
         const course = this.selectedCourseForAttendance;
-        if (!course) return;
+        if (!course) {
+            console.error('❌ No course selected');
+            return;
+        }
 
         const courseCode = course.courseCode || course.CourseCode || '';
         const courseName = course.name || course.Name || course.courseName || course.CourseName || '';
         const selectedDate = document.getElementById('attendanceDate').value;
 
         if (!selectedDate) {
-            this.showToast('Warning', 'Please select a date', 'warning');
+            this.showToast('Date Required', 'Please select a date to view students', 'warning');
             return;
         }
+        
+        // Validate date is not in the past
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const selected = new Date(selectedDate);
+        selected.setHours(0, 0, 0, 0);
+        
+        if (selected < today) {
+            this.showToast(
+                'Past Date Selected',
+                'Warning: You have selected a past date. Attendance can only be marked for today or future dates.',
+                'warning'
+            );
+        }
 
-        // Update course info
-        document.getElementById('courseInfo').textContent = `${courseCode} - ${courseName}`;
+        console.log(`📋 Loading students for course: ${courseCode}`);
 
         try {
-            // First get course details by code to get the course ID
+            console.log(`🔍 Fetching course details for code: ${courseCode}`);
             const courseDetailsResponse = await API.request(`/Course/code/${courseCode}`, {
                 method: 'GET'
             });
 
             if (!courseDetailsResponse.success || !courseDetailsResponse.data?.data) {
+                console.error('❌ Failed to load course details');
                 this.showToast('Error', 'Failed to load course details', 'error');
                 return;
             }
 
             const courseId = courseDetailsResponse.data.data.id || courseDetailsResponse.data.data.Id;
-            console.log('✅ Course ID:', courseId);
+            console.log(`✅ Course ID resolved: ${courseId}`);
 
-            // Get enrolled students
+            console.log(`📚 Fetching enrollments for course ID: ${courseId}`);
             const enrollmentResponse = await API.request(`/Enrollment/course/${courseId}`, {
                 method: 'GET'
             });
 
             if (!enrollmentResponse.success) {
-                console.error('Failed to load enrollments');
+                console.error('❌ Failed to load enrollments');
                 this.showToast('Error', 'Failed to load students', 'error');
                 return;
             }
@@ -178,7 +205,6 @@ class MarkAttendancePage {
                 enrollments = [enrollments];
             }
 
-            // Filter approved/enrolled students
             enrollments = enrollments.filter(e => {
                 if (!e) return false;
                 const status = (e.status || e.Status || '').toString().trim().toLowerCase();
@@ -187,12 +213,19 @@ class MarkAttendancePage {
 
             console.log(`✅ Found ${enrollments.length} enrolled students`);
 
-            // Display students in table
             const tbody = document.getElementById('attendanceStudentsBody');
             const markBtn = document.getElementById('markAttendanceBtn');
             
             if (enrollments.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">No enrolled students found in this course</td></tr>';
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-muted p-4">
+                            <i class="bi bi-inbox" style="font-size: 2rem; opacity: 0.3;"></i>
+                            <p class="mt-2 mb-0">No enrolled students found in this course</p>
+                            <small class="text-muted">Students must be approved/enrolled to appear here</small>
+                        </td>
+                    </tr>
+                `;
                 if (markBtn) markBtn.classList.add('d-none');
                 return;
             }
@@ -202,11 +235,20 @@ class MarkAttendancePage {
                 const studentId = enrollment.studentId || enrollment.StudentId || '';
                 
                 return `
-                    <tr>
-                        <td class="align-middle"><strong>${courseCode}</strong></td>
+                    <tr data-student-id="${studentId}" data-student-name="${studentName}">
+                        <td class="align-middle">
+                            <i class="bi bi-person-fill text-primary me-1"></i>
+                            <strong>${courseCode}</strong>
+                        </td>
                         <td class="align-middle">${courseName}</td>
-                        <td class="align-middle"><strong>${studentName}</strong></td>
-                        <td class="align-middle">${selectedDate}</td>
+                        <td class="align-middle">
+                            <i class="bi bi-person-fill text-info me-1"></i>
+                            <strong>${studentName}</strong>
+                        </td>
+                        <td class="align-middle">
+                            <i class="bi bi-calendar-event text-muted me-1"></i>
+                            ${new Date(selectedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                        </td>
                         <td class="align-middle">
                             <select class="form-select status-select" data-student-id="${studentId}" data-course-id="${courseId}" data-index="${index}">
                                 <option value="">Select Status</option>
@@ -220,12 +262,12 @@ class MarkAttendancePage {
                 `;
             }).join('');
 
-            // Show mark attendance button
             if (markBtn) markBtn.classList.remove('d-none');
+            console.log('✅ Student table rendered successfully');
 
         } catch (error) {
-            console.error('Error loading students:', error);
-            this.showToast('Error', 'Failed to load students', 'error');
+            console.error('❌ Error loading students:', error);
+            this.showToast('Error', 'Failed to load students: ' + error.message, 'error');
         }
     }
 
@@ -233,11 +275,30 @@ class MarkAttendancePage {
         const selectedDate = document.getElementById('attendanceDate').value;
 
         if (!selectedDate) {
-            this.showToast('Error', 'Please select a date', 'error');
+            this.showToast('Date Required', 'Please select a date to mark attendance', 'warning');
+            return;
+        }
+        
+        // Validate date is not in the past
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const selected = new Date(selectedDate);
+        selected.setHours(0, 0, 0, 0);
+        
+        if (selected < today) {
+            this.showToast(
+                'Past Date Not Allowed',
+                'You cannot mark attendance for past dates. Please select today\'s date or a future date.',
+                'warning'
+            );
+            return;
+        }
+        
+        if (!this.selectedCourseForAttendance) {
+            this.showToast('Course Required', 'Please search and select a course first', 'warning');
             return;
         }
 
-        // Collect all attendance data
         const selects = document.querySelectorAll('#attendanceStudentsBody .status-select');
         const attendanceData = [];
         let hasSelection = false;
@@ -248,11 +309,15 @@ class MarkAttendancePage {
                 hasSelection = true;
                 const studentId = parseInt(select.dataset.studentId);
                 const courseId = parseInt(select.dataset.courseId);
+                const row = select.closest('tr');
+                const studentName = row?.dataset?.studentName || 'Unknown';
+                
                 attendanceData.push({
                     courseId: courseId,
                     studentId: studentId,
                     date: selectedDate,
-                    status: status
+                    status: status,
+                    studentName: studentName
                 });
             }
         });
@@ -262,26 +327,30 @@ class MarkAttendancePage {
             return;
         }
 
+        const markBtn = document.getElementById('markAttendanceBtn');
+        const originalBtnText = markBtn.innerHTML;
+        
         try {
-            console.log('📤 Marking attendance:', attendanceData);
+            markBtn.disabled = true;
+            markBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Marking Attendance...';
+            
+            console.log(`📤 Marking attendance for ${attendanceData.length} student(s)`);
 
-            // Mark attendance for each student
             let successCount = 0;
             let errorCount = 0;
+            const errors = [];
 
             for (const data of attendanceData) {
                 try {
-                    // Use the correct DTO format for the API - PascalCase property names
                     const markDto = {
                         StudentId: data.studentId,
                         CourseId: data.courseId,
-                        Date: data.date + 'T00:00:00', // Convert to DateTime format
+                        Date: data.date + 'T00:00:00',
                         Status: data.status
                     };
 
-                    console.log('📤 Sending DTO:', markDto);
+                    console.log(`📤 Marking: ${data.studentName} - ${data.status}`);
 
-                    // Don't use JSON.stringify here - API.request does it automatically
                     const response = await API.request('/Attendance/mark', {
                         method: 'POST',
                         body: markDto
@@ -289,36 +358,90 @@ class MarkAttendancePage {
 
                     if (response.success || response.message) {
                         successCount++;
+                        console.log(`✅ Success: ${data.studentName}`);
                     } else {
                         errorCount++;
-                        console.error('Failed to mark attendance:', response);
+                        let errorMsg = response.error || response.message || 'Unknown error';
+                        
+                        // Make error messages more user-friendly
+                        if (errorMsg.includes('already marked') || errorMsg.includes('Attendance already marked')) {
+                            errorMsg = 'Already marked for this date';
+                        } else if (errorMsg.includes('future date')) {
+                            errorMsg = 'Cannot mark for future dates';
+                        } else if (errorMsg.includes('not enrolled') || errorMsg.includes('enrollment')) {
+                            errorMsg = 'Not enrolled in this course';
+                        }
+                        
+                        errors.push(`${data.studentName}: ${errorMsg}`);
+                        console.error(`❌ Failed: ${data.studentName} - ${errorMsg}`);
                     }
                 } catch (error) {
                     errorCount++;
-                    console.error('Error marking attendance:', error);
+                    let errorMsg = error.message;
+                    
+                    // Simplify technical errors
+                    if (errorMsg.includes('fetch') || errorMsg.includes('network')) {
+                        errorMsg = 'Network connection error';
+                    }
+                    
+                    errors.push(`${data.studentName}: ${errorMsg}`);
+                    console.error(`❌ Exception: ${data.studentName}`, error);
                 }
             }
 
+            markBtn.disabled = false;
+            markBtn.innerHTML = originalBtnText;
+
             if (successCount > 0 && errorCount === 0) {
-                this.showToast('Success', `Successfully marked attendance for ${successCount} student(s)! Redirecting to dashboard...`, 'success');
-                
-                // Wait 2 seconds then redirect to dashboard with refresh
+                this.showToast(
+                    '✓ Attendance Marked Successfully', 
+                    `Attendance successfully recorded for ${successCount} student${successCount > 1 ? 's' : ''}. Returning to dashboard...`, 
+                    'success'
+                );
+                await this.loadRecentActivity();
                 setTimeout(() => {
                     window.location.href = 'instructor-dashboard.html?refresh=true#attendance';
                 }, 2000);
             } else if (successCount > 0 && errorCount > 0) {
-                this.showToast('Warning', `Marked ${successCount} attendance record(s). ${errorCount} already exist for this date.`, 'warning');
-                
-                // Still redirect after 3 seconds
+                const errorDetails = errors.slice(0, 3).join('<br>• ');
+                const moreErrors = errors.length > 3 ? `<br>• ... and ${errors.length - 3} more error${errors.length - 3 > 1 ? 's' : ''}` : '';
+                this.showToast(
+                    'Partially Completed', 
+                    `✓ ${successCount} student${successCount > 1 ? 's' : ''} marked successfully<br>✗ ${errorCount} student${errorCount > 1 ? 's' : ''} failed:<br><br>• ${errorDetails}${moreErrors}`, 
+                    'warning'
+                );
+                await this.loadRecentActivity();
                 setTimeout(() => {
                     window.location.href = 'instructor-dashboard.html?refresh=true#attendance';
-                }, 3000);
+                }, 4000);
             } else if (errorCount > 0) {
-                this.showToast('Error', `All ${errorCount} student(s) already have attendance marked for this date. Please choose a different date or check existing records.`, 'error');
+                const errorDetails = errors.slice(0, 5).join('<br>• ');
+                const moreErrors = errors.length > 5 ? `<br>• ... and ${errors.length - 5} more` : '';
+                
+                let troubleshootingTips = '';
+                const errorText = errors.join(' ').toLowerCase();
+                
+                if (errorText.includes('already marked')) {
+                    troubleshootingTips = '<br><br>💡 <strong>Tip:</strong> Attendance has already been recorded for this date. To update, delete the existing record from the dashboard first.';
+                } else if (errorText.includes('future date')) {
+                    troubleshootingTips = '<br><br>💡 <strong>Tip:</strong> Select today\'s date or a past date to mark attendance.';
+                } else if (errorText.includes('not enrolled')) {
+                    troubleshootingTips = '<br><br>💡 <strong>Tip:</strong> Make sure students are enrolled in this course before marking attendance.';
+                } else {
+                    troubleshootingTips = '<br><br>💡 <strong>Tips:</strong><br>• Verify the date is correct<br>• Check student enrollment status<br>• Ensure attendance hasn\'t been marked already';
+                }
+                
+                this.showToast(
+                    'Attendance Marking Failed', 
+                    `Unable to mark attendance for ${errorCount} student${errorCount > 1 ? 's' : ''}:<br><br>• ${errorDetails}${moreErrors}${troubleshootingTips}`, 
+                    'error'
+                );
             }
 
         } catch (error) {
-            console.error('Error in bulk attendance:', error);
+            markBtn.disabled = false;
+            markBtn.innerHTML = originalBtnText;
+            console.error('❌ Error in bulk attendance:', error);
             this.showToast('Error', 'Failed to mark attendance: ' + error.message, 'error');
         }
     }
@@ -358,88 +481,96 @@ class MarkAttendancePage {
             }
             
             console.log('📱 Loading recent activity for instructor ID:', instructorId);
+            
+            const container = document.getElementById('recentActivityList');
+            container.innerHTML = '<p class="text-muted text-center"><i class="bi bi-hourglass-split"></i> Loading...</p>';
 
-            // Get all courses for this instructor
-            const coursesResponse = await API.request(`/Course/instructor/${instructorId}`, {
-                method: 'GET'
-            });
+            let courses = this.instructorCourses;
+            if (courses.length === 0) {
+                console.log('📚 Courses not cached, fetching...');
+                const coursesResponse = await API.request(`/Course/instructor/${instructorId}`, {
+                    method: 'GET'
+                });
 
-            if (!coursesResponse.success) {
-                document.getElementById('recentActivityList').innerHTML = '<p class="text-muted text-center">No recent activity</p>';
-                return;
+                if (!coursesResponse.success) {
+                    container.innerHTML = '<p class="text-muted text-center">No recent activity</p>';
+                    return;
+                }
+
+                courses = coursesResponse.data?.data || coursesResponse.data?.Data || coursesResponse.data || [];
+                if (!Array.isArray(courses)) {
+                    courses = [courses];
+                }
             }
 
-            let courses = coursesResponse.data?.data || coursesResponse.data?.Data || coursesResponse.data || [];
-            if (!Array.isArray(courses)) {
-                courses = [courses];
-            }
-
-            // Aggregate attendance from all courses
+            console.log(`📚 Processing ${courses.length} courses for activity`);
             let records = [];
+            
             for (const course of courses) {
-                const courseId = course.id || course.Id || course.courseId || course.CourseId;
+                let courseId = course.id || course.Id || course.courseId || course.CourseId;
+                const courseCode = course.courseCode || course.CourseCode;
+                const courseName = course.name || course.Name || course.courseName || course.CourseName;
+                
+                if (!courseId && courseCode) {
+                    try {
+                        const detailsResponse = await API.request(`/Course/code/${courseCode}`);
+                        if (detailsResponse.success && detailsResponse.data?.data) {
+                            courseId = detailsResponse.data.data.id || detailsResponse.data.data.Id;
+                            console.log(`✅ Resolved course ID ${courseId} for ${courseCode}`);
+                        }
+                    } catch (err) {
+                        console.warn('Could not load course details for:', courseCode);
+                    }
+                }
                 
                 if (!courseId) {
-                    // Try to get courseId by code
-                    const courseCode = course.courseCode || course.CourseCode;
-                    if (courseCode) {
-                        try {
-                            const detailsResponse = await API.request(`/Course/code/${courseCode}`, {
-                                method: 'GET'
-                            });
-                            if (detailsResponse.success && detailsResponse.data?.data) {
-                                const fullCourseId = detailsResponse.data.data.id || detailsResponse.data.data.Id;
-                                if (fullCourseId) {
-                                    const attendanceResponse = await API.request(`/Attendance/filter?courseId=${fullCourseId}`, {
-                                        method: 'GET'
-                                    });
-                                    if (attendanceResponse.success) {
-                                        let courseRecords = attendanceResponse.data?.data || attendanceResponse.data?.Data || attendanceResponse.data || [];
-                                        if (!Array.isArray(courseRecords)) {
-                                            courseRecords = [courseRecords];
-                                        }
-                                        records = records.concat(courseRecords);
-                                    }
-                                }
-                            }
-                        } catch (err) {
-                            console.warn('Could not load attendance for course code:', courseCode);
-                        }
-                    }
+                    console.warn(`⚠️ Skipping course - no ID: ${courseCode}`);
                     continue;
                 }
                 
                 try {
-                    const attendanceResponse = await API.request(`/Attendance/filter?courseId=${courseId}`, {
-                        method: 'GET'
-                    });
+                    const attendanceResponse = await API.request(`/Attendance/filter?courseId=${courseId}`);
                     if (attendanceResponse.success) {
                         let courseRecords = attendanceResponse.data?.data || attendanceResponse.data?.Data || attendanceResponse.data || [];
                         if (!Array.isArray(courseRecords)) {
                             courseRecords = [courseRecords];
                         }
+                        courseRecords = courseRecords.filter(r => r && Object.keys(r).length > 0);
+                        courseRecords = courseRecords.map(r => ({
+                            ...r,
+                            courseName: courseName,
+                            courseCode: courseCode
+                        }));
                         records = records.concat(courseRecords);
+                        console.log(`✅ Added ${courseRecords.length} records from ${courseCode}`);
                     }
                 } catch (err) {
                     console.warn('Could not load attendance for course:', courseId);
                 }
             }
 
-            // Get last 10 records
             records.sort((a, b) => new Date(b.date || b.Date) - new Date(a.date || a.Date));
             records = records.slice(0, 10);
+            
+            console.log(`📊 Displaying ${records.length} most recent records`);
 
-            const container = document.getElementById('recentActivityList');
             if (records.length === 0) {
-                container.innerHTML = '<p class="text-muted text-center">No recent activity</p>';
+                container.innerHTML = `
+                    <p class="text-center text-muted p-3">
+                        <i class="bi bi-inbox" style="font-size: 2rem; opacity: 0.3;"></i>
+                        <br>No recent activity
+                    </p>
+                `;
                 return;
             }
 
             container.innerHTML = records.map(record => {
                 const studentName = record.studentName || record.StudentName || 'Unknown';
                 const courseName = record.courseName || record.CourseName || 'Unknown Course';
+                const courseCode = record.courseCode || record.CourseCode || '';
                 const status = record.status || record.Status || '';
-                const date = new Date(record.date || record.Date).toLocaleDateString();
+                const date = new Date(record.date || record.Date);
+                const formattedDate = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
                 
                 let icon = '';
                 let colorClass = '';
@@ -468,7 +599,13 @@ class MarkAttendancePage {
                             <i class="bi bi-${icon} ${colorClass} me-2 mt-1"></i>
                             <div class="flex-grow-1">
                                 <p class="mb-0 small"><strong>${studentName}</strong></p>
-                                <p class="mb-0 small text-muted">${courseName} - ${status} - ${date}</p>
+                                <p class="mb-0 small text-muted">
+                                    <i class="bi bi-book"></i> ${courseCode ? courseCode + ' - ' : ''}${courseName}
+                                </p>
+                                <p class="mb-0 small text-muted">
+                                    <i class="bi bi-calendar-event"></i> ${formattedDate} - 
+                                    <span class="badge badge-sm bg-${colorClass.replace('text-', '')}">${status}</span>
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -476,8 +613,13 @@ class MarkAttendancePage {
             }).join('');
 
         } catch (error) {
-            console.error('Error loading recent activity:', error);
-            document.getElementById('recentActivityList').innerHTML = '<p class="text-muted text-center">Error loading activity</p>';
+            console.error('❌ Error loading recent activity:', error);
+            document.getElementById('recentActivityList').innerHTML = `
+                <p class="text-center text-danger p-3">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <br>Error loading activity
+                </p>
+            `;
         }
     }
 

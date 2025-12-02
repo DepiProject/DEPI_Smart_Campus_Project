@@ -152,6 +152,10 @@ AdminDashboard.prototype.saveInstructor = async function() {
             if (response.success) {
                 this.showToast('Success', '✅ Instructor created successfully!', 'success');
                 this.addActivity(`New instructor added: ${fullName}`, 'sage');
+                
+                // Check and auto-assign department head if this is the first instructor
+                await this.checkAndAutoAssignDepartmentHead(parseInt(departmentId));
+                
                 bootstrap.Modal.getInstance(document.getElementById('instructorModal')).hide();
                 this.resetEditState();
                 await this.loadInstructorsWithPagination();
@@ -538,5 +542,54 @@ AdminDashboard.prototype.executeReassignment = async function() {
     } finally {
         confirmBtn.disabled = false;
         if (spinner) spinner.classList.add('d-none');
+    }
+};
+
+// ========== AUTO-ASSIGN DEPARTMENT HEAD ==========
+
+/**
+ * Checks if a department has exactly 1 instructor and no head assigned.
+ * If conditions are met, automatically assigns the first instructor as department head.
+ * This provides a friendly user experience by reducing manual assignment work.
+ * @param {number} departmentId - The department ID to check and auto-assign
+ */
+AdminDashboard.prototype.checkAndAutoAssignDepartmentHead = async function(departmentId) {
+    if (!departmentId) return;
+    
+    try {
+        const response = await fetch(`${API.baseURL}/Department/${departmentId}/auto-assign-head`, {
+            method: 'POST',
+            headers: API.getHeaders()
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            
+            if (result.success && result.headAssigned) {
+                // Show success notification for auto-assignment
+                this.showToast(
+                    '🎉 Auto-Assignment Success!', 
+                    result.message || 'Department head has been automatically assigned!', 
+                    'success',
+                    5000
+                );
+                
+                // Reload department data to reflect the new head
+                await this.loadDepartmentsWithPagination();
+                await this.loadDepartmentSelects();
+                
+                // Log the activity
+                this.addActivity(`Auto-assigned department head (first instructor added)`, 'sage');
+            } else if (result.success && !result.headAssigned) {
+                // No auto-assignment happened (could be > 1 instructor, or already has head)
+                console.log('ℹ️ Auto-assign check:', result.message);
+            }
+        } else {
+            // Non-critical error - just log it, don't show to user
+            console.warn('Auto-assign check failed:', await response.text());
+        }
+    } catch (error) {
+        // Non-critical error - just log it, don't interrupt user flow
+        console.warn('Error checking auto-assign:', error);
     }
 };

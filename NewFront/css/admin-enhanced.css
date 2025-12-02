@@ -523,7 +523,7 @@
 }
 
 .invalid-feedback {
-    display: none;
+    display: none !important;
     width: 100%;
     margin-top: 0.25rem;
     font-size: 0.875em;
@@ -531,11 +531,12 @@
     font-weight: 500;
 }
 
+/* Show validation message when field is invalid */
 .form-control.is-invalid ~ .invalid-feedback,
 .form-select.is-invalid ~ .invalid-feedback,
-.input-group .form-control.is-invalid ~ .invalid-feedback,
-.input-group .form-select.is-invalid ~ .invalid-feedback {
-    display: block;
+.is-invalid ~ .invalid-feedback,
+.input-group:has(.is-invalid) + .invalid-feedback {
+    display: block !important;
     animation: slideIn 0.2s ease-out;
 }
 

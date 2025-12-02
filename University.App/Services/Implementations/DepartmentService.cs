@@ -317,5 +317,53 @@ namespace University.App.Services.Implementations
                 DeletedAt = d.DeletedAt
             });
         }
+
+        // ========== AUTO-ASSIGN HEAD FUNCTIONALITY ==========
+
+        /// <summary>
+        /// Checks if department has exactly 1 instructor and no head assigned yet.
+        /// If conditions are met, automatically assigns the first instructor as department head.
+        /// This provides a friendly user experience by reducing manual assignment work.
+        /// </summary>
+        /// <param name="departmentId">The department to check and potentially auto-assign</param>
+        /// <returns>Tuple indicating if head was assigned, message, and current instructor count</returns>
+        public async Task<(bool HeadAssigned, string Message, int InstructorCount)> CheckAndAutoAssignDepartmentHeadAsync(int departmentId)
+        {
+            // Get department details
+            var department = await _departmentRepo.GetDepartmentById(departmentId);
+            if (department == null)
+            {
+                return (false, "Department not found", 0);
+            }
+
+            // Check if department already has a head
+            if (department.HeadId.HasValue)
+            {
+                var instructorCount = await _departmentRepo.GetDepartmentInstructorCount(departmentId);
+                return (false, "Department already has a head assigned", instructorCount);
+            }
+
+            // Count active instructors in this department
+            var activeInstructorCount = await _departmentRepo.GetDepartmentInstructorCount(departmentId);
+            
+            // Check if we have exactly 1 instructor
+            if (activeInstructorCount != 1)
+            {
+                return (false, $"Department has {activeInstructorCount} instructor(s). Auto-assign happens at 1 instructor.", activeInstructorCount);
+            }
+
+            // Get the first instructor in the department to assign as head
+            var firstInstructor = await _instructorRepo.GetFirstInstructorByDepartmentAsync(departmentId);
+            if (firstInstructor == null)
+            {
+                return (false, "No instructors found in department", activeInstructorCount);
+            }
+
+            // Auto-assign the first instructor as department head
+            department.HeadId = firstInstructor.InstructorId;
+            await _departmentRepo.UpdateDepartment(department);
+
+            return (true, $"🎉 Auto-assigned {firstInstructor.FullName} as Department Head!", activeInstructorCount);
+        }
     }
 }

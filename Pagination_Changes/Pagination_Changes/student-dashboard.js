@@ -6,6 +6,7 @@ class StudentDashboard {
     constructor() {
         this.studentId = null; // Will be loaded from profile
         this.studentInfo = null;
+        // Pagination managers for each table
         this.coursesPagination = null;
         this.attendancePagination = null;
         this.gradesPagination = null;
@@ -1283,6 +1284,30 @@ class StudentDashboard {
                     return;
                 }
 
+                tbody.innerHTML = enrollments.map(enrollment => {
+                    // Handle both PascalCase and camelCase
+                    const courseName = enrollment.CourseName || enrollment.courseName || 'Course';
+                    const courseCode = enrollment.CourseCode || enrollment.courseCode || '';
+                    const credits = enrollment.CreditHours || enrollment.creditHours || 0;
+                    const status = enrollment.Status || enrollment.status || 'Enrolled';
+                    const finalGrade = enrollment.FinalGrade || enrollment.finalGrade;
+                    const gradeLetter = enrollment.GradeLetter || enrollment.gradeLetter;
+                    
+                    // Determine grade display based on status
+                    let gradeDisplay, letterDisplay, gradeColor;
+                    
+                    if (status === 'Rejected') {
+                        // Rejected students: show 0 and "Not graded"
+                        gradeDisplay = '0.00';
+                        letterDisplay = 'Not graded';
+                        gradeColor = 'secondary';
+                    } else {
+                        // Enrolled/other students: show actual grade or default 30 with F
+                        const hasGrade = finalGrade !== null && finalGrade !== undefined && finalGrade > 0;
+                        gradeDisplay = hasGrade ? finalGrade.toFixed(2) : '30.00';
+                        letterDisplay = gradeLetter || (hasGrade ? this.getLetterGrade(finalGrade) : 'F');
+                        gradeColor = hasGrade ? this.getGradeColor(finalGrade) : 'danger';
+                    }
                 // Initialize pagination for grades table
                 this.gradesPagination = window.createPagination({
                     itemsPerPage: 10,
@@ -1324,40 +1349,6 @@ class StudentDashboard {
                                 <tr>
                                     <td>
                                         <strong>${courseName}</strong>
-                                        <br><small class="text-muted">${courseCode}</small>
-                                    </td>
-                                    <td><span class="badge bg-light text-dark">${credits} credits</span></td>
-                                    <td><span class="badge bg-${statusBadgeClass}">${status}</span></td>
-                                    <td><strong>${gradeDisplay}</strong></td>
-                                    <td>
-                                        ${status === 'Rejected' 
-                                            ? '<span class="text-muted">Not graded</span>'
-                                            : `<span class="badge bg-${gradeColor}">${letterDisplay}</span>`}
-                                    </td>
-                                </tr>
-                            `;
-                        }).join('');
-                    }
-                });
-                
-                // Set data and render pagination controls
-                this.gradesPagination.setData(enrollments);
-                this.gradesPagination.renderControls('gradesPaginationControls');
-                
-                console.log('✅ Grades loaded successfully');
-                
-                // Initialize search functionality
-                this.initializeGradesSearch();
-            } else {
-                console.error('❌ Failed to load grades:', response.error);
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Failed to load grades</td></tr>';
-            }
-        } catch (error) {
-            console.error('❌ Error loading grades:', error);
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error loading grades</td></tr>';
-        }
-    }
-
     initializeGradesSearch() {
         const searchInput = document.getElementById('gradesSearchInput');
         if (!searchInput || !this.gradesPagination) return;
@@ -1379,6 +1370,16 @@ class StudentDashboard {
             
             // Re-render pagination controls
             this.gradesPagination.renderControls('gradesPaginationControls');
+        });
+    }               tbody.innerHTML += '<tr id="noResultsRow"><td colspan="5" class="text-center text-muted"><i class="bi bi-search"></i> No courses found matching your search.</td></tr>';
+                }
+            } else {
+                // Remove "no results" message if it exists
+                const noResultsRow = document.getElementById('noResultsRow');
+                if (noResultsRow) {
+                    noResultsRow.remove();
+                }
+            }
         });
     }
 

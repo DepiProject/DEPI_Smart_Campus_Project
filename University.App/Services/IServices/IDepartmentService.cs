@@ -18,5 +18,8 @@ namespace University.App.Services.IServices
         Task<bool> PermanentlyDeleteDepartment(int id);
         Task<(bool CanDelete, string Reason, int RelatedDataCount)> CanPermanentlyDeleteDepartment(int id);
         Task<IEnumerable<DepartmentDTO>> GetAllDepartmentsIncludingDeleted();
+
+        // Auto-assign head functionality
+        Task<(bool HeadAssigned, string Message, int InstructorCount)> CheckAndAutoAssignDepartmentHeadAsync(int departmentId);
     }
 }

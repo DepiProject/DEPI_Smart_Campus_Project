@@ -39,6 +39,16 @@ namespace University.Infra.Repositories.Users
                 .ToListAsync();
         }
 
+        public async Task<Instructor?> GetFirstInstructorByDepartmentAsync(int departmentId)
+        {
+            return await _context.Instructors
+                .Include(i => i.User)
+                .Include(i => i.Department)
+                .Where(i => i.DepartmentId == departmentId && !i.IsDeleted)
+                .OrderBy(i => i.InstructorId)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<bool> IsHeadOfAnyDepartmentAsync(int instructorId)
         {
             return await _context.Departments

@@ -4,57 +4,6 @@
 // =====================================================
 
 // ===== ATTENDANCE SECTION =====
-
-// Custom Confirmation Dialog Helper
-InstructorDashboard.prototype.showConfirmDialog = function(title, message, confirmText = 'Confirm', type = 'danger') {
-    return new Promise((resolve) => {
-        const modalId = 'confirmDialog_' + Date.now();
-        const iconClass = type === 'danger' ? 'bi-exclamation-triangle-fill text-danger' : 'bi-question-circle-fill text-warning';
-        
-        const modalHtml = `
-            <div class="modal fade" id="${modalId}" tabindex="-1">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header border-0">
-                            <h5 class="modal-title">
-                                <i class="bi ${iconClass} me-2"></i>${title}
-                            </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <p class="mb-0">${message}</p>
-                        </div>
-                        <div class="modal-footer border-0">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                <i class="bi bi-x-lg"></i> Cancel
-                            </button>
-                            <button type="button" class="btn btn-${type}" id="confirmBtn_${modalId}">
-                                <i class="bi bi-trash"></i> ${confirmText}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        const modalElement = document.getElementById(modalId);
-        const modal = new bootstrap.Modal(modalElement);
-        
-        document.getElementById('confirmBtn_' + modalId).addEventListener('click', () => {
-            modal.hide();
-            resolve(true);
-        });
-        
-        modalElement.addEventListener('hidden.bs.modal', () => {
-            modalElement.remove();
-            resolve(false);
-        });
-        
-        modal.show();
-    });
-};
-
 InstructorDashboard.prototype.loadAttendance = async function() {
     console.log('📋 Loading attendance management...');
     console.log('📌 Current Instructor ID:', this.currentInstructorId);
@@ -115,32 +64,9 @@ InstructorDashboard.prototype.loadAttendanceStats = async function() {
             courses = [courses];
         }
 
-        console.log(`📊 Found ${courses.length} courses`);
-        
         let allRecords = [];
         for (const course of courses) {
-            let courseId = course.id || course.Id || course.courseId || course.CourseId;
-            const courseCode = course.courseCode || course.CourseCode || '';
-            
-            if (!courseId && courseCode) {
-                console.log(`🔍 Course ID not found for ${courseCode}, fetching details...`);
-                try {
-                    const courseDetailsResponse = await API.request(`/Course/code/${courseCode}`);
-                    if (courseDetailsResponse.success) {
-                        const courseData = courseDetailsResponse.data?.data;
-                        courseId = courseData?.id || courseData?.Id;
-                        console.log(`✅ Resolved course ID ${courseId} for ${courseCode}`);
-                    }
-                } catch (err) {
-                    console.warn(`⚠️ Could not resolve course ID for ${courseCode}:`, err);
-                }
-            }
-            
-            if (!courseId) {
-                console.warn(`⚠️ Skipping course - no ID available: ${courseCode}`);
-                continue;
-            }
-            
+            const courseId = course.id || course.Id || course.courseId || course.CourseId;
             try {
                 const attendanceResponse = await API.request(`/Attendance/filter?courseId=${courseId}`, {
                     method: 'GET'
@@ -150,16 +76,12 @@ InstructorDashboard.prototype.loadAttendanceStats = async function() {
                     if (!Array.isArray(records)) {
                         records = [records];
                     }
-                    records = records.filter(r => r && Object.keys(r).length > 0);
-                    console.log(`✅ Loaded ${records.length} records for course ${courseCode || courseId}`);
                     allRecords = allRecords.concat(records);
                 }
             } catch (err) {
                 console.warn('Could not load attendance for course:', courseId);
             }
         }
-        
-        console.log(`📊 Total attendance records: ${allRecords.length}`);
 
         const stats = {
             total: allRecords.length,
@@ -209,40 +131,16 @@ InstructorDashboard.prototype.loadAttendanceRecords = async function() {
 
         const fromDate = document.getElementById('filterFromDate').value;
         const toDate = document.getElementById('filterToDate').value;
-        
-        console.log(`📋 Filter values - From: ${fromDate || 'None'}, To: ${toDate || 'None'}`);
 
         let records = [];
         for (const course of courses) {
-            let courseId = course.id || course.Id || course.courseId || course.CourseId;
-            const courseCode = course.courseCode || course.CourseCode || '';
+            const courseId = course.id || course.Id || course.courseId || course.CourseId;
             const courseName = course.name || course.Name || course.courseName || course.CourseName;
-            
-            if (!courseId && courseCode) {
-                console.log(`🔍 Course ID not found for ${courseCode}, fetching details...`);
-                try {
-                    const courseDetailsResponse = await API.request(`/Course/code/${courseCode}`);
-                    if (courseDetailsResponse.success) {
-                        const courseData = courseDetailsResponse.data?.data;
-                        courseId = courseData?.id || courseData?.Id;
-                        console.log(`✅ Resolved course ID ${courseId} for ${courseCode}`);
-                    }
-                } catch (err) {
-                    console.warn(`⚠️ Could not resolve course ID for ${courseCode}:`, err);
-                }
-            }
-            
-            if (!courseId) {
-                console.warn(`⚠️ Skipping course - no ID available: ${courseCode}`);
-                continue;
-            }
             
             try {
                 let url = `/Attendance/filter?courseId=${courseId}`;
-                if (fromDate) url += `&from=${fromDate}T00:00:00`;
-                if (toDate) url += `&to=${toDate}T23:59:59`;
-                
-                console.log(`📡 Calling API: ${url}`);
+                if (fromDate) url += `&from=${fromDate}`;
+                if (toDate) url += `&to=${toDate}`;
                 
                 const attendanceResponse = await API.request(url, {
                     method: 'GET'
@@ -253,54 +151,31 @@ InstructorDashboard.prototype.loadAttendanceRecords = async function() {
                     if (!Array.isArray(courseRecords)) {
                         courseRecords = [courseRecords];
                     }
-                    courseRecords = courseRecords.filter(r => r && Object.keys(r).length > 0);
                     courseRecords = courseRecords.map(r => ({
                         ...r,
-                        courseName: courseName,
-                        courseCode: courseCode
+                        courseName: courseName
                     }));
-                    console.log(`✅ Loaded ${courseRecords.length} records for course ${courseCode || courseId}`);
                     records = records.concat(courseRecords);
                 }
             } catch (err) {
                 console.warn('Could not load attendance for course:', courseId);
             }
         }
-        
-        console.log(`📊 Total records before filter: ${records.length}`);
 
         if (fromDate || toDate) {
-            console.log(`🔍 Applying client-side date filter...`);
             records = records.filter(record => {
-                const recordDateStr = (record.date || record.Date || '').split('T')[0];
-                
-                console.log(`Checking record date: ${recordDateStr} against range ${fromDate} to ${toDate}`);
-                
-                if (fromDate && toDate) {
-                    return recordDateStr >= fromDate && recordDateStr <= toDate;
-                } else if (fromDate) {
-                    return recordDateStr >= fromDate;
-                } else if (toDate) {
-                    return recordDateStr <= toDate;
-                }
+                const recordDate = new Date(record.date || record.Date);
+                if (fromDate && recordDate < new Date(fromDate)) return false;
+                if (toDate && recordDate > new Date(toDate)) return false;
                 return true;
             });
-            console.log(`✅ Records after filter: ${records.length}`);
         }
 
         records.sort((a, b) => new Date(b.date || b.Date) - new Date(a.date || a.Date));
 
         const tbody = document.getElementById('attendanceRecordsBody');
         if (records.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="4" class="text-center text-muted p-4">
-                        <i class="bi bi-inbox" style="font-size: 2rem; opacity: 0.3;"></i>
-                        <p class="mt-2 mb-0">No attendance records found</p>
-                        ${fromDate || toDate ? '<small>Try adjusting your filter dates</small>' : ''}
-                    </td>
-                </tr>
-            `;
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No records found</td></tr>';
             return;
         }
 
@@ -312,62 +187,39 @@ InstructorDashboard.prototype.loadAttendanceRecords = async function() {
                     tbody.innerHTML = pageData.map(record => {
                         const studentName = record.studentName || record.StudentName || 'Unknown';
                         const courseName = record.courseName || record.CourseName || 'Unknown';
-                        const courseCode = record.courseCode || record.CourseCode || '';
-                        const date = new Date(record.date || record.Date);
-                        const formattedDate = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                        const date = new Date(record.date || record.Date).toLocaleDateString();
                         const status = record.status || record.Status || '';
                         const attendanceId = record.id || record.Id || record.attendanceId || record.AttendanceId;
 
                         let statusBadge = '';
-                        let statusIcon = '';
                         switch (status.toLowerCase()) {
                             case 'present':
-                                statusIcon = '<i class="bi bi-check-circle-fill text-success"></i>';
                                 statusBadge = '<span class="status-badge status-present">Present</span>';
                                 break;
                             case 'absent':
-                                statusIcon = '<i class="bi bi-x-circle-fill text-danger"></i>';
                                 statusBadge = '<span class="status-badge status-absent">Absent</span>';
                                 break;
                             case 'late':
-                                statusIcon = '<i class="bi bi-clock-fill text-warning"></i>';
                                 statusBadge = '<span class="status-badge status-late">Late</span>';
                                 break;
                             case 'excused':
-                                statusIcon = '<i class="bi bi-info-circle-fill text-info"></i>';
                                 statusBadge = '<span class="status-badge status-excused">Excused</span>';
                                 break;
                             default:
-                                statusIcon = '<i class="bi bi-question-circle"></i>';
                                 statusBadge = `<span class="status-badge">${status}</span>`;
                         }
 
                         return `
                             <tr>
+                                <td>${studentName}</td>
+                                <td>${courseName}</td>
+                                <td>${date}</td>
+                                <td>${statusBadge}</td>
                                 <td>
-                                    <i class="bi bi-person-fill text-primary me-1"></i>
-                                    <strong>${studentName}</strong>
-                                </td>
-                                <td>
-                                    <i class="bi bi-book text-info me-1"></i>
-                                    ${courseCode ? `<strong>${courseCode}</strong> - ` : ''}${courseName}
-                                </td>
-                                <td>
-                                    <i class="bi bi-calendar-event text-muted me-1"></i>
-                                    ${formattedDate}
-                                </td>
-                                <td>
-                                    ${statusIcon} ${statusBadge}
-                                </td>
-                                <!--
-                                <td>
-                                    <button class="btn btn-sm btn-outline-danger" 
-                                            ${!attendanceId ? 'disabled' : ''}
-                                            onclick="instructorDashboard.deleteAttendance(${attendanceId})">
+                                    <button class="btn btn-sm btn-outline-danger" onclick="instructorDashboard.deleteAttendance(${attendanceId})">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
-                                -->
                             </tr>
                         `;
                     }).join('');
@@ -382,50 +234,6 @@ InstructorDashboard.prototype.loadAttendanceRecords = async function() {
     } catch (error) {
         console.error('Error loading attendance records:', error);
     }
-};
-
-// Search Attendance Records (Client-Side Filtering)
-InstructorDashboard.prototype.searchAttendanceRecords = function() {
-    const searchInput = document.getElementById('attendanceSearchInput');
-    if (!searchInput || !this.attendancePagination) return;
-    
-    const searchTerm = searchInput.value.toLowerCase().trim();
-    
-    if (!searchTerm) {
-        // Clear search filter
-        this.attendancePagination.removeFilter('search');
-    } else {
-        // Apply search filter
-        this.attendancePagination.addFilter('search', (record) => {
-            const studentName = (record.studentName || record.StudentName || '').toLowerCase();
-            const courseName = (record.courseName || record.CourseName || '').toLowerCase();
-            const courseCode = (record.courseCode || record.CourseCode || '').toLowerCase();
-            const status = (record.status || record.Status || '').toLowerCase();
-            const date = new Date(record.date || record.Date).toLocaleDateString('en-US').toLowerCase();
-            
-            const searchText = studentName + ' ' + courseName + ' ' + courseCode + ' ' + status + ' ' + date;
-            return searchText.includes(searchTerm);
-        });
-    }
-    
-    // Re-render pagination controls
-    this.attendancePagination.renderControls('attendancePaginationControls');
-};
-
-// Clear Attendance Search
-InstructorDashboard.prototype.clearAttendanceSearch = function() {
-    const searchInput = document.getElementById('attendanceSearchInput');
-    if (!searchInput) return;
-    
-    searchInput.value = '';
-    
-    if (this.attendancePagination) {
-        // Clear search filter from pagination
-        this.attendancePagination.removeFilter('search');
-        this.attendancePagination.renderControls('attendancePaginationControls');
-    }
-    
-    searchInput.focus();
 };
 
 InstructorDashboard.prototype.loadRecentActivity = async function() {
@@ -452,29 +260,7 @@ InstructorDashboard.prototype.loadRecentActivity = async function() {
 
         let records = [];
         for (const course of courses) {
-            let courseId = course.id || course.Id || course.courseId || course.CourseId;
-            const courseCode = course.courseCode || course.CourseCode || '';
-            const courseName = course.name || course.Name || course.courseName || course.CourseName;
-            
-            if (!courseId && courseCode) {
-                console.log(`🔍 Course ID not found for ${courseCode}, fetching details...`);
-                try {
-                    const courseDetailsResponse = await API.request(`/Course/code/${courseCode}`);
-                    if (courseDetailsResponse.success) {
-                        const courseData = courseDetailsResponse.data?.data;
-                        courseId = courseData?.id || courseData?.Id;
-                        console.log(`✅ Resolved course ID ${courseId} for ${courseCode}`);
-                    }
-                } catch (err) {
-                    console.warn(`⚠️ Could not resolve course ID for ${courseCode}:`, err);
-                }
-            }
-            
-            if (!courseId) {
-                console.warn(`⚠️ Skipping course - no ID available: ${courseCode}`);
-                continue;
-            }
-            
+            const courseId = course.id || course.Id || course.courseId || course.CourseId;
             try {
                 const attendanceResponse = await API.request(`/Attendance/filter?courseId=${courseId}`, {
                     method: 'GET'
@@ -484,12 +270,6 @@ InstructorDashboard.prototype.loadRecentActivity = async function() {
                     if (!Array.isArray(courseRecords)) {
                         courseRecords = [courseRecords];
                     }
-                    courseRecords = courseRecords.filter(r => r && Object.keys(r).length > 0);
-                    courseRecords = courseRecords.map(r => ({
-                        ...r,
-                        courseName: courseName,
-                        courseCode: courseCode
-                    }));
                     records = records.concat(courseRecords);
                 }
             } catch (err) {
@@ -508,11 +288,8 @@ InstructorDashboard.prototype.loadRecentActivity = async function() {
 
         container.innerHTML = records.map(record => {
             const studentName = record.studentName || record.StudentName || 'Unknown';
-            const courseName = record.courseName || record.CourseName || 'Unknown Course';
-            const courseCode = record.courseCode || record.CourseCode || '';
             const status = record.status || record.Status || '';
-            const date = new Date(record.date || record.Date);
-            const formattedDate = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            const date = new Date(record.date || record.Date).toLocaleDateString();
             
             let icon = '';
             let colorClass = '';
@@ -541,13 +318,7 @@ InstructorDashboard.prototype.loadRecentActivity = async function() {
                         <i class="bi bi-${icon} ${colorClass} me-2 mt-1"></i>
                         <div class="flex-grow-1">
                             <p class="mb-0 small"><strong>${studentName}</strong></p>
-                            <p class="mb-0 small text-muted">
-                                <i class="bi bi-book"></i> ${courseCode ? courseCode + ' - ' : ''}${courseName}
-                            </p>
-                            <p class="mb-0 small text-muted">
-                                <i class="bi bi-calendar-event"></i> ${formattedDate} - 
-                                <span class="badge badge-sm bg-${colorClass.replace('text-', '')}">${status}</span>
-                            </p>
+                            <p class="mb-0 small text-muted">${status} - ${date}</p>
                         </div>
                     </div>
                 </div>
@@ -560,70 +331,43 @@ InstructorDashboard.prototype.loadRecentActivity = async function() {
 };
 
 InstructorDashboard.prototype.deleteAttendance = async function(attendanceId) {
-    console.log('🗑️ Attempting to delete attendance ID:', attendanceId);
-    
-    const confirmed = await this.showConfirmDialog(
-        'Delete Attendance Record',
-        'Are you sure you want to permanently delete this attendance record? This action cannot be undone.',
-        'Delete',
-        'danger'
-    );
-    
-    if (!confirmed) {
-        console.log('❌ Delete cancelled by user');
+    if (!confirm('Are you sure you want to delete this attendance record?')) {
         return;
     }
 
     try {
-        console.log(`📤 Sending DELETE request to /Attendance/${attendanceId}`);
-        
         const response = await API.request(`/Attendance/${attendanceId}`, {
             method: 'DELETE'
         });
-        
-        console.log('📥 Delete response:', response);
 
-        if (response.success || response.statusCode === 200) {
-            this.showToast('Success', 'Attendance record deleted successfully', 'success');
-            
+        if (response.success) {
+            this.showToast('Success', 'Attendance record deleted', 'success');
             await this.loadAttendanceStats();
             await this.loadAttendanceRecords();
             await this.loadRecentActivity();
         } else {
-            const errorMsg = response.error || response.message || 'Failed to delete attendance record';
-            console.error('❌ Delete failed:', errorMsg);
-            this.showToast('Error', errorMsg, 'error');
+            this.showToast('Error', 'Failed to delete attendance record', 'error');
         }
 
     } catch (error) {
-        console.error('❌ Error deleting attendance:', error);
-        const errorMsg = error.message || 'Failed to delete attendance record';
-        this.showToast('Error', errorMsg, 'error');
+        console.error('Error deleting attendance:', error);
+        this.showToast('Error', 'Failed to delete attendance record', 'error');
     }
 };
 
 InstructorDashboard.prototype.refreshAttendance = async function() {
     console.log('🔄 Refreshing attendance data...');
     
-    try {
-        this.showToast('Info', 'Refreshing attendance data...', 'info');
-        
-        const fromDate = document.getElementById('filterFromDate');
-        const toDate = document.getElementById('filterToDate');
-        if (fromDate) fromDate.value = '';
-        if (toDate) toDate.value = '';
-        
-        await this.loadAttendanceStats();
-        await this.loadAttendanceRecords();
-        await this.loadRecentActivity();
-        
-        console.log('✅ Refresh completed successfully');
-        this.showToast('Success', 'Attendance data refreshed successfully!', 'success');
-        
-    } catch (error) {
-        console.error('❌ Error refreshing attendance:', error);
-        this.showToast('Error', 'Failed to refresh: ' + error.message, 'error');
-    }
+    const fromDate = document.getElementById('filterFromDate');
+    const toDate = document.getElementById('filterToDate');
+    if (fromDate) fromDate.value = '';
+    if (toDate) toDate.value = '';
+    
+    await this.loadAttendanceStats();
+    await this.loadAttendanceRecords();
+    await this.loadRecentActivity();
+    
+    this.showToast('Success', 'Attendance data refreshed successfully!', 'success');
 };
 
 // ===== EXCEL UPLOAD FUNCTIONS =====

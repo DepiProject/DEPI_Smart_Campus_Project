@@ -281,5 +281,57 @@ namespace University.API.Controllers
                 return StatusCode(500, new { Success = false, Message = "An error occurred while checking department", Error = ex.Message });
             }
         }
+
+        // ========== AUTO-ASSIGN HEAD FUNCTIONALITY ==========
+
+        /// <summary>
+        /// Checks if department has exactly 1 instructor and no head assigned.
+        /// If conditions are met, automatically assigns the first instructor as department head.
+        /// This provides a friendly user experience by reducing manual work.
+        /// </summary>
+        /// <param name="departmentId">The department ID to check and auto-assign</param>
+        /// <returns>Result indicating if head was assigned, message, and instructor count</returns>
+        [HttpPost("{departmentId}/auto-assign-head")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult> AutoAssignDepartmentHead(int departmentId)
+        {
+            if (departmentId <= 0)
+                return BadRequest(new { Success = false, Message = "Invalid department ID" });
+
+            try
+            {
+                var result = await _departmentService.CheckAndAutoAssignDepartmentHeadAsync(departmentId);
+                
+                if (result.HeadAssigned)
+                {
+                    return Ok(new 
+                    { 
+                        Success = true, 
+                        HeadAssigned = true,
+                        Message = result.Message,
+                        InstructorCount = result.InstructorCount
+                    });
+                }
+                else
+                {
+                    return Ok(new 
+                    { 
+                        Success = true, 
+                        HeadAssigned = false,
+                        Message = result.Message,
+                        InstructorCount = result.InstructorCount
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new 
+                { 
+                    Success = false, 
+                    Message = "An error occurred while auto-assigning department head", 
+                    Error = ex.Message 
+                });
+            }
+        }
     }
 }

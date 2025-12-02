@@ -911,7 +911,10 @@
                                         placeholder="instructor@university.edu.eg"
                                         pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(edu|ac)\.[a-zA-Z]{2,}$">
                                 </div>
-                                <div class="invalid-feedback" id="instructorEmailError"></div>
+                                <div class="invalid-feedback" id="instructorEmailError">
+                                    <i class="bi bi-exclamation-circle"></i> Must be university format (e.g.,
+                                    user@example.edu.eg or user@example.ac.eg)
+                                </div>
                             </div>
 
                             <!-- Department -->
@@ -924,7 +927,10 @@
                                         <option value="">Select Department</option>
                                     </select>
                                 </div>
-                                <div class="invalid-feedback" id="instructorDepartmentError"></div>
+                                <div class="invalid-feedback" id="instructorDepartmentError">
+                                    <i class="bi bi-exclamation-circle"></i> Please select a department for the
+                                    instructor
+                                </div>
                             </div>
                         </div>
 
@@ -938,7 +944,10 @@
                                     <input type="text" class="form-control" id="instructorFirstName" required
                                         placeholder="John" maxlength="50" pattern="^[a-zA-Z\s\-']+$">
                                 </div>
-                                <div class="invalid-feedback" id="instructorFirstNameError"></div>
+                                <div class="invalid-feedback" id="instructorFirstNameError">
+                                    <i class="bi bi-exclamation-circle"></i> Use only letters, spaces, hyphens, or
+                                    apostrophes (max 50 chars)
+                                </div>
                             </div>
 
                             <!-- Last Name -->
@@ -950,7 +959,10 @@
                                     <input type="text" class="form-control" id="instructorLastName" required
                                         placeholder="Smith" maxlength="50" pattern="^[a-zA-Z\s\-']+$">
                                 </div>
-                                <div class="invalid-feedback" id="instructorLastNameError"></div>
+                                <div class="invalid-feedback" id="instructorLastNameError">
+                                    <i class="bi bi-exclamation-circle"></i> Use only letters, spaces, hyphens, or
+                                    apostrophes (max 50 chars)
+                                </div>
                             </div>
                         </div>
 
@@ -964,7 +976,10 @@
                                     <input type="tel" class="form-control" id="instructorPhone"
                                         placeholder="01012345678" maxlength="11" pattern="^(010|011|012|015)\d{8}$">
                                 </div>
-                                <div class="invalid-feedback" id="instructorPhoneError"></div>
+                                <div class="invalid-feedback" id="instructorPhoneError">
+                                    <i class="bi bi-exclamation-circle"></i> Must start with 010, 011, 012, or 015
+                                    followed by 8 digits (last 8 digits cannot be all the same)
+                                </div>
                             </div>
 
                             <!-- Password (Create mode only) -->
@@ -980,10 +995,17 @@
                                         <i class="bi bi-eye"></i>
                                     </button>
                                 </div>
+                                <div class="invalid-feedback" id="instructorPasswordError">
+                                    <i class="bi bi-exclamation-circle"></i> Min 8 chars: must include UPPERCASE,
+                                    lowercase, number, and special char (@$!%*?&)
+                                </div>
                                 <div class="password-strength mt-1" id="instructorPasswordStrength">
                                     <div class="progress" style="height: 4px;">
                                         <div class="progress-bar" role="progressbar" style="width: 0%"></div>
                                     </div>
+                                    <small class="text-muted d-block mt-1">
+                                        <span id="strengthText" class="text-muted">-</span>
+                                    </small>
                                 </div>
                             </div>
                         </div>

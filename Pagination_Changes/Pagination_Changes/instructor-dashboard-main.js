@@ -15,6 +15,7 @@ class InstructorDashboard {
         this.currentProfile = null;
         this.allCourses = [];
         this.instructorId = null;
+        // Pagination manager for attendance table
         this.attendancePagination = null;
         
         this.initializeEventListeners();
