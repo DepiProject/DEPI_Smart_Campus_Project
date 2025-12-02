@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Take Exam - Smart Campus</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="../css/utilities.css">
+    <link rel="stylesheet" href="../css/archived-pages.css">
+    <style>
+        .exam-timer-card {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 8px 20px rgba(239, 68, 68, 0.25);
+            text-align: center;
+        }
+
+        .exam-timer-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .exam-timer-label {
+            font-size: 0.875rem;
+            opacity: 0.9;
+            margin-top: 0.5rem;
+        }
+
+        .question-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            border: 2px solid var(--sage-100);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+        }
+
+        .question-card:hover {
+            box-shadow: 0 8px 24px rgba(90, 122, 90, 0.12);
+            border-color: var(--sage-300);
+        }
+
+        .question-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--sage-500), var(--sage-600));
+            color: white;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-right: 1rem;
+        }
+
+        .question-text {
+            font-size: 1.1rem;
+            color: var(--sage-900);
+            font-weight: 600;
+            line-height: 1.6;
+        }
+
+        .option-wrapper {
+            margin-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .option-label {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            background: var(--cream-50);
+            border: 2px solid var(--sage-200);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            color: var(--sage-800);
+        }
+
+        .option-label:hover {
+            background: var(--cream-100);
+            border-color: var(--sage-400);
+            transform: translateX(4px);
+        }
+
+        .option-label input[type="radio"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 1rem;
+            cursor: pointer;
+            accent-color: var(--sage-600);
+        }
+
+        .option-label input[type="radio"]:checked + .option-text {
+            font-weight: 600;
+            color: var(--sage-900);
+        }
+
+        .option-label:has(input:checked) {
+            background: var(--sage-100);
+            border-color: var(--sage-600);
+            box-shadow: 0 0 0 3px rgba(90, 122, 90, 0.1);
+        }
+
+        .exam-info-banner {
+            background: linear-gradient(135deg, var(--sage-50), var(--cream-100));
+            border: 2px solid var(--sage-200);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .exam-info-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--sage-800);
+            font-size: 0.95rem;
+        }
+
+        .exam-info-item i {
+            color: var(--sage-600);
+            font-size: 1.25rem;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            text-align: center;
+            border: 3px solid var(--sage-200);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+        }
+
+        .result-score {
+            font-size: 4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--sage-600), var(--sage-800));
+            /* -webkit-background-clip: text; */
+            -webkit-text-fill-color: transparent;
+            margin: 1rem 0;
+        }
+
+        .result-icon {
+            font-size: 5rem;
+            margin-bottom: 1rem;
+        }
+
+        .result-icon.pass {
+            color: #10b981;
+        }
+
+        .result-icon.fail {
+            color: #ef4444;
+        }
+
+        .progress-indicator {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: var(--cream-100);
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .progress-text {
+            font-weight: 600;
+            color: var(--sage-800);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .btn-exam-primary {
+            flex: 1;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, var(--sage-600), var(--sage-700));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-exam-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(90, 122, 90, 0.3);
+        }
+
+        .btn-exam-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-exam-secondary {
+            flex: 1;
+            padding: 1rem 2rem;
+            background: white;
+            color: var(--sage-700);
+            border: 2px solid var(--sage-300);
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-exam-secondary:hover {
+            background: var(--sage-50);
+            border-color: var(--sage-500);
+        }
+
+        .empty-state-exam {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .empty-state-exam i {
+            font-size: 5rem;
+            color: var(--sage-300);
+            margin-bottom: 1.5rem;
+        }
+
+        .empty-state-exam h3 {
+            color: var(--sage-700);
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state-exam p {
+            color: var(--sage-500);
+        }
+
+        @keyframes pulse-timer {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .exam-timer-card.warning {
+            animation: pulse-timer 1s infinite;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Modern Navigation -->
+    <nav class="modern-navbar">
+        <div class="container-fluid px-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="bi bi-mortarboard-fill text-white" style="font-size: 28px;"></i>
+                    <h1 class="text-white m-0" style="font-size: 20px; font-weight: 700;">Smart Campus</h1>
+                </div>
+                <div class="d-flex gap-2">
+                    <button onclick="window.history.back()" class="btn btn-light btn-nav">
+                        <i class="bi bi-arrow-left me-2"></i>Back
+                    </button>
+                    <button id="logoutBtn" class="btn btn-danger btn-nav">
+                        <i class="bi bi-box-arrow-right me-2"></i>Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+                <!-- buttons -->
+ <button type="button"
+        class="btn btn-sm btn-success"
+        onclick="adminDashboard.addQuestion()">
+  <i class="bi bi-plus-lg"></i> Add Question
+</button>
+
+<button type="button"
+        class="btn btn-primary"
+        id="saveExamBtn"
+        onclick="adminDashboard.saveExam()">
+  <span id="examBtnText">Save Exam</span>
+  <span id="examBtnSpinner" class="spinner-border spinner-border-sm d-none"></span>
+</button>
+
+
+
+
+    <!-- Main Content -->
+    <div class="content-wrapper">
+        <!-- Page Header -->
+        <div class="page-header mb-4">
+            <div class="page-header-icon">
+                <i class="bi bi-file-earmark-text-fill"></i>
+            </div>
+            <div class="page-header-content">
+                <h1 class="page-title" id="exam-title">Loading Exam...</h1>
+                <p class="page-subtitle" id="exam-subtitle">Prepare to demonstrate your knowledge</p>
+            </div>
+        </div>
+
+        <!-- Exam Info Banner (before start) -->
+        <div id="exam-info-banner" class="exam-info-banner">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="exam-info-item">
+                        <i class="bi bi-clock-fill"></i>
+                        <div>
+                            <strong>Duration:</strong>
+                            <span id="exam-duration-info">-- minutes</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="exam-info-item">
+                        <i class="bi bi-question-circle-fill"></i>
+                        <div>
+                            <strong>Questions:</strong>
+                            <span id="exam-questions-count">--</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="exam-info-item">
+                        <i class="bi bi-trophy-fill"></i>
+                        <div>
+                            <strong>Passing Score:</strong>
+                            <span id="exam-passing-score">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center mt-4">
+                <button id="start-btn" class="btn-exam-primary" style="max-width: 300px;">
+                    <i class="bi bi-play-fill me-2"></i>Start Exam
+                </button>
+            </div>
+        </div>
+
+        <!-- Timer Card (during exam) -->
+        <div id="timer-card" class="exam-timer-card mb-4" style="display: none;">
+            <div class="exam-timer-value" id="timer">--:--</div>
+            <div class="exam-timer-label">Time Remaining</div>
+        </div>
+
+        <!-- Progress Indicator -->
+        <div id="progress-indicator" class="progress-indicator" style="display: none;">
+            <div class="progress-text">
+                <i class="bi bi-list-check me-2"></i>
+                <span id="answered-count">0</span> of <span id="total-questions">0</span> answered
+            </div>
+            <div class="progress-text">
+                <i class="bi bi-percent me-2"></i>
+                <span id="progress-percentage">0%</span> complete
+            </div>
+        </div>
+
+        <!-- Questions Form -->
+        <form id="questions-form" onsubmit="return false;" style="display: none;">
+            <div id="questions-container"></div>
+
+            <div class="action-buttons">
+                <button id="submit-btn" class="btn-exam-primary" type="button" disabled>
+                    <i class="bi bi-check-circle-fill me-2"></i>Submit Exam
+                </button>
+                <button id="cancel-btn" class="btn-exam-secondary" type="button">
+                    <i class="bi bi-x-circle-fill me-2"></i>Leave Exam
+                </button>
+            </div>
+        </form>
+
+        <!-- Result Container -->
+        <div id="result-container" style="display: none;">
+            <div class="result-card">
+                <div class="result-icon" id="result-icon">
+                    <i class="bi bi-trophy-fill"></i>
+                </div>
+                <h2 style="color: var(--sage-900); font-weight: 800; margin-bottom: 1rem;">Exam Completed!</h2>
+                <div class="result-score" id="score"></div>
+                <div id="meta" style="color: var(--sage-600); font-size: 1.1rem; margin-bottom: 2rem;"></div>
+                <button onclick="window.location.href='student-dashboard.html'" class="btn-exam-primary" style="max-width: 300px;">
+                    <i class="bi bi-house-fill me-2"></i>Back to Dashboard
+                </button>
+                <pre id="result-json" style="display: none;"></pre>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="empty-state-exam">
+            <div class="spinner-border" style="color: var(--sage-600); width: 4rem; height: 4rem;"></div>
+            <h3 class="mt-4">Loading Exam...</h3>
+            <p>Please wait while we prepare your exam</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/exam.js"></script>
+</body>
+
+</html>

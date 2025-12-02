@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rejected Enrollments - Smart Campus Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-mortarboard-fill"></i> Smart Campus Admin
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="admin-dashboard.html">
+                    <i class="bi bi-arrow-left"></i> Back to Dashboard
+                </a>
+                <a class="nav-link" href="#" id="logoutBtn">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="admin-dashboard.html">
+                                <i class="bi bi-speedometer2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#">
+                                <i class="bi bi-x-circle"></i> Rejected Enrollments
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main Content Area -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div
+                    class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="bi bi-x-circle"></i> Rejected Enrollments
+                    </h1>
+                </div>
+
+                <!-- Rejected Enrollments Table -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-x-circle-fill"></i> Rejected & Soft Deleted Enrollments
+                        </h5>
+                        <small>These enrollments are preserved for audit trail and can be restored to Pending
+                            status</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Student</th>
+                                        <th>Course</th>
+                                        <th>Code</th>
+                                        <th>Department</th>
+                                        <th>Credits</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rejectedEnrollmentsTableBody">
+                                    <tr>
+                                        <td colspan="7" class="text-center">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info mt-3">
+                    <i class="bi bi-info-circle"></i> <strong>About Rejected Enrollments:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li><strong>Restore:</strong> Re-activates the enrollment and sets status back to "Pending" for
+                            admin review and approval</li>
+                        <li>Rejected enrollments are preserved in the database for audit trail and compliance</li>
+                        <li>These enrollments do not appear in active enrollment listings or student counts</li>
+                        <li>Soft-deleted records maintain data integrity and historical tracking</li>
+                    </ul>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle"></i> Confirm Permanent Delete
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="deleteMessage">Are you sure you want to permanently delete this enrollment?</p>
+                    <p class="text-danger"><strong>⚠️ Warning:</strong> This action cannot be undone!</p>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete Forever</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" id="toastContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/api.js"></script>
+    <script>
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', async function () {
+            // Check authentication
+            const token = localStorage.getItem('authToken');
+            if (!token || API.isTokenExpired()) {
+                window.location.href = '../index.html';
+                return;
+            }
+
+            // Check if user is admin
+            const role = API.getUserRole();
+            if (role !== 'Admin') {
+                alert('Access denied. Admin privileges required.');
+                window.location.href = '../index.html';
+                return;
+            }
+
+            // Create dashboard helper
+            const dashboard = {
+                showToast: function (title, message, type) {
+                    const toastContainer = document.getElementById('toastContainer');
+                    const toastId = 'toast-' + Date.now();
+                    const bgClass = type === 'success' ? 'bg-success' : type === 'error' ? 'bg-danger' : 'bg-warning';
+
+                    const toastHtml = `
+                        <div class="toast align-items-center text-white ${bgClass} border-0" id="${toastId}" role="alert">
+                            <div class="d-flex">
+                                <div class="toast-body">
+                                    <strong>${title}:</strong> ${message}
+                                </div>
+                                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                            </div>
+                        </div>
+                    `;
+                    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+                    const toastEl = document.getElementById(toastId);
+                    const toast = new bootstrap.Toast(toastEl);
+                    toast.show();
+                },
+
+                loadRejectedEnrollments: async function () {
+                    console.log('🔄 Loading rejected enrollments...');
+                    // Force fresh data by adding timestamp
+                    const response = await API.enrollment.getAllIncludingDeleted();
+                    console.log('📊 Enrollments response:', response);
+
+                    const tbody = document.getElementById('rejectedEnrollmentsTableBody');
+
+                    if (response.success && response.data) {
+                        let enrollments = response.data.Data || response.data.data || response.data;
+                        console.log('📋 Total enrollments:', enrollments.length);
+
+                        if (!Array.isArray(enrollments)) {
+                            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Unexpected data format</td></tr>';
+                            return;
+                        }
+
+                        const rejectedEnrollments = enrollments.filter(e =>
+                            (e.Status === 'Rejected' || e.status === 'Rejected') ||
+                            (e.IsDeleted || e.isDeleted)
+                        );
+
+                        console.log('🗑️ Rejected/Deleted enrollments:', rejectedEnrollments.length);
+
+                        if (rejectedEnrollments.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No rejected enrollments found</td></tr>';
+                            return;
+                        }
+
+                        tbody.innerHTML = rejectedEnrollments.map(enroll => {
+                            const studentName = enroll.StudentName || enroll.studentName || 'N/A';
+                            const courseName = enroll.CourseName || enroll.courseName || 'N/A';
+                            const courseCode = enroll.CourseCode || enroll.courseCode || '-';
+                            const deptName = enroll.DepartmentName || enroll.departmentName || '-';
+                            const credits = enroll.CreditHours || enroll.creditHours || '-';
+                            const enrollmentId = enroll.EnrollmentId || enroll.enrollmentId;
+                            const enrollDate = enroll.EnrollmentDate || enroll.enrollmentDate;
+                            const isDeleted = enroll.IsDeleted || enroll.isDeleted;
+                            const dateDisplay = enrollDate ? new Date(enrollDate).toLocaleDateString() : '-';
+                            const statusBadge = isDeleted ? 'bg-secondary' : 'bg-danger';
+                            const statusText = isDeleted ? 'Deleted' : 'Rejected';
+
+                            return `
+                            <tr class="table-secondary">
+                                <td><small>${studentName}</small></td>
+                                <td>
+                                    <small>${courseName}</small>
+                                    <span class="badge ${statusBadge} ms-2">${statusText}</span>
+                                </td>
+                                <td><strong>${courseCode}</strong></td>
+                                <td><small>${deptName}</small></td>
+                                <td>${credits}</td>
+                                <td><small>${dateDisplay}</small></td>
+                                <td>
+                                    <button class="btn btn-sm btn-success" onclick="restoreEnrollment(${enrollmentId})" title="Restore to Pending">
+                                        <i class="bi bi-arrow-counterclockwise"></i> Restore
+                                    </button>
+                                </td>
+                            </tr>
+                        `}).join('');
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Failed to load rejected enrollments</td></tr>';
+                    }
+                }
+            };
+
+            // Global functions
+            window.restoreEnrollment = async function (id) {
+                console.log('↩️ Attempting to restore enrollment:', id);
+                try {
+                    const response = await API.enrollment.restore(id);
+                    console.log('📊 Restore response:', response);
+                    console.log('Response data:', response.data);
+
+                    if (response.success || response.status === 200) {
+                        dashboard.showToast('Success', 'Enrollment restored successfully!', 'success');
+                        // Wait a moment before reloading
+                        setTimeout(() => {
+                            dashboard.loadRejectedEnrollments();
+                        }, 500);
+                    } else {
+                        const errorMsg = response.data?.Message || response.data?.message || response.error || 'Failed to restore enrollment';
+                        console.error('❌ Restore failed:', errorMsg);
+                        dashboard.showToast('Error', errorMsg, 'error');
+                    }
+                } catch (error) {
+                    console.error('❌ Restore exception:', error);
+                    dashboard.showToast('Error', error.message || 'Failed to restore enrollment', 'error');
+                }
+            };
+
+            window.confirmPermanentDelete = function (id) {
+                const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+                window.deleteConfirmId = id;
+                deleteModal.show();
+            };
+
+            // Load data
+            await dashboard.loadRejectedEnrollments();
+
+            // Logout button
+            document.getElementById('logoutBtn').addEventListener('click', function (e) {
+                e.preventDefault();
+                API.logout();
+                window.location.href = '../index.html';
+            });
+
+            // Confirm delete button
+            document.getElementById('confirmDeleteBtn').addEventListener('click', async function () {
+                const id = window.deleteConfirmId;
+                if (!id) return;
+
+                try {
+                    console.log('🔥 Calling hardDelete for enrollment:', id);
+                    const response = await API.enrollment.hardDelete(id);
+                    console.log('📊 Delete response:', response);
+                    console.log('📊 Response status:', response.status);
+                    console.log('📊 Response success:', response.success);
+                    console.log('📊 Response data:', response.data);
+
+                    const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'));
+                    deleteModal.hide();
+
+                    if (response.success && (response.status === 200 || response.status === 204)) {
+                        dashboard.showToast('Success', 'Enrollment permanently deleted!', 'success');
+                        // Immediate reload to verify deletion
+                        console.log('⏳ Waiting 1 second for database commit...');
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        console.log('🔄 Reloading rejected enrollments list...');
+                        await dashboard.loadRejectedEnrollments();
+                        console.log('✅ Reload complete');
+                    } else {
+                        const errorMsg = response.message || response.Message || response.error || 'Failed to delete enrollment';
+                        console.error('❌ Delete failed:', errorMsg);
+                        dashboard.showToast('Error', errorMsg, 'error');
+                    }
+                } catch (error) {
+                    console.error('❌ Delete error:', error);
+                    dashboard.showToast('Error', error.message || 'Failed to delete enrollment', 'error');
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

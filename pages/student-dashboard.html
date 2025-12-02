@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - Smart Campus</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../css/modern-theme.css">
+    <link rel="stylesheet" href="../css/utilities.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <style>
+        body {
+            background: var(--cream-50);
+            padding-left: 80px;
+        }
+
+        .main-content {
+            margin-left: 0;
+            padding: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding-left: 0;
+            }
+
+            .icon-sidebar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Icon Sidebar Navigation -->
+    <div class="icon-sidebar">
+        <a href="#dashboard" data-section="dashboard" class="icon-sidebar-item active">
+            <i class="bi bi-speedometer2"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="#courses" data-section="courses" class="icon-sidebar-item">
+            <i class="bi bi-book"></i>
+            <span>Courses</span>
+        </a>
+        <a href="#attendance" data-section="attendance" class="icon-sidebar-item">
+            <i class="bi bi-calendar-check"></i>
+            <span>Attendance</span>
+        </a>
+        <a href="#exams" data-section="exams" class="icon-sidebar-item">
+            <i class="bi bi-journal-text"></i>
+            <span>Exams</span>
+        </a>
+        <a href="#grades" data-section="grades" class="icon-sidebar-item">
+            <i class="bi bi-trophy"></i>
+            <span>Grades</span>
+        </a>
+        <a href="#profile" data-section="profile" class="icon-sidebar-item">
+            <i class="bi bi-person-circle"></i>
+            <span>Profile</span>
+        </a>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="modern-nav">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <span class="navbar-brand mb-0 h5 text-white fw-bold">
+                <i class="bi bi-mortarboard-fill"></i> Smart Campus Student
+            </span>
+            <div class="dropdown">
+                <button class="btn user-dropdown-btn dropdown-toggle" type="button" id="userDropdown"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-person-circle"></i> <span id="userName">Student</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end user-dropdown-menu" aria-labelledby="userDropdown">
+                    <li><a class="dropdown-item" href="#profile" data-section="profile"
+                            onclick="document.querySelector('.icon-sidebar-item[data-section=profile]').click()"><i
+                                class="bi bi-person-circle"></i> My Profile</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-gear"></i> Settings</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-question-circle"></i> Help</a></li>
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+                    <li><a class="dropdown-item text-danger" href="#" id="logoutBtn"><i
+                                class="bi bi-box-arrow-right"></i>
+                            Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center py-4">
+                <h1 class="h2">Student Dashboard</h1>
+            </div>
+
+            <!-- Dashboard Overview -->
+            <div id="dashboard" class="section">
+                <div class="row g-4 mb-4">
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100 hover-card hover-lift">
+                            <div class="card-body text-center position-relative">
+                                <div class="stat-icon stat-icon-primary mx-auto animate-float">
+                                    <i class="bi bi-book-fill"></i>
+                                </div>
+                                <h6 class="card-title text-muted text-uppercase small">Enrolled Courses</h6>
+                                <h2 class="card-text counter" id="totalEnrolledCourses">--</h2>
+                                <small class="text-muted"><i class="bi bi-calendar3"></i> This semester</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100 hover-card hover-lift">
+                            <div class="card-body text-center position-relative">
+                                <div class="stat-icon stat-icon-success mx-auto animate-float"
+                                    style="animation-delay: 0.1s;">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                </div>
+                                <h6 class="card-title text-muted text-uppercase small">Attendance</h6>
+                                <h2 class="card-text text-success counter" id="studentAttendance">--</h2>
+                                <small class="text-success"><i class="bi bi-graph-up-arrow"></i> Good
+                                    standing</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100 hover-card hover-lift">
+                            <div class="card-body text-center position-relative">
+                                <div class="stat-icon stat-icon-warning mx-auto animate-float"
+                                    style="animation-delay: 0.2s;">
+                                    <i class="bi bi-trophy-fill"></i>
+                                </div>
+                                <h6 class="card-title text-muted text-uppercase small">GPA</h6>
+                                <h2 class="card-text text-warning counter" id="studentGPA">--</h2>
+                                <small class="text-muted">Out of 4.0</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100 hover-card hover-lift">
+                            <div class="card-body text-center position-relative">
+                                <div class="stat-icon stat-icon-info mx-auto animate-float"
+                                    style="animation-delay: 0.3s;">
+                                    <i class="bi bi-credit-card-fill"></i>
+                                </div>
+                                <h6 class="card-title text-muted text-uppercase small">Total Credits</h6>
+                                <h2 class="card-text text-info counter" id="studentCredits">--</h2>
+                                <small class="text-muted">Enrolled this semester</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Courses Section -->
+            <div id="courses" class="section d-none">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="text-gradient"><i class="bi bi-book-fill me-2"></i>My Courses</h2>
+                    <button class="btn btn-primary btn-icon" data-bs-toggle="modal" data-bs-target="#enrollModal">
+                        <i class="bi bi-plus-lg"></i> Enroll Course
+                    </button>
+                </div>
+
+                <!-- Enrolled Courses -->
+                <h5 class="mt-4 mb-3"><i class="bi bi-bookmark-check-fill text-primary me-2"></i>Enrolled Courses
+                </h5>
+                <div class="table-responsive mb-5">
+                    <table class="table table-striped" id="coursesTable">
+                        <thead>
+                            <tr>
+                                <th><i class="bi bi-journal-bookmark me-2"></i>Course Name</th>
+                                <th><i class="bi bi-building me-2"></i>Department</th>
+                                <th><i class="bi bi-person-workspace me-2"></i>Instructor</th>
+                                <th><i class="bi bi-award me-2"></i>Credits</th>
+                                <th><i class="bi bi-check-circle me-2"></i>Status</th>
+                                <th><i class="bi bi-gear me-2"></i>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="coursesTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">
+                                    <div class="py-4">
+                                        <div class="spinner-border text-primary mb-3" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <p class="mb-0">Loading courses...</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Available Courses to Enroll -->
+                <h5 class="mt-5 mb-3"><i class="bi bi-plus-square-fill text-info me-2"></i>Available Courses in Your
+                    Department</h5>
+                <div class="row" id="availableCoursesContainer">
+                    <div class="col-12 text-center text-muted py-5">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Loading available courses...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance Section -->
+            <div id="attendance" class="section d-none">
+                <h2 class="mb-4">Attendance</h2>
+                <div class="table-responsive">
+                    <table class="table table-striped" id="attendanceTable">
+                        <thead>
+                            <tr>
+                                <th>Course</th>
+                                <th>Present</th>
+                                <th>Absent</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceTableBody">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Exams Section -->
+            <div id="exams" class="section d-none">
+                <h2 class="mb-4">My Exams</h2>
+                <div class="table-responsive">
+                    <table class="table table-striped" id="examsTable">
+                        <thead>
+                            <tr>
+                                <th>Course</th>
+                                <th>Title</th>
+                                <th>Date</th>
+                                <th>Duration</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="examsTableBody">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Grades Section -->
+            <div id="grades" class="section d-none">
+                <h2 class="mb-4">My Grades</h2>
+                <div class="table-responsive">
+                    <table class="table table-striped" id="gradesTable">
+                        <thead>
+                            <tr>
+                                <th>Course</th>
+                                <th>Credits</th>
+                                <th>Status</th>
+                                <th>Final Grade</th>
+                                <th>Letter Grade</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gradesTableBody">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Profile Section -->
+            <div id="profile" class="section d-none">
+                <h2 class="mb-4">My Profile</h2>
+
+                <!-- Profile Display View -->
+                <div id="profileDisplayView" class="card border-0 shadow-sm">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0" style="color: var(--sage-700);"><i class="bi bi-person-circle"></i> Profile
+                            Information</h5>
+                        <button class="btn btn-light btn-sm" onclick="studentDashboard.showEditProfileForm()">
+                            <i class="bi bi-pencil"></i> Edit
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <h6 class="text-muted">Student Code</h6>
+                                <p class="fs-6" id="displayStudentCode">-</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <h6 class="text-muted">Level</h6>
+                                <p class="fs-6" id="displayLevel">-</p>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <h6 class="text-muted">First Name</h6>
+                                <p class="fs-6" id="displayFirstName">-</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <h6 class="text-muted">Last Name</h6>
+                                <p class="fs-6" id="displayLastName">-</p>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <h6 class="text-muted">Email</h6>
+                                <p class="fs-6" id="displayEmail">-</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <h6 class="text-muted">Contact Number</h6>
+                                <p class="fs-6" id="displayContactNumber">-</p>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <h6 class="text-muted">Department</h6>
+                                <p class="fs-6" id="displayDepartment">-</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <h6 class="text-muted">Role</h6>
+                                <p class="fs-6"><span class="badge bg-info">Student</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Edit View -->
+                <div id="profileEditView" class="card border-0 shadow-sm d-none mt-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="bi bi-pencil-square"></i> Edit Profile</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="profileForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">First Name</label>
+                                    <input type="text" class="form-control" id="profileFirstName" required
+                                        placeholder="Enter first name">
+                                    <small class="text-muted">Letters only, max 50 characters</small>
+                                    <div id="firstNameError" class="text-danger small mt-1"></div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Last Name</label>
+                                    <input type="text" class="form-control" id="profileLastName" required
+                                        placeholder="Enter last name">
+                                    <small class="text-muted">Letters only, max 50 characters</small>
+                                    <div id="lastNameError" class="text-danger small mt-1"></div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Student Code</label>
+                                    <input type="text" class="form-control" id="profileStudentCode" disabled
+                                        placeholder="Auto-generated, cannot be changed" readonly>
+                                    <small class="text-muted">Student code cannot be changed</small>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Contact Number</label>
+                                    <input type="tel" class="form-control" id="profileContactNumber"
+                                        placeholder="Enter 11-digit contact number" maxlength="11">
+                                    <small class="text-muted">11 digits (optional)</small>
+                                    <div id="contactNumberError" class="text-danger small mt-1"></div>
+                                </div>
+                            </div>
+                            <div class="alert alert-info small mt-3">
+                                <i class="bi bi-info-circle"></i> Your full name should contain only
+                                letters. Phone
+                                numbers must be exactly 11 digits if provided.
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-check-lg"></i> Save Changes
+                                </button>
+                                <button type="button" class="btn btn-secondary"
+                                    onclick="studentDashboard.showDisplayProfileView()">
+                                    <i class="bi bi-x-lg"></i> Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Enroll Modal -->
+    <div class="modal fade" id="enrollModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Enroll in Course</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="enrollForm">
+                        <div class="alert alert-info mb-3">
+                            <small>
+                                <i class="bi bi-info-circle"></i>
+                                Showing available courses from your department. Select a course to enroll.
+                            </small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Select Course <span class="text-danger">*</span></label>
+                            <select class="form-select" id="courseSelect" required>
+                                <option value="">Loading courses...</option>
+                            </select>
+                            <small class="text-muted d-block mt-2">
+                                Only courses from your department are shown.
+                                Courses you are already enrolled in are excluded.
+                            </small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="enrollBtn">Enroll</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alertContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+        crossorigin="anonymous"></script>
+    <script src="../js/notifications.js"></script>
+    <script src="../js/cache.js"></script>
+    <script src="../js/pagination.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/student-dashboard.js"></script>
+
+    <!-- Mobile Navigation Toggle -->
+    <button class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Toggle Navigation">
+        <i class="bi bi-list"></i>
+    </button>
+    <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+
+    <script>
+        // Icon sidebar navigation
+        document.querySelectorAll('.icon-sidebar-item[data-section]').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.icon-sidebar-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+
+                // Close mobile menu after selection
+                if (window.innerWidth <= 768) {
+                    document.querySelector('.icon-sidebar').classList.remove('mobile-open');
+                    document.getElementById('mobileNavOverlay').classList.remove('active');
+                }
+            });
+        });
+
+        // Mobile navigation toggle
+        const mobileNavToggle = document.getElementById('mobileNavToggle');
+        const mobileNavOverlay = document.getElementById('mobileNavOverlay');
+        const iconSidebar = document.querySelector('.icon-sidebar');
+
+        mobileNavToggle.addEventListener('click', () => {
+            iconSidebar.classList.toggle('mobile-open');
+            mobileNavOverlay.classList.toggle('active');
+        });
+
+        mobileNavOverlay.addEventListener('click', () => {
+            iconSidebar.classList.remove('mobile-open');
+            mobileNavOverlay.classList.remove('active');
+        });
+    </script>
+</body>
+
+</html>
