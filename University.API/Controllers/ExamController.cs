@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using University.App.DTOs;
 using University.App.Services.IServices;
 
@@ -102,6 +103,16 @@ namespace University.API.Controllers
         [Authorize(Roles = "Admin,Instructor")]
         public async Task<IActionResult> CreateExam([FromBody] CreateExamDto dto)
         {
+            // Ensure we use the authenticated user's id as the instructor id to prevent spoofing
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized(new { success = false, message = "Invalid user token" });
+            }
+
+            // Set the instructor id from the token (ignore any client-provided instructorId)
+            dto.InstructorId = userId;
+
             if (!ModelState.IsValid)
                 return BadRequest(new { success = false, errors = ModelState });
 

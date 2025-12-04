@@ -4,8 +4,8 @@
 // =====================================================
 
 const API = {
-    // baseURL: 'https://smartcampus-university.runasp.net/api'
-    baseURL: 'http://localhost:5175/api',
+     baseURL: 'https://smartcampus-university.runasp.net/api',
+    //baseURL: 'http://localhost:5175/api',
 
     // Get token dynamically to always use the latest
     get token() {
@@ -53,9 +53,39 @@ const API = {
             body: config.body 
         });
 
-        try {
-            const response = await fetch(url, config);
+        // Retry on network-level failures (e.g., "Failed to fetch")
+        const maxNetworkRetries = 2;
+        let attempt = 0;
+        let lastError = null;
+        let response = null;
 
+        while (attempt <= maxNetworkRetries) {
+            try {
+                if (attempt > 0) console.warn(`🔁 API request retry ${attempt} for ${url}`);
+                response = await fetch(url, config);
+                lastError = null;
+                break; // success
+            } catch (netErr) {
+                lastError = netErr;
+                console.error(`❌ Network error on API request (attempt ${attempt}):`, netErr);
+                attempt++;
+                // simple backoff
+                await new Promise(r => setTimeout(r, 300 * attempt));
+            }
+        }
+
+        if (!response && lastError) {
+            console.error('❌ API Network Failure after retries:', lastError);
+            return {
+                success: false,
+                status: 0,
+                error: lastError.message || 'Network error',
+                Message: lastError.message || 'Network error',
+                data: null
+            };
+        }
+        
+        try {
             // Handle non-JSON responses
             const contentType = response.headers.get('content-type');
             let data;

@@ -1,5 +1,6 @@
 ﻿using University.App.DTOs;
 using University.App.Interfaces;
+using University.App.Interfaces.Courses;
 using University.App.Services.IServices;
 using University.App.Validators;
 using University.Core.Entities;
@@ -10,17 +11,20 @@ namespace University.App.Services.Implementations
     {
         private readonly IExamRepository _examRepository;
         private readonly ISubmissionRepository _submissionRepository;
+        private readonly ICourseRepository _courseRepository;
         private readonly ExamValidator _examValidator;
         private readonly ExamQuestionValidator _questionValidator;
 
         public ExamService(
             IExamRepository examRepository,
             ISubmissionRepository submissionRepository,
+            ICourseRepository courseRepository,
             ExamValidator examValidator,
             ExamQuestionValidator questionValidator)
         {
             _examRepository = examRepository;
             _submissionRepository = submissionRepository;
+            _courseRepository = courseRepository;
             _examValidator = examValidator;
             _questionValidator = questionValidator;
         }
@@ -85,6 +89,20 @@ namespace University.App.Services.Implementations
 
             if (dto.CourseId <= 0)
                 throw new ArgumentException("Invalid course ID");
+
+            if (dto.InstructorId <= 0)
+                throw new ArgumentException("Invalid instructor ID");
+
+            // Validate that the course belongs to the instructor
+            var (courses, _) = await _courseRepository.SearchCoursesAsync(null, null, dto.InstructorId, 1, 100);
+            var courseExists = courses.Any(c => c.CourseId == dto.CourseId && !c.IsDeleted);
+            
+            if (!courseExists)
+            {
+                // include assigned course ids in message to aid debugging
+                var assignedIds = string.Join(',', courses.Select(c => c.CourseId));
+                throw new InvalidOperationException($"Course {dto.CourseId} is not assigned to instructor {dto.InstructorId}. Assigned course IDs: {assignedIds}");
+            }
 
             var exam = new Exam
             {

@@ -132,6 +132,14 @@ class InstructorDashboard {
                 return;
             }
 
+            console.log('✅ Instructor ID is now set:', this.currentInstructorId);
+            
+            // Pre-load exam courses so they're ready when modal opens
+            if (this.loadExamCourses) {
+                console.log('📚 Pre-loading exam courses...');
+                await this.loadExamCourses();
+            }
+
             // Load initial dashboard statistics
             await this.loadDashboardStats();
         } catch (error) {
@@ -177,6 +185,16 @@ class InstructorDashboard {
                 }
                 
                 // Get total students and calculate average grades
+
+                // Cache courses for other modules (exams, attendance, etc.)
+                try {
+                    this.instructorCourses = Array.isArray(myCourses) ? myCourses : [];
+                    console.log(`📥 Cached ${this.instructorCourses.length} instructor courses`);
+                } catch (e) {
+                    console.warn('⚠️ Could not cache instructor courses', e);
+                    this.instructorCourses = [];
+                }
+
                 let totalStudents = 0;
                 let allGrades = [];
                 let pendingCount = 0;
@@ -543,7 +561,29 @@ class InstructorDashboard {
 }
 
 // Initialize dashboard when DOM is ready
+// =====================================================
+// ADDITIONAL FIX: Ensure courses are loaded when modal opens
+// =====================================================
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Initializing Instructor Dashboard...');
     window.instructorDashboard = new InstructorDashboard();
+    
+    // Add modal event listener
+    const examModal = document.getElementById('examModal');
+    if (examModal) {
+        examModal.addEventListener('show.bs.modal', async () => {
+            console.log('📝 Exam modal opening - loading courses...');
+            
+            // Reset form
+            if (window.instructorDashboard?.resetExamForm) {
+                window.instructorDashboard.resetExamForm();
+            }
+            
+            // IMPORTANT: Always reload courses when modal opens
+            if (window.instructorDashboard?.loadExamCourses) {
+                await window.instructorDashboard.loadExamCourses();
+            }
+        });
+    }
 });
