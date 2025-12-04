@@ -306,9 +306,10 @@
                 }[enrollment.status] || 'badge-sage';
 
                 const initials = (enrollment.studentName || 'NA').split(' ').map(n => n[0]).join('').substring(0, 2);
-                const enrollDate = enrollment.enrolledAt ? new Date(enrollment.enrolledAt).toLocaleDateString('en-US', {
-                    month: 'short', day: 'numeric', year: 'numeric'
-                }) : 'N/A';
+                const enrollDate = (enrollment.enrollmentDate || enrollment.EnrollmentDate || enrollment.enrolledAt) 
+                    ? new Date(enrollment.enrollmentDate || enrollment.EnrollmentDate || enrollment.enrolledAt).toLocaleDateString('en-US', {
+                        month: 'short', day: 'numeric', year: 'numeric'
+                    }) : 'N/A';
 
                 return `
                     <div class="enrollment-card animate-fadeInUp">

@@ -95,13 +95,24 @@ namespace University.App.Services.Implementations
 
             // Validate that the course belongs to the instructor
             var (courses, _) = await _courseRepository.SearchCoursesAsync(null, null, dto.InstructorId, 1, 100);
+            
+            // DEBUG: Log all courses found for this instructor
+            var assignedIds = string.Join(", ", courses.Select(c => $"CourseId={c.CourseId}, Name={c.Name}, InstructorId={c.InstructorId}"));
+            
             var courseExists = courses.Any(c => c.CourseId == dto.CourseId && !c.IsDeleted);
             
             if (!courseExists)
             {
-                // include assigned course ids in message to aid debugging
-                var assignedIds = string.Join(',', courses.Select(c => c.CourseId));
-                throw new InvalidOperationException($"Course {dto.CourseId} is not assigned to instructor {dto.InstructorId}. Assigned course IDs: {assignedIds}");
+                // Also check if the course exists at all
+                var targetCourse = await _courseRepository.GetCourseById(dto.CourseId);
+                var courseInfo = targetCourse != null 
+                    ? $"Course exists - ID: {targetCourse.CourseId}, Name: {targetCourse.Name}, AssignedInstructorId: {targetCourse.InstructorId}, IsDeleted: {targetCourse.IsDeleted}"
+                    : "Course not found in database";
+                
+                throw new InvalidOperationException(
+                    $"Course {dto.CourseId} is not assigned to Instructor {dto.InstructorId}. " +
+                    $"Instructor's courses: [{assignedIds}]. " +
+                    $"Target course info: {courseInfo}");
             }
 
             var exam = new Exam

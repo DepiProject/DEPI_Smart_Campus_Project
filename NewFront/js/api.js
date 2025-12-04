@@ -4,8 +4,8 @@
 // =====================================================
 
 const API = {
-     baseURL: 'https://smartcampus-university.runasp.net/api',
-    //baseURL: 'http://localhost:5175/api',
+    // baseURL: 'https://smartcampus-university.runasp.net/api',
+    baseURL: 'http://localhost:5175/api',
 
     // Get token dynamically to always use the latest
     get token() {
@@ -144,11 +144,19 @@ const API = {
                     status: response.status, 
                     statusText: response.statusText,
                     data,
+                    dataType: typeof data,
+                    dataKeys: typeof data === 'object' ? Object.keys(data) : [],
+                    errorMessage: errorMessage,
                     headers: {
                         contentType: response.headers.get('content-type'),
                         authorization: response.headers.get('authorization')
                     }
                 });
+                
+                // Log the full error details if available
+                if (data && typeof data === 'object') {
+                    console.error('❌ Full error data:', JSON.stringify(data, null, 2));
+                }
                 
                 return {
                     success: false,
@@ -159,6 +167,13 @@ const API = {
                     Errors: data.Errors || []
                 };
             }
+
+            console.log('✅ Success Response:', {
+                status: response.status,
+                dataType: typeof data,
+                dataKeys: typeof data === 'object' ? Object.keys(data) : [],
+                data: data
+            });
 
             return {
                 success: true,
@@ -813,6 +828,36 @@ const API = {
         // Delete exam
         async delete(id) {
             return API.request(`/Exam/${id}`, {
+                method: 'DELETE'
+            });
+        },
+
+        // Add question to exam
+        async addQuestion(questionData) {
+            return API.request('/Exam/questions', {
+                method: 'POST',
+                body: questionData
+            });
+        },
+
+        // Get exam questions
+        async getQuestions(examId) {
+            return API.request(`/Exam/${examId}/questions`, {
+                method: 'GET'
+            });
+        },
+
+        // Update question
+        async updateQuestion(examId, questionId, questionData) {
+            return API.request(`/Exam/${examId}/questions/${questionId}`, {
+                method: 'PUT',
+                body: questionData
+            });
+        },
+
+        // Delete question
+        async deleteQuestion(examId, questionId) {
+            return API.request(`/Exam/${examId}/questions/${questionId}`, {
                 method: 'DELETE'
             });
         }

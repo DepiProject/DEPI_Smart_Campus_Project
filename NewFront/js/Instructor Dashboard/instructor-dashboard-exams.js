@@ -652,11 +652,11 @@ InstructorDashboard.prototype.saveExam = async function() {
 
     // Create exam payload
     const examPayload = {
-        title: data.title,
-        courseId: data.courseId,
-        duration: data.durationMinutes,
-        totalPoints: data.totalMarks,
-        examDate: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+        Title: data.title,
+        CourseId: data.courseId,
+        Duration: data.durationMinutes,
+        TotalPoints: data.totalMarks,
+        ExamDate: new Date(Date.now() + 5 * 60 * 1000).toISOString()
     };
 
     console.log('📝 Creating exam with payload:', examPayload);
@@ -668,17 +668,40 @@ InstructorDashboard.prototype.saveExam = async function() {
 
         const examResponse = await API.exam.create(examPayload);
         console.log('✅ Exam creation response:', examResponse);
+        console.log('✅ Response details:', {
+            success: examResponse.success,
+            status: examResponse.status,
+            error: examResponse.error,
+            message: examResponse.message,
+            Message: examResponse.Message,
+            data: examResponse.data,
+            fullResponse: JSON.stringify(examResponse, null, 2)
+        });
 
         if (!examResponse.success) {
-            throw new Error(examResponse.error || examResponse.message || 'Failed to create exam');
+            console.error('❌ Exam creation failed with response:', examResponse);
+            console.error('❌ Error details:', examResponse.data);
+            const errorMsg = examResponse.error || examResponse.message || examResponse.Message || 'Failed to create exam';
+            console.error('❌ Final error message:', errorMsg);
+            throw new Error(errorMsg);
         }
 
         const examId = examResponse.data?.Data?.ExamId || 
                       examResponse.data?.data?.ExamId || 
                       examResponse.data?.ExamId ||
                       examResponse.data?.examId;
+        
+        console.log('🔍 Exam ID extraction:', {
+            'data?.Data?.ExamId': examResponse.data?.Data?.ExamId,
+            'data?.data?.ExamId': examResponse.data?.data?.ExamId,
+            'data?.ExamId': examResponse.data?.ExamId,
+            'data?.examId': examResponse.data?.examId,
+            'finalExamId': examId,
+            'fullData': examResponse.data
+        });
                       
         if (!examId) {
+            console.error('❌ No exam ID found in response:', examResponse);
             throw new Error('No exam ID returned from server');
         }
 
@@ -692,20 +715,26 @@ InstructorDashboard.prototype.saveExam = async function() {
             const validOpts = q.options.filter(o => o.text && o.text.trim());
 
             const qPayload = {
-                questionText: q.text.trim(),
-                orderNumber: i + 1,
-                score: 1,
-                examId: examId,
-                courseId: data.courseId,
-                mCQOptions: validOpts.map((o, idx) => ({
-                    optionText: o.text.trim(),
-                    orderNumber: idx + 1,
-                    isCorrect: !!o.isCorrect
+                QuestionText: q.text.trim(),
+                OrderNumber: i + 1,
+                Score: 1,
+                ExamId: examId,
+                CourseId: data.courseId,
+                MCQOptions: validOpts.map((o, idx) => ({
+                    OptionText: o.text.trim(),
+                    OrderNumber: idx + 1,
+                    IsCorrect: !!o.isCorrect
                 }))
             };
 
             console.log(`📝 Adding question ${i+1}:`, qPayload);
-            await API.exam.addQuestion(qPayload);
+            const questionResponse = await API.exam.addQuestion(qPayload);
+            console.log(`✅ Question ${i+1} response:`, questionResponse);
+            
+            if (!questionResponse.success) {
+                console.error(`❌ Failed to add question ${i+1}:`, questionResponse);
+                throw new Error(`Failed to add question ${i+1}: ${questionResponse.error || questionResponse.message}`);
+            }
         }
 
         this.showToast('Success', 'Exam created successfully!', 'success');
