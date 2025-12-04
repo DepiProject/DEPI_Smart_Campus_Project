@@ -114,7 +114,6 @@ namespace University.API.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
-
             try
             {
                 var student = await _studentService.CreateAsync(dto);
