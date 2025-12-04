@@ -67,6 +67,8 @@ namespace University.App.DTOs
 
         [Required(ErrorMessage = "Course ID is required")]
         public int CourseId { get; set; }
+
+        public int InstructorId { get; set; }
     }
 
     public class CreateQuestionDto

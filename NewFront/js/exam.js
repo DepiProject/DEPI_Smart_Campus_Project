@@ -1,435 +1,554 @@
 // =====================================================
-// Exam Manager - Handles exam taking functionality
+// Exam Taking Handler - Modern Version
+// Integrated with Smart Campus University API
 // =====================================================
 
 class ExamManager {
     constructor() {
         this.examId = null;
-        this.studentId = null;
         this.submissionId = null;
         this.examData = null;
-        this.questions = [];
-        this.answers = {};
+        this.remainingSeconds = 0;
         this.timerInterval = null;
-        this.timeRemaining = 0; // in seconds
-        this.examStarted = false;
+        this.studentId = null;
+        this.answered = 0;
         
         this.init();
     }
 
-    // Initialize exam from URL parameter
-    async init() {
+    init() {
         console.log('🎓 Initializing Exam Manager...');
         
-        // Check authentication
-        const token = localStorage.getItem('authToken');
-        if (!token || API.isTokenExpired()) {
-            window.location.href = '../index.html';
-            return;
-        }
-
-        // Get exam ID from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        this.examId = urlParams.get('examId');
-
-        if (!this.examId) {
-            this.showToast('Error', 'No exam ID provided', 'error');
-            setTimeout(() => window.location.href = 'student-dashboard.html', 2000);
-            return;
-        }
-
-        // Get student ID from profile
-        await this.loadStudentId();
+        // Get examId from URL
+        this.examId = this.getQueryParam('examId');
         
-        // Load exam information
-        await this.loadExamInfo();
+        if (!this.examId) {
+            this.showError('No exam ID provided in URL');
+            return;
+        }
+
+        // Get elements
+        this.elements = {
+            startBtn: document.getElementById('start-btn'),
+            timer: document.getElementById('timer'),
+            timerCard: document.getElementById('timer-card'),
+            questionsForm: document.getElementById('questions-form'),
+            questionsContainer: document.getElementById('questions-container'),
+            submitBtn: document.getElementById('submit-btn'),
+            cancelBtn: document.getElementById('cancel-btn'),
+            examTitle: document.getElementById('exam-title'),
+            examSubtitle: document.getElementById('exam-subtitle'),
+            resultContainer: document.getElementById('result-container'),
+            scoreEl: document.getElementById('score'),
+            metaEl: document.getElementById('meta'),
+            resultIcon: document.getElementById('result-icon'),
+            resultJson: document.getElementById('result-json'),
+            infoBanner: document.getElementById('exam-info-banner'),
+            durationInfo: document.getElementById('exam-duration-info'),
+            questionsCount: document.getElementById('exam-questions-count'),
+            passingScore: document.getElementById('exam-passing-score'),
+            progressIndicator: document.getElementById('progress-indicator'),
+            answeredCount: document.getElementById('answered-count'),
+            totalQuestions: document.getElementById('total-questions'),
+            progressPercentage: document.getElementById('progress-percentage'),
+            loadingState: document.getElementById('loading-state')
+        };
+
+        this.initializeEventListeners();
+        this.loadExamInfo();
     }
 
-    // Load student ID from profile
-    async loadStudentId() {
+    initializeEventListeners() {
+        if (this.elements.startBtn) {
+            this.elements.startBtn.addEventListener('click', () => this.startExam());
+        }
+
+        if (this.elements.submitBtn) {
+            this.elements.submitBtn.addEventListener('click', () => this.submitExam());
+        }
+
+        if (this.elements.cancelBtn) {
+            this.elements.cancelBtn.addEventListener('click', () => this.cancelExam());
+        }
+
+        // Track answers for progress
+        if (this.elements.questionsForm) {
+            this.elements.questionsForm.addEventListener('change', () => this.updateProgress());
+        }
+    }
+
+    getQueryParam(key) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(key);
+    }
+
+    async getCurrentStudent() {
         try {
-            const response = await API.student.getMyProfile();
-            if (response.success && response.data) {
-                const profile = response.data.Data || response.data.data || response.data;
+            // Get student profile to get actual student ID
+            const profileResponse = await API.student.getMyProfile();
+            
+            if (profileResponse.success && profileResponse.data) {
+                const profile = profileResponse.data.Data || 
+                               profileResponse.data.data || 
+                               profileResponse.data;
+                
                 this.studentId = profile.StudentId || profile.studentId;
                 console.log('✅ Student ID loaded:', this.studentId);
-            } else {
-                throw new Error('Failed to load student profile');
+                return this.studentId;
             }
         } catch (error) {
-            console.error('❌ Error loading student ID:', error);
-            this.showToast('Error', 'Failed to load student information', 'error');
-            setTimeout(() => window.location.href = 'student-dashboard.html', 2000);
+            console.error('❌ Error getting student ID:', error);
         }
+        return null;
     }
 
-    // Load exam information and display pre-exam screen
     async loadExamInfo() {
+        console.log('📚 Loading exam information...');
+        
         try {
-            console.log('📝 Loading exam info for ID:', this.examId);
+            // Get exam details before starting
+            const response = await API.exam.getById(this.examId);
             
-            // First, get enrolled courses to find the course ID
-            const enrollmentsResponse = await API.enrollment.getByStudentId(this.studentId);
-            const enrollments = enrollmentsResponse.success && enrollmentsResponse.data ? 
-                (enrollmentsResponse.data.Data || enrollmentsResponse.data.data || enrollmentsResponse.data || []) : [];
-            
-            // Get all exams and find the one with matching exam ID
-            const examsResponse = await API.exam.getAll(1, 100);
-            if (!examsResponse.success || !examsResponse.data) {
-                throw new Error('Failed to load exams');
-            }
-            
-            const allExams = examsResponse.data.Data || examsResponse.data.data || examsResponse.data || [];
-            const exam = allExams.find(e => 
-                (e.ExamId || e.examId || e.Id || e.id) == this.examId
-            );
-            
-            if (!exam) {
-                throw new Error('Exam not found');
-            }
-            
-            const courseId = exam.CourseId || exam.courseId;
-            
-            // Now load full exam details with questions
-            const response = await API.request(`/Exam/${this.examId}/course/${courseId}/with-questions`, {
-                method: 'GET'
-            });
-
             if (response.success && response.data) {
-                this.examData = response.data.Data || response.data.data || response.data;
-                this.questions = this.examData.Questions || this.examData.questions || [];
+                const exam = response.data.Data || response.data.data || response.data;
                 
-                console.log('✅ Exam data loaded:', this.examData);
-                console.log('📋 Questions:', this.questions);
+                console.log('✅ Exam info loaded:', exam);
                 
-                this.displayPreExamInfo();
-            } else {
-                throw new Error(response.error || 'Failed to load exam');
+                // Update UI with exam info
+                if (this.elements.examTitle) {
+                    this.elements.examTitle.textContent = exam.title || exam.Title || 'Exam';
+                }
+                
+                if (this.elements.examSubtitle) {
+                    this.elements.examSubtitle.textContent = exam.description || exam.Description || 'Prepare to demonstrate your knowledge';
+                }
+                
+                if (this.elements.durationInfo) {
+                    const duration = exam.durationMinutes || exam.DurationMinutes || 0;
+                    this.elements.durationInfo.textContent = `${duration} minutes`;
+                }
+                
+                if (this.elements.questionsCount) {
+                    const questions = exam.questions || exam.Questions || [];
+                    this.elements.questionsCount.textContent = questions.length;
+                }
+                
+                if (this.elements.passingScore) {
+                    const passing = exam.passingScore || exam.PassingScore || 60;
+                    this.elements.passingScore.textContent = `${passing}%`;
+                }
+                
+                // Hide loading, show info banner
+                if (this.elements.loadingState) {
+                    this.elements.loadingState.style.display = 'none';
+                }
+                if (this.elements.infoBanner) {
+                    this.elements.infoBanner.style.display = 'block';
+                }
             }
         } catch (error) {
             console.error('❌ Error loading exam info:', error);
-            this.showToast('Error', error.message || 'Failed to load exam information', 'error');
-            setTimeout(() => window.location.href = 'student-dashboard.html', 2000);
+            this.showError('Failed to load exam information');
         }
     }
 
-    // Display pre-exam information
-    displayPreExamInfo() {
-        document.getElementById('loadingSpinner').classList.add('d-none');
-        document.getElementById('preExamInfo').classList.remove('d-none');
-
-        const title = this.examData.Title || this.examData.title || 'Exam';
-        const description = this.examData.Description || this.examData.description || '';
-        const duration = this.examData.Duration || this.examData.duration || 0;
-        const totalMarks = this.examData.TotalMarks || this.examData.totalMarks || 0;
-        const passingScore = this.examData.PassingScore || this.examData.passingScore || 0;
-
-        document.getElementById('examTitle').textContent = title;
-        document.getElementById('examDescription').textContent = description;
-        document.getElementById('examDuration').textContent = duration + ' minutes';
-        document.getElementById('examQuestionCount').textContent = this.questions.length;
-        document.getElementById('examTotalMarks').textContent = totalMarks;
-        document.getElementById('examPassingScore').textContent = passingScore + '%';
-    }
-
-    // Start the exam
     async startExam() {
+        console.log('🚀 Starting exam...');
+        
+        if (!this.examId) {
+            notifications.error('Error', 'No exam ID provided');
+            return;
+        }
+
+        // Get student ID first
+        await this.getCurrentStudent();
+        
+        if (!this.studentId) {
+            notifications.error('Error', 'Could not identify student. Please log in again.');
+            return;
+        }
+
+        // Disable start button and show loading
+        if (this.elements.startBtn) {
+            this.elements.startBtn.disabled = true;
+            this.elements.startBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Starting...';
+        }
+
         try {
-            console.log('▶️ Starting exam...');
+            const payload = {
+                examId: parseInt(this.examId, 10),
+                studentId: parseInt(this.studentId, 10)
+            };
             
-            // Create submission
+            console.log('📤 Starting exam with payload:', payload);
+            
             const response = await API.submission.startExam(this.examId, this.studentId);
+            console.log('📊 Start exam response:', response);
             
             if (response.success && response.data) {
-                const submissionData = response.data.Data || response.data.data || response.data;
-                this.submissionId = submissionData.SubmissionId || submissionData.submissionId || submissionData.Id || submissionData.id;
+                const data = response.data.Data || response.data.data || response.data;
                 
-                console.log('✅ Submission created:', this.submissionId);
+                this.submissionId = data.submissionId || data.SubmissionId;
+                this.examData = data.exam || data.Exam;
                 
-                // Hide pre-exam info, show exam content
-                document.getElementById('preExamInfo').classList.add('d-none');
-                document.getElementById('examContent').classList.remove('d-none');
+                console.log('✅ Exam started:', {
+                    submissionId: this.submissionId,
+                    examData: this.examData
+                });
                 
-                // Set exam title in header
-                const title = this.examData.Title || this.examData.title || 'Exam';
-                document.getElementById('examTitleHeader').textContent = title;
+                // Hide info banner, show exam
+                if (this.elements.infoBanner) {
+                    this.elements.infoBanner.style.display = 'none';
+                }
+                
+                // Update title
+                if (this.elements.examTitle) {
+                    this.elements.examTitle.textContent = this.examData.title || this.examData.Title || 'Exam';
+                }
                 
                 // Render questions
                 this.renderQuestions();
                 
                 // Start timer
-                const duration = this.examData.Duration || this.examData.duration || 60;
-                this.timeRemaining = duration * 60; // Convert to seconds
-                this.startTimer();
+                const durationMinutes = this.examData.durationMinutes || this.examData.DurationMinutes || 0;
+                this.startTimer(durationMinutes * 60);
                 
-                this.examStarted = true;
+                // Show exam form and timer
+                if (this.elements.questionsForm) {
+                    this.elements.questionsForm.style.display = 'block';
+                }
+                if (this.elements.timerCard) {
+                    this.elements.timerCard.style.display = 'block';
+                }
+                if (this.elements.progressIndicator) {
+                    this.elements.progressIndicator.style.display = 'flex';
+                }
+                
+                notifications.success('Exam Started', 'Good luck!');
             } else {
                 throw new Error(response.error || 'Failed to start exam');
             }
         } catch (error) {
             console.error('❌ Error starting exam:', error);
-            this.showToast('Error', error.message || 'Failed to start exam', 'error');
+            notifications.error('Error', 'Failed to start exam: ' + error.message);
+            
+            // Re-enable start button
+            if (this.elements.startBtn) {
+                this.elements.startBtn.disabled = false;
+                this.elements.startBtn.innerHTML = '<i class="bi bi-play-fill me-2"></i>Start Exam';
+            }
         }
     }
 
-    // Render questions
     renderQuestions() {
-        const container = document.getElementById('questionsContainer');
-        document.getElementById('totalQuestions').textContent = this.questions.length;
+        if (!this.examData || !this.examData.questions) {
+            console.error('❌ No questions to render');
+            return;
+        }
+
+        const questions = this.examData.questions || this.examData.Questions || [];
+        console.log('📝 Rendering', questions.length, 'questions');
         
-        container.innerHTML = this.questions.map((question, index) => {
-            const questionId = question.QuestionId || question.questionId || question.Id || question.id;
-            const questionText = question.QuestionText || question.questionText || question.Text || question.text;
-            const marks = question.Marks || question.marks || 1;
-            const options = question.Options || question.options || [];
+        if (this.elements.totalQuestions) {
+            this.elements.totalQuestions.textContent = questions.length;
+        }
+
+        this.elements.questionsContainer.innerHTML = questions.map((question, index) => {
+            const questionId = question.id || question.Id || question.questionId || question.QuestionId;
+            const questionText = question.text || question.Text || question.questionText || question.QuestionText;
+            const options = question.options || question.Options || [];
             
             return `
-                <div class="question-card" data-question-id="${questionId}">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <h5>Question ${index + 1}</h5>
-                        <span class="badge bg-primary">${marks} mark${marks > 1 ? 's' : ''}</span>
-                    </div>
-                    <p class="lead mb-4">${questionText}</p>
-                    
-                    <div class="options">
-                        ${options.map(option => {
-                            const optionId = option.OptionId || option.optionId || option.Id || option.id;
-                            const optionText = option.OptionText || option.optionText || option.Text || option.text;
-                            
-                            return `
-                                <label class="option-label">
-                                    <input type="radio" 
-                                           name="question_${questionId}" 
-                                           value="${optionId}"
-                                           onchange="examManager.handleAnswerChange(${questionId}, ${optionId})">
-                                    <span class="option-text ms-2">${optionText}</span>
-                                </label>
-                            `;
-                        }).join('')}
+                <div class="question-card animate-fadeInUp" style="animation-delay: ${index * 0.1}s">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="question-number">${index + 1}</div>
+                        <div class="flex-grow-1">
+                            <p class="question-text mb-0">${questionText}</p>
+                            <div class="option-wrapper">
+                                ${options.map(option => {
+                                    const optionId = option.id || option.Id || option.optionId || option.OptionId;
+                                    const optionText = option.text || option.Text || option.optionText || option.OptionText;
+                                    const inputId = `q_${questionId}_opt_${optionId}`;
+                                    
+                                    return `
+                                        <label class="option-label" for="${inputId}">
+                                            <input type="radio" 
+                                                   name="q_${questionId}" 
+                                                   value="${optionId}" 
+                                                   id="${inputId}">
+                                            <span class="option-text">${optionText}</span>
+                                        </label>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
         }).join('');
-    }
 
-    // Handle answer change
-    handleAnswerChange(questionId, optionId) {
-        this.answers[questionId] = optionId;
-        console.log('📝 Answer selected:', { questionId, optionId });
-        
         this.updateProgress();
     }
 
-    // Update progress
     updateProgress() {
-        const answeredCount = Object.keys(this.answers).length;
-        const totalQuestions = this.questions.length;
-        const percentage = (answeredCount / totalQuestions * 100).toFixed(0);
-        
-        document.getElementById('answeredCount').textContent = answeredCount;
-        document.getElementById('progressBar').style.width = percentage + '%';
-        document.getElementById('progressBar').textContent = percentage + '%';
-        document.getElementById('progressBar').setAttribute('aria-valuenow', percentage);
-        
-        // Enable submit button if all questions answered
-        const submitBtn = document.getElementById('submitExamBtn');
-        if (answeredCount === totalQuestions) {
-            submitBtn.disabled = false;
-            submitBtn.classList.add('pulse');
-        } else {
-            submitBtn.disabled = true;
-            submitBtn.classList.remove('pulse');
+        if (!this.examData || !this.examData.questions) return;
+
+        const questions = this.examData.questions || this.examData.Questions || [];
+        let answered = 0;
+
+        questions.forEach(question => {
+            const questionId = question.id || question.Id || question.questionId || question.QuestionId;
+            const selected = document.querySelector(`input[name="q_${questionId}"]:checked`);
+            if (selected) answered++;
+        });
+
+        this.answered = answered;
+        const total = questions.length;
+        const percentage = total > 0 ? Math.round((answered / total) * 100) : 0;
+
+        if (this.elements.answeredCount) {
+            this.elements.answeredCount.textContent = answered;
+        }
+        if (this.elements.progressPercentage) {
+            this.elements.progressPercentage.textContent = `${percentage}%`;
+        }
+
+        // Enable submit only if all answered
+        if (this.elements.submitBtn) {
+            this.elements.submitBtn.disabled = answered < total;
         }
     }
 
-    // Start countdown timer
-    startTimer() {
-        const updateTimer = () => {
-            const minutes = Math.floor(this.timeRemaining / 60);
-            const seconds = this.timeRemaining % 60;
-            
-            const display = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
-            document.getElementById('timer').textContent = display;
-            
-            // Warning when less than 2 minutes
-            const timerBox = document.getElementById('timerBox');
-            if (this.timeRemaining < 120) {
-                timerBox.classList.add('timer-warning');
-            }
-            
-            this.timeRemaining--;
-            
-            // Auto-submit when time expires
-            if (this.timeRemaining < 0) {
-                clearInterval(this.timerInterval);
-                this.showToast('Time Up', 'Exam time has expired. Submitting automatically...', 'warning');
-                setTimeout(() => this.submitExam(), 2000);
-            }
-        };
+    startTimer(seconds) {
+        this.remainingSeconds = seconds;
+        this.updateTimerDisplay();
         
-        updateTimer(); // Initial call
-        this.timerInterval = setInterval(updateTimer, 1000);
+        this.timerInterval = setInterval(() => {
+            this.remainingSeconds--;
+            this.updateTimerDisplay();
+            
+            // Add warning animation when time is low (last 2 minutes)
+            if (this.remainingSeconds <= 120 && this.elements.timerCard) {
+                this.elements.timerCard.classList.add('warning');
+            }
+            
+            if (this.remainingSeconds <= 0) {
+                this.stopTimer();
+                this.autoSubmit();
+            }
+        }, 1000);
     }
 
-    // Submit exam
+    updateTimerDisplay() {
+        if (!this.elements.timer) return;
+        
+        const minutes = Math.floor(this.remainingSeconds / 60);
+        const seconds = this.remainingSeconds % 60;
+        const formatted = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        this.elements.timer.textContent = formatted;
+    }
+
+    stopTimer() {
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+        }
+    }
+
+    gatherAnswers() {
+        if (!this.examData || !this.examData.questions) return [];
+
+        const questions = this.examData.questions || this.examData.Questions || [];
+        
+        return questions.map(question => {
+            const questionId = question.id || question.Id || question.questionId || question.QuestionId;
+            const selected = document.querySelector(`input[name="q_${questionId}"]:checked`);
+            
+            return {
+                questionId: parseInt(questionId, 10),
+                optionId: selected ? parseInt(selected.value, 10) : null
+            };
+        });
+    }
+
     async submitExam() {
-        if (Object.keys(this.answers).length === 0) {
-            this.showToast('Warning', 'Please answer at least one question before submitting', 'warning');
+        console.log('📤 Submitting exam...');
+        
+        if (!this.submissionId) {
+            notifications.error('Error', 'No active submission');
             return;
         }
-        
-        if (!confirm('Are you sure you want to submit the exam? This action cannot be undone.')) {
-            return;
+
+        // Check if all questions are answered
+        if (this.answered < (this.examData?.questions?.length || 0)) {
+            const confirmed = await notifications.confirm(
+                'Incomplete Exam',
+                'You have not answered all questions. Submit anyway?',
+                { type: 'warning' }
+            );
+            
+            if (!confirmed) return;
         }
-        
+
+        // Disable submit button
+        if (this.elements.submitBtn) {
+            this.elements.submitBtn.disabled = true;
+            this.elements.submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
+        }
+
+        this.stopTimer();
+
         try {
-            console.log('📤 Submitting exam...');
+            const answers = this.gatherAnswers();
             
-            // Stop timer
-            if (this.timerInterval) {
-                clearInterval(this.timerInterval);
-            }
-            
-            // Prepare submission data
-            const submissionData = {
-                SubmissionId: this.submissionId,
-                Answers: Object.keys(this.answers).map(questionId => ({
-                    QuestionId: parseInt(questionId),
-                    OptionId: this.answers[questionId]
-                }))
+            const payload = {
+                submissionId: this.submissionId,
+                answers: answers
             };
             
-            console.log('📦 Submission data:', submissionData);
+            console.log('📤 Submitting answers:', payload);
             
-            const response = await API.submission.submitExam(submissionData);
+            const response = await API.submission.submitExam(payload);
+            console.log('📊 Submit response:', response);
             
             if (response.success) {
-                console.log('✅ Exam submitted successfully');
-                this.showToast('Success', 'Exam submitted successfully!', 'success');
-                
                 // Get result
-                await this.getResult();
+                await this.showResult();
             } else {
                 throw new Error(response.error || 'Failed to submit exam');
             }
         } catch (error) {
             console.error('❌ Error submitting exam:', error);
-            this.showToast('Error', error.message || 'Failed to submit exam', 'error');
+            notifications.error('Error', 'Failed to submit exam: ' + error.message);
+            
+            // Re-enable submit button
+            if (this.elements.submitBtn) {
+                this.elements.submitBtn.disabled = false;
+                this.elements.submitBtn.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Submit Exam';
+            }
         }
     }
 
-    // Get and display result
-    async getResult() {
+    async autoSubmit() {
+        console.log('⏰ Time expired - auto-submitting...');
+        notifications.warning('Time Expired', 'Exam is being submitted automatically');
+        await this.submitExam();
+    }
+
+    async showResult() {
+        console.log('📊 Fetching exam result...');
+        
         try {
-            console.log('📊 Getting exam result...');
-            
-            const response = await API.submission.getResult(this.examId, this.studentId);
+            const examId = this.examData.id || this.examData.Id;
+            const response = await API.submission.getResult(examId, this.studentId);
+            console.log('📊 Result response:', response);
             
             if (response.success && response.data) {
                 const result = response.data.Data || response.data.data || response.data;
-                console.log('✅ Result:', result);
                 
-                this.displayResult(result);
-            } else {
-                // If result endpoint fails, show generic success message
-                this.displayGenericResult();
+                // Hide exam form and timer
+                if (this.elements.questionsForm) {
+                    this.elements.questionsForm.style.display = 'none';
+                }
+                if (this.elements.timerCard) {
+                    this.elements.timerCard.style.display = 'none';
+                }
+                if (this.elements.progressIndicator) {
+                    this.elements.progressIndicator.style.display = 'none';
+                }
+                
+                // Show result
+                if (this.elements.resultContainer) {
+                    this.elements.resultContainer.style.display = 'block';
+                }
+                
+                const score = result.score || result.Score || 0;
+                const isPassed = score >= (this.examData.passingScore || 60);
+                
+                // Update score
+                if (this.elements.scoreEl) {
+                    this.elements.scoreEl.textContent = `${score.toFixed(1)}%`;
+                }
+                
+                // Update icon
+                if (this.elements.resultIcon) {
+                    this.elements.resultIcon.className = isPassed ? 'result-icon pass' : 'result-icon fail';
+                    this.elements.resultIcon.innerHTML = isPassed 
+                        ? '<i class="bi bi-trophy-fill"></i>'
+                        : '<i class="bi bi-x-circle-fill"></i>';
+                }
+                
+                // Update meta
+                if (this.elements.metaEl) {
+                    const correct = result.correctAnswers || result.CorrectAnswers || 0;
+                    const total = result.totalQuestions || result.TotalQuestions || 0;
+                    const status = isPassed ? 'Passed' : 'Failed';
+                    
+                    this.elements.metaEl.innerHTML = `
+                        <strong>${status}</strong> • Correct: ${correct}/${total} • 
+                        Submitted: ${new Date().toLocaleString()}
+                    `;
+                }
+                
+                // Show detailed results (optional)
+                if (this.elements.resultJson && result) {
+                    this.elements.resultJson.textContent = JSON.stringify(result, null, 2);
+                }
+                
+                notifications.success('Exam Submitted', `You scored ${score.toFixed(1)}%`);
             }
         } catch (error) {
-            console.error('❌ Error getting result:', error);
-            this.displayGenericResult();
+            console.error('❌ Error fetching result:', error);
+            
+            // Show basic completion message
+            if (this.elements.resultContainer) {
+                this.elements.resultContainer.style.display = 'block';
+            }
+            if (this.elements.scoreEl) {
+                this.elements.scoreEl.textContent = 'Submitted Successfully';
+            }
+            if (this.elements.metaEl) {
+                this.elements.metaEl.textContent = 'Your exam has been submitted. Results will be available soon.';
+            }
         }
     }
 
-    // Display result
-    displayResult(result) {
-        document.getElementById('examContent').classList.add('d-none');
-        document.getElementById('resultDisplay').classList.remove('d-none');
-        
-        const score = result.Score || result.score || 0;
-        const totalMarks = result.TotalMarks || result.totalMarks || this.examData.TotalMarks || 100;
-        const percentage = (score / totalMarks * 100).toFixed(1);
-        const passingScore = this.examData.PassingScore || this.examData.passingScore || 50;
-        const passed = percentage >= passingScore;
-        const correctAnswers = result.CorrectAnswers || result.correctAnswers || 0;
-        
-        // Update display
-        document.getElementById('resultScore').textContent = percentage + '%';
-        document.getElementById('correctAnswers').textContent = correctAnswers;
-        document.getElementById('totalQuestionsResult').textContent = this.questions.length;
-        
-        if (passed) {
-            document.getElementById('resultIcon').innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
-            document.getElementById('resultTitle').textContent = 'Congratulations! You Passed!';
-            document.getElementById('resultTitle').className = 'text-success';
-            document.getElementById('resultMessage').textContent = 'Great job! You have successfully passed this exam.';
-        } else {
-            document.getElementById('resultIcon').innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i>';
-            document.getElementById('resultTitle').textContent = 'Exam Not Passed';
-            document.getElementById('resultTitle').className = 'text-danger';
-            document.getElementById('resultMessage').textContent = 'Keep studying and try again next time.';
+    cancelExam() {
+        const confirmed = confirm('Are you sure you want to leave this exam? Your progress will not be saved.');
+        if (confirmed) {
+            this.stopTimer();
+            window.history.back();
         }
     }
 
-    // Display generic result (when detailed result is not available)
-    displayGenericResult() {
-        document.getElementById('examContent').classList.add('d-none');
-        document.getElementById('resultDisplay').classList.remove('d-none');
-        
-        document.getElementById('resultIcon').innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
-        document.getElementById('resultTitle').textContent = 'Exam Submitted Successfully!';
-        document.getElementById('resultScore').textContent = 'Submitted';
-        document.getElementById('resultMessage').textContent = 'Your exam has been submitted. Results will be available soon.';
-        document.getElementById('correctAnswers').textContent = '-';
-        document.getElementById('totalQuestionsResult').textContent = this.questions.length;
-    }
-
-    // Leave exam with confirmation
-    leaveExam() {
-        if (confirm('Are you sure you want to leave the exam? Your progress will not be saved.')) {
-            window.location.href = 'student-dashboard.html';
-        }
-    }
-
-    // Show toast notification
-    showToast(title, message, type = 'info') {
-        const toastContainer = document.getElementById('alertContainer');
-        
-        const typeConfig = {
-            success: { bg: 'bg-success', icon: 'bi-check-circle-fill', text: 'text-white' },
-            error: { bg: 'bg-danger', icon: 'bi-exclamation-triangle-fill', text: 'text-white' },
-            warning: { bg: 'bg-warning', icon: 'bi-exclamation-circle-fill', text: 'text-dark' },
-            info: { bg: 'bg-info', icon: 'bi-info-circle-fill', text: 'text-white' }
-        };
-        
-        const config = typeConfig[type] || typeConfig.info;
-        const toastId = 'toast-' + Date.now();
-        
-        const toastHtml = `
-            <div id="${toastId}" class="toast align-items-center ${config.bg} ${config.text} border-0" role="alert">
-                <div class="d-flex">
-                    <div class="toast-body">
-                        <i class="bi ${config.icon} me-2"></i>
-                        <strong>${title}:</strong> ${message}
-                    </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    showError(message) {
+        if (this.elements.loadingState) {
+            this.elements.loadingState.innerHTML = `
+                <div class="empty-state-exam">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <h3>Error</h3>
+                    <p>${message}</p>
+                    <button onclick="window.history.back()" class="btn-exam-primary" style="max-width: 200px;">
+                        Go Back
+                    </button>
                 </div>
-            </div>
-        `;
-        
-        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-        
-        const toastElement = document.getElementById(toastId);
-        const toast = new bootstrap.Toast(toastElement, { autohide: true, delay: 5000 });
-        toast.show();
-        
-        toastElement.addEventListener('hidden.bs.toast', () => {
-            toastElement.remove();
-        });
+            `;
+        }
     }
 }
 
-// Initialize on page load
+// Initialize Exam Manager
 let examManager;
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 Initializing Exam Page...');
+    
+    // Check authentication
+    const token = localStorage.getItem('authToken');
+    if (!token || API.isTokenExpired()) {
+        window.location.href = '../index.html';
+        return;
+    }
+    
     examManager = new ExamManager();
 });
