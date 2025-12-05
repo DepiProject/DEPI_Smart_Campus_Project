@@ -173,6 +173,8 @@ namespace University.Infra.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Date = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CourseId = table.Column<int>(type: "int", nullable: false),
                     StudentId = table.Column<int>(type: "int", nullable: true)
                 },
@@ -368,6 +370,8 @@ namespace University.Infra.Migrations
                     Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false, defaultValue: "Enrolled"),
                     FinalGrade = table.Column<decimal>(type: "decimal(4,2)", precision: 4, scale: 2, nullable: true),
                     GradeLetter = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
                     StudentId = table.Column<int>(type: "int", nullable: true),
@@ -399,6 +403,8 @@ namespace University.Infra.Migrations
                     StartedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     SubmittedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Score = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     InstructorId = table.Column<int>(type: "int", nullable: true),
                     ExamId = table.Column<int>(type: "int", nullable: true),
                     StudentId = table.Column<int>(type: "int", nullable: true)

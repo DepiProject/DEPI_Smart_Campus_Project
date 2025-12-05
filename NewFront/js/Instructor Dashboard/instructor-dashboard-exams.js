@@ -868,7 +868,7 @@ InstructorDashboard.prototype.loadExams = async function() {
         // Store courses for later use
         this.instructorCourses = courses;
 
-        // Get all exams
+        // Get all exams (add timestamp to prevent caching)
         const response = await API.exam.getAll(1, 100);
         
         if (response.success && response.data) {
@@ -930,9 +930,11 @@ InstructorDashboard.prototype.renderExams = function(exams) {
     if (!exams || exams.length === 0) {
         examsTableBody.innerHTML = `
             <tr>
-                <td colspan="7" class="text-center text-muted py-4">
-                    <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
-                    <p class="mt-2">No exams created yet. Click "Create New Exam" to get started!</p>
+                <td colspan="7" class="text-center">
+                    <div class="empty-state">
+                        <i class="bi bi-inbox"></i>
+                        <p>No exams created yet. Click "Create New Exam" to get started!</p>
+                    </div>
                 </td>
             </tr>
         `;
@@ -950,6 +952,12 @@ InstructorDashboard.prototype.renderExams = function(exams) {
             ? (course.CourseName || course.courseName || course.Name || course.name || 'Unknown')
             : (exam.CourseName || exam.courseName || 'Unknown Course');
         
+        const courseCode = course 
+            ? (course.CourseCode || course.courseCode || course.Code || course.code || '')
+            : '';
+        
+        const displayCourseName = courseCode ? `${courseCode} - ${courseName}` : courseName;
+        
         const title = exam.Title || exam.title || 'Untitled Exam';
         const duration = exam.Duration || exam.duration || 0;
         const questionCount = exam.QuestionCount || exam.questionCount || 0;
@@ -957,27 +965,60 @@ InstructorDashboard.prototype.renderExams = function(exams) {
         const avgScore = exam.AverageScore || exam.averageScore || 0;
         const examId = exam.ExamId || exam.examId || exam.Id || exam.id;
         
+        // Submission badge class
+        const submissionBadgeClass = submissionCount > 0 ? 'badge-submissions' : 'badge-no-submissions';
+        
+        // Score color
+        const scoreClass = avgScore >= 70 ? 'text-success' : avgScore >= 50 ? 'text-warning' : 'text-danger';
+        
         return `
             <tr>
-                <td><strong class="text-primary">${courseName}</strong></td>
                 <td>
-                    <strong>${title}</strong><br>
-                    <small class="text-muted">ID: ${examId}</small>
+                    <div style="font-weight: 600; color: #4f46e5;">${displayCourseName}</div>
                 </td>
-                <td><span class="badge bg-info"><i class="bi bi-clock"></i> ${duration} min</span></td>
-                <td><span class="badge bg-secondary"><i class="bi bi-question-circle"></i> ${questionCount}</span></td>
-                <td><span class="badge ${submissionCount > 0 ? 'bg-success' : 'bg-secondary'}"><i class="bi bi-people"></i> ${submissionCount}</span></td>
-                <td><strong class="${avgScore >= 50 ? 'text-success' : 'text-danger'}">${avgScore.toFixed(1)}%</strong></td>
                 <td>
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-primary" onclick="instructorDashboard.viewExamDetails(${examId}, ${courseId})" title="View">
-                            <i class="bi bi-eye"></i>
+                    <div style="font-weight: 600; color: #1f2937;">${title}</div>
+                    <small class="text-muted" style="font-size: 0.75rem;">ID: ${examId}</small>
+                </td>
+                <td>
+                    <span class="exam-badge badge-duration">
+                        <i class="bi bi-clock-fill"></i> ${duration} min
+                    </span>
+                </td>
+                <td>
+                    <span class="exam-badge badge-questions">
+                        <i class="bi bi-question-circle-fill"></i> ${questionCount}
+                    </span>
+                </td>
+                <td>
+                    <span class="exam-badge ${submissionBadgeClass}">
+                        <i class="bi bi-people-fill"></i> ${submissionCount}
+                    </span>
+                </td>
+                <td>
+                    <strong class="${scoreClass}" style="font-size: 1.1rem;">${avgScore.toFixed(1)}%</strong>
+                </td>
+                <td>
+                    <div class="action-btn-group">
+                        <button class="action-btn btn-questions" 
+                                onclick="instructorDashboard.manageQuestions(${examId}, ${courseId})" 
+                                title="Manage Questions (Add/Delete)">
+                            <i class="bi bi-question-circle-fill"></i>
                         </button>
-                        <button class="btn btn-outline-warning" onclick="instructorDashboard.editExam(${examId})" title="Edit">
-                            <i class="bi bi-pencil"></i>
+                        <button class="action-btn btn-view" 
+                                onclick="instructorDashboard.viewExamDetails(${examId}, ${courseId})" 
+                                title="View Exam (Read-Only)">
+                            <i class="bi bi-file-text-fill"></i>
                         </button>
-                        <button class="btn btn-outline-danger" onclick="instructorDashboard.deleteExam(${examId})" title="Delete">
-                            <i class="bi bi-trash"></i>
+                        <button class="action-btn btn-edit" 
+                                onclick="instructorDashboard.editExam(${examId})" 
+                                title="Edit Exam Details">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                        <button class="action-btn btn-delete" 
+                                onclick="instructorDashboard.closeExam(${examId})" 
+                                title="Close Exam">
+                            <i class="bi bi-lock-fill"></i>
                         </button>
                     </div>
                 </td>
@@ -1881,74 +1922,74 @@ InstructorDashboard.prototype.saveExam = async function() {
         return;
     }
     
-    // Validate Questions
-    if (!data.questions || data.questions.length === 0) {
-        this.showToast('Error', 'Please add at least one question', 'error');
-        return;
-    }
-    
-    if (data.questions.length > 100) {
-        this.showToast('Error', 'Cannot add more than 100 questions', 'error');
-        return;
-    }
-    
-    // 3. تحقق من الأسئلة
-    console.log(`🔍 Validating ${data.questions.length} questions...`);
-    
-    for (let i = 0; i < data.questions.length; i++) {
-        const q = data.questions[i];
+    // Questions are now OPTIONAL during exam creation
+    // Validate questions only if they are provided
+    if (data.questions && data.questions.length > 0) {
+        console.log(`🔍 Validating ${data.questions.length} questions...`);
         
-        if (!q.text || !q.text.trim()) {
-            this.showToast('Error', `Question ${i+1}: Text is required`, 'error');
+        if (data.questions.length > 100) {
+            this.showToast('Error', 'Cannot add more than 100 questions', 'error');
             return;
         }
         
-        if (q.text.trim().length < 5) {
-            this.showToast('Error', `Question ${i+1}: Text must be at least 5 characters`, 'error');
-            return;
-        }
-        
-        if (q.text.trim().length > 1000) {
-            this.showToast('Error', `Question ${i+1}: Text cannot exceed 1000 characters`, 'error');
-            return;
-        }
-        
-        const validOptions = q.options.filter(o => o.text && o.text.trim());
-        if (validOptions.length < 2) {
-            this.showToast('Error', `Question ${i+1}: At least 2 options required`, 'error');
-            return;
-        }
-        
-        if (validOptions.length > 10) {
-            this.showToast('Error', `Question ${i+1}: Cannot have more than 10 options`, 'error');
-            return;
-        }
-        
-        // Validate each option length
-        for (let j = 0; j < validOptions.length; j++) {
-            if (validOptions[j].text.trim().length < 1) {
-                this.showToast('Error', `Question ${i+1}, Option ${j+1}: Text is required`, 'error');
+        for (let i = 0; i < data.questions.length; i++) {
+            const q = data.questions[i];
+            
+            if (!q.text || !q.text.trim()) {
+                this.showToast('Error', `Question ${i+1}: Text is required`, 'error');
                 return;
             }
-            if (validOptions[j].text.trim().length > 500) {
-                this.showToast('Error', `Question ${i+1}, Option ${j+1}: Text cannot exceed 500 characters`, 'error');
+            
+            if (q.text.trim().length < 5) {
+                this.showToast('Error', `Question ${i+1}: Text must be at least 5 characters`, 'error');
+                return;
+            }
+            
+            if (q.text.trim().length > 1000) {
+                this.showToast('Error', `Question ${i+1}: Text cannot exceed 1000 characters`, 'error');
+                return;
+            }
+            
+            const validOptions = q.options.filter(o => o.text && o.text.trim());
+            if (validOptions.length < 2) {
+                this.showToast('Error', `Question ${i+1}: At least 2 options required`, 'error');
+                return;
+            }
+            
+            if (validOptions.length > 10) {
+                this.showToast('Error', `Question ${i+1}: Cannot have more than 10 options`, 'error');
+                return;
+            }
+            
+            // Validate each option length
+            for (let j = 0; j < validOptions.length; j++) {
+                if (validOptions[j].text.trim().length < 1) {
+                    this.showToast('Error', `Question ${i+1}, Option ${j+1}: Text is required`, 'error');
+                    return;
+                }
+                if (validOptions[j].text.trim().length > 500) {
+                    this.showToast('Error', `Question ${i+1}, Option ${j+1}: Text cannot exceed 500 characters`, 'error');
+                    return;
+                }
+            }
+            
+            const hasCorrect = validOptions.some(o => o.isCorrect);
+            if (!hasCorrect) {
+                this.showToast('Error', `Question ${i+1}: Mark at least one correct answer`, 'error');
+                return;
+            }
+            
+            // Check for duplicate options in the same question
+            const optionTexts = validOptions.map(o => o.text.trim().toLowerCase());
+            const uniqueOptions = new Set(optionTexts);
+            if (optionTexts.length !== uniqueOptions.size) {
+                this.showToast('Error', `Question ${i+1}: Duplicate options found. Each option must be unique.`, 'error');
                 return;
             }
         }
-        
-        const hasCorrect = validOptions.some(o => o.isCorrect);
-        if (!hasCorrect) {
-            this.showToast('Error', `Question ${i+1}: Mark at least one correct answer`, 'error');
-            return;
-        }
-        
-        // Check for duplicate options in the same question
-        const optionTexts = validOptions.map(o => o.text.trim().toLowerCase());
-        const uniqueOptions = new Set(optionTexts);
-        if (optionTexts.length !== uniqueOptions.size) {
-            this.showToast('Error', `Question ${i+1}: Duplicate options found. Each option must be unique.`, 'error');
-            return;
-        }
+        console.log(`✅ All ${data.questions.length} questions validated successfully`);
+    } else {
+        console.log('ℹ️ No questions added - exam will be created without questions');
     }
     
     console.log('✅ All validations passed successfully');
@@ -1991,31 +2032,41 @@ InstructorDashboard.prototype.saveExam = async function() {
 
         console.log('✅ Exam created successfully, ID:', examId);
 
-        // Add questions
-        if (btnText) btnText.textContent = 'Adding questions...';
-        
-        for (let i = 0; i < data.questions.length; i++) {
-            const q = data.questions[i];
-            const validOpts = q.options.filter(o => o.text && o.text.trim());
+        // Add questions only if they were provided
+        if (data.questions && data.questions.length > 0) {
+            if (btnText) btnText.textContent = `Adding ${data.questions.length} questions...`;
+            
+            for (let i = 0; i < data.questions.length; i++) {
+                const q = data.questions[i];
+                const validOpts = q.options.filter(o => o.text && o.text.trim());
 
-            const qPayload = {
-                questionText: q.text.trim(),
-                orderNumber: i + 1,
-                score: 1,
-                examId: examId,
-                courseId: data.courseId,
-                mCQOptions: validOpts.map((o, idx) => ({
-                    optionText: o.text.trim(),
-                    orderNumber: idx + 1,
-                    isCorrect: !!o.isCorrect
-                }))
-            };
+                const qPayload = {
+                    questionText: q.text.trim(),
+                    orderNumber: i + 1,
+                    score: 1,
+                    examId: examId,
+                    courseId: data.courseId,
+                    mCQOptions: validOpts.map((o, idx) => ({
+                        optionText: o.text.trim(),
+                        orderNumber: idx + 1,
+                        isCorrect: !!o.isCorrect
+                    }))
+                };
 
-            console.log(`📝 Adding question ${i+1}:`, qPayload);
-            await API.exam.addQuestion(qPayload);
+                console.log(`📝 Adding question ${i+1}:`, qPayload);
+                const questionResponse = await API.exam.addQuestion(qPayload);
+                
+                if (!questionResponse.success) {
+                    console.error(`❌ Failed to add question ${i+1}:`, questionResponse);
+                    this.showToast('Warning', `Exam created but failed to add question ${i+1}. You can add questions later.`, 'warning');
+                }
+            }
+            
+            this.showToast('Success', `Exam created with ${data.questions.length} questions!`, 'success');
+        } else {
+            this.showToast('Success', 'Exam created successfully! You can add questions to it now.', 'success');
         }
-
-        this.showToast('Success', 'Exam created successfully!', 'success');
+        
         
         // 10. أعد تعيين الفورم وأغلق المودال
         this.resetExamForm();
@@ -2297,36 +2348,609 @@ InstructorDashboard.prototype.setupExamFormListeners = function() {
 
 // ===== VIEW / EDIT / DELETE =====
 InstructorDashboard.prototype.viewExamDetails = async function(examId, courseId) {
-    try {
-        const response = await API.request(`/Exam/${examId}/course/${courseId}/with-questions`, { method: 'GET' });
-        if (response.success) {
-            this.showToast('Info', 'Exam loaded successfully', 'info');
-        } else {
-            this.showToast('Error', 'Failed to load exam', 'error');
-        }
-    } catch (error) {
-        this.showToast('Error', 'Error loading exam', 'error');
-    }
-};
-
-
-InstructorDashboard.prototype.editExam = function(examId) {
-    this.showToast('Info', 'Edit feature coming soon', 'info');
-};
-
-
-InstructorDashboard.prototype.deleteExam = async function(examId) {
-    if (!confirm('Delete this exam?')) return;
+    console.log('👁️ Viewing exam details:', examId, courseId);
     
     try {
-        const response = await API.exam.delete(examId);
-        if (response.success) {
-            this.showToast('Success', 'Exam deleted', 'success');
-            this.loadExams();
+        // Show modal with loading state
+        const modal = new bootstrap.Modal(document.getElementById('examDetailsModal'));
+        document.getElementById('examDetailsContent').innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-3 text-muted">Loading exam details...</p>
+            </div>
+        `;
+        modal.show();
+        
+        // Fetch exam details
+        const response = await API.request(`/Exam/${examId}/course/${courseId}/with-questions`, { method: 'GET' });
+        
+        if (response.success && response.data) {
+            const exam = response.data.data || response.data;
+            this.displayExamDetails(exam);
         } else {
-            this.showToast('Error', 'Failed to delete', 'error');
+            document.getElementById('examDetailsContent').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i> Failed to load exam details
+                </div>
+            `;
         }
     } catch (error) {
-        this.showToast('Error', 'Error deleting exam', 'error');
+        console.error('Error loading exam:', error);
+        document.getElementById('examDetailsContent').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle"></i> Error: ${error.message}
+            </div>
+        `;
     }
+};
+
+InstructorDashboard.prototype.displayExamDetails = function(exam) {
+    const examId = exam.ExamId || exam.examId || exam.Id || exam.id;
+    const courseId = exam.CourseId || exam.courseId;
+    const questions = exam.Questions || exam.questions || [];
+    
+    const questionsHtml = questions.map((q, idx) => {
+        const questionId = q.QuestionId || q.questionId || q.Id || q.id;
+        const options = q.MCQOptions || q.mcqOptions || [];
+        const optionsHtml = options.map((opt, optIdx) => `
+            <div class="form-check ms-4 ${opt.IsCorrect || opt.isCorrect ? 'text-success fw-bold' : ''}">
+                <input class="form-check-input" type="radio" disabled ${opt.IsCorrect || opt.isCorrect ? 'checked' : ''}>
+                <label class="form-check-label">
+                    ${String.fromCharCode(65 + optIdx)}. ${opt.OptionText || opt.optionText}
+                    ${opt.IsCorrect || opt.isCorrect ? '<i class="bi bi-check-circle-fill text-success ms-2"></i>' : ''}
+                </label>
+            </div>
+        `).join('');
+        
+        return `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h6 class="card-title">Question ${idx + 1}</h6>
+                    <p class="mb-3">${q.QuestionText || q.questionText}</p>
+                    ${optionsHtml}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    document.getElementById('examDetailsContent').innerHTML = `
+        <!-- Exam Details (Read-Only) -->
+        <div class="card mb-4">
+            <div class="card-header text-white" style="background-color: #476247;">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Exam Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Title</label>
+                        <p class="form-control-plaintext">${exam.Title || exam.title || 'N/A'}</p>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Duration</label>
+                        <p class="form-control-plaintext">${exam.Duration || exam.duration || 0} minutes</p>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Total Points</label>
+                        <p class="form-control-plaintext">${exam.TotalPoints || exam.totalPoints || 0}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Passing Score</label>
+                        <p class="form-control-plaintext">${exam.PassingScore || exam.passingScore || 0}</p>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label fw-bold">Description</label>
+                        <p class="form-control-plaintext">${exam.Description || exam.description || 'No description'}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Questions (Read-Only) -->
+        <div class="card">
+            <div class="card-header text-white" style="background-color: #476247;">
+                <h5 class="mb-0"><i class="bi bi-question-circle"></i> Questions (${questions.length})</h5>
+            </div>
+            <div class="card-body">
+                ${questions.length > 0 ? questionsHtml : `
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> No questions added yet.
+                        Use the "Manage Questions" button to add questions.
+                    </div>
+                `}
+            </div>
+        </div>
+    `;
+};
+
+
+InstructorDashboard.prototype.editExam = async function(examId) {
+    console.log('✏️ Edit exam metadata:', examId);
+    
+    try {
+        // Find the exam to get its details
+        const exam = this.allExams?.find(e => {
+            const id = e.ExamId || e.examId || e.Id || e.id;
+            return id === examId;
+        });
+        
+        if (!exam) {
+            this.showToast('Error', 'Exam not found', 'error');
+            return;
+        }
+        
+        // Populate the edit form
+        document.getElementById('editExamId').value = examId;
+        document.getElementById('editExamCourseId').value = exam.CourseId || exam.courseId;
+        document.getElementById('editExamTitleField').value = exam.Title || exam.title || '';
+        
+        // Format exam date for datetime-local input
+        const examDate = exam.ExamDate || exam.examDate;
+        if (examDate) {
+            const date = new Date(examDate);
+            const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+            document.getElementById('editExamDateField').value = localDate.toISOString().slice(0, 16);
+        }
+        
+        document.getElementById('editExamDurationField').value = exam.Duration || exam.duration || 60;
+        document.getElementById('editExamTotalMarksField').value = exam.TotalPoints || exam.totalPoints || 0;
+        document.getElementById('editExamPassingScoreField').value = exam.PassingScore || exam.passingScore || 0;
+        document.getElementById('editExamDescriptionField').value = exam.Description || exam.description || '';
+        
+        // Open the edit modal
+        const editModal = new bootstrap.Modal(document.getElementById('editExamModal'));
+        editModal.show();
+        
+    } catch (error) {
+        console.error('Error opening exam editor:', error);
+        this.showToast('Error', 'Failed to open exam editor: ' + error.message, 'error');
+    }
+};
+
+// Save edited exam metadata
+InstructorDashboard.prototype.saveExamEdit = async function() {
+    console.log('💾 Saving exam edits');
+    
+    try {
+        const examId = parseInt(document.getElementById('editExamId').value);
+        const courseId = parseInt(document.getElementById('editExamCourseId').value);
+        const title = document.getElementById('editExamTitleField').value.trim();
+        const examDate = document.getElementById('editExamDateField').value;
+        const duration = parseInt(document.getElementById('editExamDurationField').value);
+        const totalMarks = parseFloat(document.getElementById('editExamTotalMarksField').value);
+        const passingScore = parseFloat(document.getElementById('editExamPassingScoreField').value);
+        const description = document.getElementById('editExamDescriptionField').value.trim();
+        
+        // Validation
+        if (!title || title.length < 3) {
+            this.showToast('Error', 'Title must be at least 3 characters', 'error');
+            return;
+        }
+        
+        if (!examDate) {
+            this.showToast('Error', 'Exam date is required', 'error');
+            return;
+        }
+        
+        // Validate exam date is not in the past
+        const selectedDate = new Date(examDate);
+        const now = new Date();
+        if (selectedDate < now) {
+            this.showToast('Error', 'Exam date cannot be in the past', 'error');
+            return;
+        }
+        
+        if (duration < 5 || duration > 180) {
+            this.showToast('Error', 'Duration must be between 5-180 minutes', 'error');
+            return;
+        }
+        
+        if (totalMarks < 1 || totalMarks > 100) {
+            this.showToast('Error', 'Total marks must be between 1-100', 'error');
+            return;
+        }
+        
+        if (passingScore < 1 || passingScore > totalMarks) {
+            this.showToast('Error', 'Passing score must be between 1 and total marks', 'error');
+            return;
+        }
+        
+        const examData = {
+            Title: title,
+            ExamDate: examDate,
+            Duration: duration,
+            TotalPoints: totalMarks
+        };
+        
+        const response = await API.exam.update(examId, courseId, examData);
+        
+        if (response.success) {
+            this.showToast('Success', 'Exam updated successfully', 'success');
+            
+            // Close edit modal
+            const editModal = bootstrap.Modal.getInstance(document.getElementById('editExamModal'));
+            if (editModal) {
+                editModal.hide();
+            }
+            
+            // Small delay to ensure backend has processed
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            // Reload exams table
+            await this.loadExams();
+            
+            // If view modal is open, refresh it too
+            const viewModal = document.getElementById('examDetailsModal');
+            if (viewModal && viewModal.classList.contains('show')) {
+                console.log('🔄 Refreshing view modal with updated data');
+                await this.viewExamDetails(examId, courseId);
+            }
+        } else {
+            this.showToast('Error', response.message || 'Failed to update exam', 'error');
+        }
+        
+    } catch (error) {
+        console.error('Error saving exam edits:', error);
+        this.showToast('Error', 'Failed to save exam: ' + error.message, 'error');
+    }
+};
+
+
+InstructorDashboard.prototype.closeExam = async function(examId) {
+    console.log('🔒 Close exam:', examId);
+    
+    try {
+        // Find the exam to get its courseId
+        const exam = this.allExams?.find(e => {
+            const id = e.ExamId || e.examId || e.Id || e.id;
+            return id === examId;
+        });
+        
+        if (!exam) {
+            this.showToast('Error', 'Exam not found', 'error');
+            return;
+        }
+        
+        const courseId = exam.CourseId || exam.courseId;
+        const examTitle = exam.Title || exam.title || 'this exam';
+        console.log('🔒 Closing exam:', examId, 'from course:', courseId);
+        
+        const response = await API.exam.delete(examId, courseId);
+        
+        if (response.success) {
+            this.showToast('Success', `Exam "${examTitle}" has been closed. Students can no longer submit answers.`, 'success');
+            await this.loadExams();
+        } else {
+            this.showToast('Error', response.message || 'Failed to close exam', 'error');
+        }
+    } catch (error) {
+        console.error('Error closing exam:', error);
+        this.showToast('Error', 'Failed to close exam: ' + error.message, 'error');
+    }
+};
+
+// Backward compatibility alias
+InstructorDashboard.prototype.deleteExam = InstructorDashboard.prototype.closeExam;
+
+// ===== MANAGE QUESTIONS =====
+InstructorDashboard.prototype.manageQuestions = async function(examId, courseId) {
+    console.log('📝 Managing questions for exam:', examId, 'course:', courseId);
+    
+    // Store current exam context
+    this.currentManagingExamId = examId;
+    this.currentManagingCourseId = courseId;
+    
+    try {
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('manageQuestionsModal'));
+        modal.show();
+        
+        // Show loading state
+        document.getElementById('questionsListContainer').innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-3 text-muted">Loading questions...</p>
+            </div>
+        `;
+        
+        // Get exam details with questions
+        const response = await API.request(`/Exam/${examId}/course/${courseId}/with-questions`, { 
+            method: 'GET' 
+        });
+        
+        if (response.success && response.data) {
+            const exam = response.data.data || response.data.Data || response.data;
+            const examTitle = exam.Title || exam.title || 'Exam';
+            const questions = exam.Questions || exam.questions || [];
+            
+            // Update exam info
+            document.getElementById('questionExamTitle').textContent = `Exam: ${examTitle} (${questions.length} questions)`;
+            
+            // Render questions list
+            this.renderQuestionsList(questions);
+        } else {
+            document.getElementById('questionsListContainer').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i> Failed to load questions
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading questions:', error);
+        document.getElementById('questionsListContainer').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle"></i> Error: ${error.message}
+            </div>
+        `;
+    }
+};
+
+// ===== RENDER QUESTIONS LIST =====
+InstructorDashboard.prototype.renderQuestionsList = function(questions) {
+    const container = document.getElementById('questionsListContainer');
+    
+    if (!questions || questions.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+                <p class="mt-3 text-muted">No questions added yet. Click "Add New Question" to get started!</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const questionsHtml = questions.map((q, idx) => {
+        const questionId = q.QuestionId || q.questionId || q.Id || q.id;
+        const questionText = q.QuestionText || q.questionText || '';
+        const score = q.Score || q.score || 1;
+        const options = q.MCQOptions || q.mcqOptions || [];
+        
+        const optionsHtml = options.map((opt, optIdx) => {
+            const optionText = opt.OptionText || opt.optionText || '';
+            const isCorrect = opt.IsCorrect || opt.isCorrect;
+            
+            return `
+                <div class="form-check ms-3 ${isCorrect ? 'text-success fw-bold' : ''}">
+                    <input class="form-check-input" type="radio" disabled ${isCorrect ? 'checked' : ''}>
+                    <label class="form-check-label">
+                        ${String.fromCharCode(65 + optIdx)}. ${optionText}
+                        ${isCorrect ? '<i class="bi bi-check-circle-fill text-success ms-2"></i>' : ''}
+                    </label>
+                </div>
+            `;
+        }).join('');
+        
+        return `
+            <div class="card mb-3 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="card-title text-primary">Question ${idx + 1}</h6>
+                            <p class="mb-3">${questionText}</p>
+                            <div class="mb-2">
+                                ${optionsHtml}
+                            </div>
+                            <small class="text-muted">
+                                <i class="bi bi-star-fill text-warning"></i> ${score} point(s)
+                            </small>
+                        </div>
+                        <div class="btn-group-vertical btn-group-sm">
+                            <button class="btn btn-outline-danger" 
+                                    onclick="instructorDashboard.confirmDeleteQuestion(${questionId})"
+                                    title="Delete Question">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    container.innerHTML = questionsHtml;
+};
+
+// ===== CONFIRM DELETE QUESTION =====
+InstructorDashboard.prototype.confirmDeleteQuestion = async function(questionId) {
+    if (!confirm('Are you sure you want to delete this question? This action cannot be undone.')) {
+        return;
+    }
+    
+    const examId = this.currentManagingExamId;
+    const courseId = this.currentManagingCourseId;
+    
+    try {
+        const response = await API.request(`/Exam/${examId}/questions/${questionId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.success) {
+            this.showToast('Success', 'Question deleted successfully', 'success');
+            // Reload questions list
+            await this.manageQuestions(examId, courseId);
+        } else {
+            this.showToast('Error', response.message || 'Failed to delete question', 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting question:', error);
+        this.showToast('Error', 'Failed to delete question: ' + error.message, 'error');
+    }
+};
+
+// ===== SHOW ADD QUESTION MODAL =====
+InstructorDashboard.prototype.showAddQuestionModal = function() {
+    const modal = new bootstrap.Modal(document.getElementById('addQuestionModal'));
+    
+    // Reset form
+    document.getElementById('questionForm').reset();
+    document.getElementById('questionModalTitle').textContent = 'Add Question';
+    
+    // Reset options to default 4
+    const optionsContainer = document.getElementById('optionsContainer');
+    optionsContainer.innerHTML = `
+        <div class="mb-3 option-group">
+            <div class="input-group">
+                <span class="input-group-text">
+                    <input type="radio" name="correctOption" value="0" checked>
+                </span>
+                <span class="input-group-text">A</span>
+                <input type="text" class="form-control option-text" placeholder="Option A" required>
+            </div>
+        </div>
+        <div class="mb-3 option-group">
+            <div class="input-group">
+                <span class="input-group-text">
+                    <input type="radio" name="correctOption" value="1">
+                </span>
+                <span class="input-group-text">B</span>
+                <input type="text" class="form-control option-text" placeholder="Option B" required>
+            </div>
+        </div>
+        <div class="mb-3 option-group">
+            <div class="input-group">
+                <span class="input-group-text">
+                    <input type="radio" name="correctOption" value="2">
+                </span>
+                <span class="input-group-text">C</span>
+                <input type="text" class="form-control option-text" placeholder="Option C" required>
+            </div>
+        </div>
+        <div class="mb-3 option-group">
+            <div class="input-group">
+                <span class="input-group-text">
+                    <input type="radio" name="correctOption" value="3">
+                </span>
+                <span class="input-group-text">D</span>
+                <input type="text" class="form-control option-text" placeholder="Option D" required>
+            </div>
+        </div>
+    `;
+    
+    modal.show();
+};
+
+// ===== ADD MORE OPTION =====
+InstructorDashboard.prototype.addMoreOption = function() {
+    const optionsContainer = document.getElementById('optionsContainer');
+    const currentOptions = optionsContainer.querySelectorAll('.option-group');
+    const nextIndex = currentOptions.length;
+    const nextLetter = String.fromCharCode(65 + nextIndex);
+    
+    if (nextIndex >= 10) {
+        this.showToast('Warning', 'Maximum 10 options allowed', 'warning');
+        return;
+    }
+    
+    const newOption = document.createElement('div');
+    newOption.className = 'mb-3 option-group';
+    newOption.innerHTML = `
+        <div class="input-group">
+            <span class="input-group-text">
+                <input type="radio" name="correctOption" value="${nextIndex}">
+            </span>
+            <span class="input-group-text">${nextLetter}</span>
+            <input type="text" class="form-control option-text" placeholder="Option ${nextLetter}" required>
+            <button class="btn btn-outline-danger" type="button" onclick="this.closest('.option-group').remove()">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    `;
+    
+    optionsContainer.appendChild(newOption);
+};
+
+// ===== SAVE QUESTION =====
+InstructorDashboard.prototype.saveQuestion = async function() {
+    const examId = this.currentManagingExamId;
+    const courseId = this.currentManagingCourseId;
+    
+    const questionText = document.getElementById('questionText').value.trim();
+    const score = parseFloat(document.getElementById('questionScore').value);
+    const orderNumber = parseInt(document.getElementById('questionOrder').value);
+    
+    // Validate
+    if (!questionText) {
+        this.showToast('Error', 'Question text is required', 'error');
+        return;
+    }
+    
+    if (questionText.length < 5) {
+        this.showToast('Error', 'Question text must be at least 5 characters', 'error');
+        return;
+    }
+    
+    if (!score || score <= 0) {
+        this.showToast('Error', 'Points must be greater than 0', 'error');
+        return;
+    }
+    
+    // Get options
+    const optionGroups = document.querySelectorAll('.option-group');
+    const options = [];
+    const correctOptionIndex = parseInt(document.querySelector('input[name="correctOption"]:checked')?.value || '0');
+    
+    optionGroups.forEach((group, idx) => {
+        const optionText = group.querySelector('.option-text').value.trim();
+        if (optionText) {
+            options.push({
+                optionText: optionText,
+                orderNumber: idx + 1,
+                isCorrect: idx === correctOptionIndex
+            });
+        }
+    });
+    
+    if (options.length < 2) {
+        this.showToast('Error', 'At least 2 options are required', 'error');
+        return;
+    }
+    
+    const hasCorrect = options.some(o => o.isCorrect);
+    if (!hasCorrect) {
+        this.showToast('Error', 'Please mark the correct answer', 'error');
+        return;
+    }
+    
+    try {
+        const questionData = {
+            examId: examId,
+            courseId: courseId,
+            questionText: questionText,
+            score: score,
+            orderNumber: orderNumber,
+            mCQOptions: options
+        };
+        
+        console.log('📝 Saving question:', questionData);
+        
+        const response = await API.exam.addQuestion(questionData);
+        
+        if (response.success) {
+            this.showToast('Success', 'Question added successfully!', 'success');
+            
+            // Close add question modal
+            const addModal = bootstrap.Modal.getInstance(document.getElementById('addQuestionModal'));
+            if (addModal) addModal.hide();
+            
+            // Reload questions list
+            await this.manageQuestions(examId, courseId);
+        } else {
+            this.showToast('Error', response.message || 'Failed to add question', 'error');
+        }
+    } catch (error) {
+        console.error('Error saving question:', error);
+        this.showToast('Error', 'Failed to save question: ' + error.message, 'error');
+    }
+};
+
+// ===== CLOSE EXAM =====
+InstructorDashboard.prototype.closeExam = async function(examId) {
+    if (!confirm('Are you sure you want to close this exam? Students will no longer be able to take it.')) {
+        return;
+    }
+    
+    this.showToast('Info', 'Close exam feature will be implemented soon', 'info');
 };

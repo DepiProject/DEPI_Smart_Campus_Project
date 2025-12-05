@@ -797,7 +797,8 @@ const API = {
     exam: {
         // Get all exams
         async getAll(pageNumber = 1, pageSize = 10) {
-            return API.request(`/Exam?pageNumber=${pageNumber}&pageSize=${pageSize}`, {
+            const timestamp = new Date().getTime();
+            return API.request(`/Exam?pageNumber=${pageNumber}&pageSize=${pageSize}&_=${timestamp}`, {
                 method: 'GET'
             });
         },
@@ -850,16 +851,16 @@ const API = {
         },
 
         // Update exam
-        async update(id, examData) {
-            return API.request(`/Exam/${id}`, {
+        async update(id, courseId, examData) {
+            return API.request(`/Exam/${id}/course/${courseId}`, {
                 method: 'PUT',
                 body: examData
             });
         },
 
         // Delete exam
-        async delete(id) {
-            return API.request(`/Exam/${id}`, {
+        async delete(id, courseId) {
+            return API.request(`/Exam/${id}/course/${courseId}`, {
                 method: 'DELETE'
             });
         },

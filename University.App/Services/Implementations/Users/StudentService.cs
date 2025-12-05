@@ -53,8 +53,8 @@ namespace University.App.Services.Implementations.Users
                 FirstName = dto.FirstName.Trim(),
                 LastName = dto.LastName.Trim(),
                 Role = "Student",
-                EmailConfirmed = true,
-                MustChangePassword = true // Force password change on first login
+                EmailConfirmed = true
+                //MustChangePassword = true // Force password change on first login
             };
 
             var result = await _userManager.CreateAsync(user, dto.Password);

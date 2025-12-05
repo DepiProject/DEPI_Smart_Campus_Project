@@ -38,14 +38,7 @@ namespace University.App.Services.Implementations
             if (!result.Succeeded)
                 return null;
 
-            // 3. Check if user must change password on first login
-            if (user.MustChangePassword == true)
-            {
-                // Return special token indicating password change required
-                // Frontend should detect this and redirect to change password page
-                throw new InvalidOperationException("PASSWORD_CHANGE_REQUIRED");
-            }
-
+           
             // 4. Generate JWT token
             return await GenerateJwtToken(user);
         }
@@ -62,10 +55,7 @@ namespace University.App.Services.Implementations
             if (!passwordCheck.Succeeded)
                 throw new UnauthorizedAccessException("Current password is incorrect.");
 
-            // 3. Check if user must change password
-            if (user.MustChangePassword != true)
-                throw new InvalidOperationException("Password change not required.");
-
+            
             // 4. Change password using Identity
             var removePasswordResult = await _userManager.RemovePasswordAsync(user);
             if (!removePasswordResult.Succeeded)
@@ -79,7 +69,7 @@ namespace University.App.Services.Implementations
             }
 
             // 5. Clear the MustChangePassword flag
-            user.MustChangePassword = false;
+           // user.MustChangePassword = false;
             user.UpdatedAt = DateTime.UtcNow;
             await _userManager.UpdateAsync(user);
 
