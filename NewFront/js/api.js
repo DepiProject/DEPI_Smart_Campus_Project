@@ -5,7 +5,7 @@
 
 const API = {
      baseURL: 'https://smartcampus-university.runasp.net/api',
-    //baseURL: 'http://localhost:5175/api',
+    //baseURL: 'http://localhost:7034/swagger',
 
     // Get token dynamically to always use the latest
     get token() {
