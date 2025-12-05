@@ -1955,13 +1955,11 @@ InstructorDashboard.prototype.saveExam = async function() {
 
     // 4. إنشاء payload - استخدم الـ ID الموجود في الـ dropdown كما هو
     const examPayload = {
-        title: data.title.trim(),
-        courseId: data.courseId, // استخدم القيمة كما هي
+        title: data.title,
+        courseId: data.courseId,
         duration: data.durationMinutes,
         totalPoints: data.totalMarks,
-       // examDate: new Date().toISOString(),
-       examDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        description: data.description || ""
+        examDate: new Date(Date.now() + 5 * 60 * 1000).toISOString()
     };
 
     console.log('📤 Sending exam data to server:', examPayload);
@@ -1975,102 +1973,48 @@ InstructorDashboard.prototype.saveExam = async function() {
 
         // 5. أرسل البيانات إلى السيرفر
         const examResponse = await API.exam.create(examPayload);
-        console.log('📥 Server response:', examResponse);
+        console.log('✅ Exam creation response:', examResponse);
 
         // 6. تحقق من الاستجابة
         if (!examResponse.success) {
-            let errorMessage = examResponse.error || examResponse.Message || 'Failed to create exam';
-            
-            // إذا كان خطأ 500، المشكلة في الـ courseId
-            if (examResponse.status === 500) {
-                errorMessage = 'Course ID ' + data.courseId + ' not found in database. ';
-                errorMessage += 'Please contact administrator to fix course data.';
-            }
-            
-            throw new Error(errorMessage);
+            throw new Error(examResponse.error || examResponse.message || 'Failed to create exam');
         }
 
-        // 7. احصل على examId من الاستجابة
-        console.log('🔍 Extracting ExamId from response...');
-        console.log('📦 examResponse structure:', examResponse);
-        console.log('📦 examResponse.data structure:', examResponse.data);
-        
-        let examId = examResponse.data?.ExamId || 
-                    examResponse.data?.examId || 
-                    examResponse.data?.id ||
-                    examResponse.data?.Data?.ExamId ||
-                    examResponse.data?.data?.ExamId ||
-                    examResponse.data?.data?.examId ||
-                    examResponse.data?.InstructorId ||
-                    examResponse.data?.instructorId ||
-                    examResponse.data?.data?.InstructorId ||
-                    examResponse.data?.data?.instructorId; // Fallback for nested data
-
-        console.log('🆔 Extracted ExamId:', examId, '(type:', typeof examId, ')');
-
-        if (!examId || examId <= 0) {
-            console.error('❌ No valid exam ID in response!');
-            console.error('📋 Full response:', JSON.stringify(examResponse, null, 2));
-            throw new Error('Exam created but no valid ID returned. Cannot add questions.');
+        const examId = examResponse.data?.Data?.ExamId || 
+                      examResponse.data?.data?.ExamId || 
+                      examResponse.data?.ExamId ||
+                      examResponse.data?.examId;
+                      
+        if (!examId) {
+            throw new Error('No exam ID returned from server');
         }
 
         console.log('✅ Exam created successfully, ID:', examId);
 
-        // 8. أضف الأسئلة إذا كان examId موجوداً
-        if (examId > 0 && data.questions && data.questions.length > 0) {
-            console.log(`📝 Starting to add ${data.questions.length} questions...`);
-            if (btnText) btnText.textContent = 'Adding Questions...';
-            
-            let questionsAdded = 0;
-            
-            for (let i = 0; i < data.questions.length; i++) {
-                const q = data.questions[i];
-                const validOptions = q.options.filter(o => o.text && o.text.trim());
-                
-                if (validOptions.length < 2) {
-                    console.warn(`⚠️ Question ${i+1} has less than 2 valid options, skipping...`);
-                    continue;
-                }
-                
-                const questionPayload = {
-                    examId: examId,
-                    questionText: q.text.trim(),
-                    orderNumber: i + 1,
-                    score: Math.floor(data.totalMarks / data.questions.length), // توزيع العلامات
-                    courseId: data.courseId,
-                    mcqOptions: validOptions.map((opt, idx) => ({
-                        optionText: opt.text.trim(),
-                        orderNumber: idx + 1,
-                        isCorrect: opt.isCorrect || false
-                    }))
-                };
+        // Add questions
+        if (btnText) btnText.textContent = 'Adding questions...';
+        
+        for (let i = 0; i < data.questions.length; i++) {
+            const q = data.questions[i];
+            const validOpts = q.options.filter(o => o.text && o.text.trim());
 
-                console.log(`➕ Adding question ${i+1}/${data.questions.length}:`, questionPayload);
-                
-                try {
-                    const qResponse = await API.exam.addQuestion(questionPayload);
-                    console.log(`📥 Question ${i+1} response:`, qResponse);
-                    
-                    if (qResponse.success) {
-                        questionsAdded++;
-                        console.log(`✅ Question ${i+1} added successfully`);
-                    } else {
-                        console.error(`❌ Failed to add question ${i+1}:`, qResponse.error || qResponse.message);
-                    }
-                } catch (qError) {
-                    console.error(`❌ Exception adding question ${i+1}:`, qError);
-                    console.error('Error details:', qError.message, qError.stack);
-                }
-            }
-            
-            console.log(`\n📊 SUMMARY: ${questionsAdded}/${data.questions.length} questions added successfully`);
-            
-            if (questionsAdded === 0 && data.questions.length > 0) {
-                console.error('⚠️ WARNING: No questions were added!');
-            }
+            const qPayload = {
+                questionText: q.text.trim(),
+                orderNumber: i + 1,
+                score: 1,
+                examId: examId,
+                courseId: data.courseId,
+                mCQOptions: validOpts.map((o, idx) => ({
+                    optionText: o.text.trim(),
+                    orderNumber: idx + 1,
+                    isCorrect: !!o.isCorrect
+                }))
+            };
+
+            console.log(`📝 Adding question ${i+1}:`, qPayload);
+            await API.exam.addQuestion(qPayload);
         }
 
-        // 9. اعرض رسالة النجاح
         this.showToast('Success', 'Exam created successfully!', 'success');
         
         // 10. أعد تعيين الفورم وأغلق المودال

@@ -141,6 +141,8 @@ namespace University.App.Services.Implementations
                 Console.WriteLine($"  - CourseId: {c.CourseId}, Name: '{c.Name}', InstructorId: {c.InstructorId}, IsDeleted: {c.IsDeleted}");
             }
             
+            var assignedIds = string.Join(", ", courses.Select(c => $"CourseId={c.CourseId}, Name={c.Name}, InstructorId={c.InstructorId}"));
+            
             var courseExists = courses.Any(c => c.CourseId == dto.CourseId && !c.IsDeleted);
             
             if (!courseExists)
@@ -162,7 +164,6 @@ namespace University.App.Services.Implementations
                     Console.WriteLine($"[ERROR] Course {dto.CourseId} does not exist in database!");
                 }
                 
-                var assignedIds = string.Join(", ", courses.Select(c => $"CourseId={c.CourseId}, Name={c.Name}"));
                 var courseInfo = targetCourse != null 
                     ? $"Course exists - ID: {targetCourse.CourseId}, Name: {targetCourse.Name}, AssignedInstructorId: {targetCourse.InstructorId}, IsDeleted: {targetCourse.IsDeleted}"
                     : "Course not found in database";
