@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Smart Campus</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../css/modern-theme.css">
+    <link rel="stylesheet" href="../css/utilities.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="stylesheet" href="../css/admin-enhanced.css">
+    <link rel="stylesheet" href="../css/profile.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            background: var(--warm-50);
+            padding-left: 80px;
+        }
+
+        .main-content {
+            margin-left: 0;
+            padding: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding-left: 0;
+            }
+
+            .icon-sidebar {
+                display: none;
+            }
+        }
+
+        /* Enhanced Form Validation Styles */
+        .form-control.is-valid,
+        .form-select.is-valid {
+            border-color: #198754;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='m2.3 6.73.8-.77-.8-.77-1.5 1.5L.83 5.2v1.5l1.5 1.5z'/%3e%3c/svg%3e");
+            animation: validPulse 0.3s ease-in-out;
+        }
+
+        .form-control.is-invalid,
+        .form-select.is-invalid {
+            border-color: #dc3545;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23dc3545' d='M7.4 6.3l-1.1 1.1L4 5.1 1.7 7.4.6 6.3 2.9 4 .6 1.7 1.7.6 4 2.9 6.3.6 7.4 1.7 5.1 4l2.3 2.3z'/%3e%3c/svg%3e");
+            animation: invalidShake 0.3s ease-in-out;
+        }
+
+        @keyframes validPulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(25, 135, 84, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(25, 135, 84, 0);
+            }
+        }
+
+        @keyframes invalidShake {
+
+            0%,
+            20%,
+            40%,
+            60%,
+            80% {
+                transform: translateX(-2px);
+            }
+
+            10%,
+            30%,
+            50%,
+            70%,
+            90% {
+                transform: translateX(2px);
+            }
+
+            100% {
+                transform: translateX(0);
+            }
+        }
+
+        .invalid-feedback {
+            display: none;
+            font-size: 0.875em;
+            margin-top: 0.25rem;
+            color: #dc3545;
+            font-weight: 500;
+        }
+
+        .form-control.is-invalid~.invalid-feedback,
+        .form-select.is-invalid~.invalid-feedback {
+            display: block;
+        }
+
+        .valid-feedback {
+            display: none !important;
+        }
+
+        /* Password strength indicator */
+        .password-strength .progress {
+            height: 6px !important;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .password-strength .progress-bar {
+            transition: width 0.3s ease, background-color 0.3s ease;
+        }
+
+        /* Validation icons in input groups */
+        .input-group .form-control.is-valid~.input-group-text {
+            border-color: #198754;
+            background-color: rgba(25, 135, 84, 0.1);
+        }
+
+        .input-group .form-control.is-invalid~.input-group-text {
+            border-color: #dc3545;
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+
+        /* Real-time validation feedback */
+        .form-label.required::after {
+            content: " *";
+            color: #dc3545;
+        }
+
+        .validation-success-icon {
+            color: #198754;
+            margin-left: 8px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .form-control.is-valid~.validation-success-icon,
+        .form-select.is-valid~.validation-success-icon {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Icon Sidebar Navigation -->
+    <div class="icon-sidebar">
+        <a href="#dashboard" data-section="dashboard" class="icon-sidebar-item active">
+            <i class="bi bi-speedometer2"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="#instructors" data-section="instructors" class="icon-sidebar-item">
+            <i class="bi bi-person-workspace"></i>
+            <span>Instructors</span>
+        </a>
+        <a href="#students" data-section="students" class="icon-sidebar-item">
+            <i class="bi bi-people"></i>
+            <span>Students</span>
+        </a>
+        <a href="#departments" data-section="departments" class="icon-sidebar-item">
+            <i class="bi bi-building"></i>
+            <span>Departments</span>
+        </a>
+        <a href="#courses" data-section="courses" class="icon-sidebar-item">
+            <i class="bi bi-book"></i>
+            <span>Courses</span>
+        </a>
+        <a href="enrollment-management.html" class="icon-sidebar-item">
+            <i class="bi bi-card-checklist"></i>
+            <span>Enrollments</span>
+        </a>
+        <a href="#profile" data-section="profile" class="icon-sidebar-item">
+            <i class="bi bi-person-circle"></i>
+            <span>Profile</span>
+        </a>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="modern-nav">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <span class="navbar-brand mb-0 h5 text-white fw-bold">
+                <i class="bi bi-mortarboard-fill"></i> Smart Campus Admin
+            </span>
+            <div class="dropdown">
+                <button class="btn user-dropdown-btn dropdown-toggle" type="button" id="userDropdown"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-person-circle"></i> <span id="userName">Amal Ahmed</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end user-dropdown-menu" aria-labelledby="userDropdown">
+                    <li><a class="dropdown-item" href="#profile" data-section="profile"
+                            onclick="document.querySelector('.icon-sidebar-item[data-section=profile]').click()"><i
+                                class="bi bi-person-circle"></i> My Profile</a></li>
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+                    <li><a class="dropdown-item text-danger" href="#" id="logoutBtn"><i
+                                class="bi bi-box-arrow-right"></i>
+                            Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="container-fluid">
+            <!-- Dashboard Overview -->
+            <div id="dashboard" class="section">
+                <!-- Enhanced Stats Cards -->
+                <div class="row g-4 mb-4">
+                    <div class="col-xl-3 col-md-6">
+                        <div class="stat-card-enhanced sage-gradient">
+                            <div class="stat-card-icon">
+                                <i class="bi bi-people-fill"></i>
+                            </div>
+                            <div class="stat-card-content">
+                                <h6 class="stat-label">Total Students</h6>
+                                <h2 class="stat-number" id="totalStudents">
+                                    <span class="counter">--</span>
+                                </h2>
+                                <div class="stat-trend">
+                                    <i class="bi bi-graph-up-arrow"></i>
+                                    <span>Registered</span>
+                                </div>
+                            </div>
+                            <div class="stat-card-shimmer"></div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                        <div class="stat-card-enhanced warm-gradient">
+                            <div class="stat-card-icon">
+                                <i class="bi bi-person-workspace"></i>
+                            </div>
+                            <div class="stat-card-content">
+                                <h6 class="stat-label">Instructors</h6>
+                                <h2 class="stat-number" id="totalInstructors">
+                                    <span class="counter">--</span>
+                                </h2>
+                                <div class="stat-trend">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    <span>Active</span>
+                                </div>
+                            </div>
+                            <div class="stat-card-shimmer"></div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                        <div class="stat-card-enhanced beige-gradient">
+                            <div class="stat-card-icon">
+                                <i class="bi bi-building"></i>
+                            </div>
+                            <div class="stat-card-content">
+                                <h6 class="stat-label">Departments</h6>
+                                <h2 class="stat-number" id="totalDepartments">
+                                    <span class="counter">--</span>
+                                </h2>
+                                <div class="stat-trend">
+                                    <i class="bi bi-building-check"></i>
+                                    <span>Active</span>
+                                </div>
+                            </div>
+                            <div class="stat-card-shimmer"></div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                        <div class="stat-card-enhanced cream-gradient">
+                            <div class="stat-card-icon">
+                                <i class="bi bi-book-fill"></i>
+                            </div>
+                            <div class="stat-card-content">
+                                <h6 class="stat-label">Courses</h6>
+                                <h2 class="stat-number" id="totalCourses">
+                                    <span class="counter">--</span>
+                                </h2>
+                                <div class="stat-trend">
+                                    <i class="bi bi-grid-3x3-gap-fill"></i>
+                                    <span>Available</span>
+                                </div>
+                            </div>
+                            <div class="stat-card-shimmer"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts and Analytics Row -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-8">
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <h5 class="chart-title">
+                                    <i class="bi bi-graph-up"></i> Enrollment Trends
+                                </h5>
+                                <div class="chart-actions">
+                                    <button class="btn btn-sm btn-outline-secondary"
+                                        onclick="adminDashboard.refreshCharts()">
+                                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="chart-card-body">
+                                <canvas id="enrollmentTrendChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <h5 class="chart-title">
+                                    <i class="bi bi-pie-chart-fill"></i> Department Distribution
+                                </h5>
+                            </div>
+                            <div class="chart-card-body">
+                                <canvas id="departmentChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions & Stats Row -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-6">
+                        <div class="quick-actions-card">
+                            <div class="quick-actions-header">
+                                <h5><i class="bi bi-lightning-fill"></i> Quick Actions</h5>
+                                <p class="text-muted small mb-0">Manage your campus efficiently</p>
+                            </div>
+                            <div class="quick-actions-grid">
+                                <a href="#students" data-section="students" class="quick-action-btn sage">
+                                    <div class="action-icon">
+                                        <i class="bi bi-person-plus"></i>
+                                    </div>
+                                    <div class="action-content">
+                                        <h6>Add Student</h6>
+                                        <small>Register new student</small>
+                                    </div>
+                                </a>
+                                <a href="#instructors" data-section="instructors" class="quick-action-btn warm">
+                                    <div class="action-icon">
+                                        <i class="bi bi-person-plus-fill"></i>
+                                    </div>
+                                    <div class="action-content">
+                                        <h6>Add Instructor</h6>
+                                        <small>Create instructor profile</small>
+                                    </div>
+                                </a>
+                                <a href="#courses" data-section="courses" class="quick-action-btn beige">
+                                    <div class="action-icon">
+                                        <i class="bi bi-book"></i>
+                                    </div>
+                                    <div class="action-content">
+                                        <h6>Add Course</h6>
+                                        <small>Create new course</small>
+                                    </div>
+                                </a>
+                                <a href="#departments" data-section="departments" class="quick-action-btn cream">
+                                    <div class="action-icon">
+                                        <i class="bi bi-building-add"></i>
+                                    </div>
+                                    <div class="action-content">
+                                        <h6>Add Department</h6>
+                                        <small>Setup new department</small>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <h5 class="chart-title">
+                                    <i class="bi bi-bar-chart-fill"></i> Course Enrollment Stats
+                                </h5>
+                            </div>
+                            <div class="chart-card-body">
+                                <canvas id="courseStatsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity Feed -->
+                <div class="row g-4">
+                    <div class="col-12">
+                        <div class="activity-card">
+                            <div class="activity-header">
+                                <h5><i class="bi bi-clock-history"></i> Recent Activity</h5>
+                                <span class="badge bg-sage">Live</span>
+                            </div>
+                            <div class="activity-list" id="activityFeed">
+                                <div class="activity-item">
+                                    <div class="activity-icon sage">
+                                        <i class="bi bi-person-check-fill"></i>
+                                    </div>
+                                    <div class="activity-content">
+                                        <p class="activity-text">System initialized successfully</p>
+                                        <small class="activity-time">Just now</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- End Dashboard Overview -->
+
+            <!-- Instructors Section -->
+            <div id="instructors" class="section d-none">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Manage Instructors</h2>
+                    <div>
+                        <a href="archived-instructors.html" class="btn btn-outline-warning me-2">
+                            <i class="bi bi-archive"></i> View Archived Instructors
+                        </a>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#instructorModal">
+                            <i class="bi bi-plus-lg"></i> Add Instructor
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="row g-2">
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" class="form-control border-start-0" id="instructorSearchInput"
+                                    placeholder="Search by name, email, or department...">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select" id="instructorDepartmentFilter">
+                                <option value="">All Departments</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped" id="instructorsTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Department</th>
+                                <th>Contact</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="instructorsTableBody">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="instructorsPaginationControls" class="mt-3"></div>
+            </div>
+
+            <!-- Users Section -->
+            <div id="students" class="section d-none">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Manage Students</h2>
+                    <div>
+                        <a href="archived-students.html" class="btn btn-outline-warning me-2">
+                            <i class="bi bi-archive"></i> View Archived Students
+                        </a>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#studentModal">
+                            <i class="bi bi-plus-lg"></i> Add Student
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="row g-2">
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" class="form-control border-start-0" id="studentSearchInput"
+                                    placeholder="Search by code, name, email, or department...">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select" id="studentLevelFilter">
+                                <option value="">All Levels</option>
+                                <option value="1">Level 1 (Freshman)</option>
+                                <option value="2">Level 2 (Sophomore)</option>
+                                <option value="3">Level 3 (Junior)</option>
+                                <option value="4">Level 4 (Senior)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped" id="studentsTable">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Level</th>
+                                <th>Department</th>
+                                <th>Contact</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsTableBody">
+                            <tr>
+                                <td colspan="7" class="text-center text-muted">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="studentsPaginationControls" class="mt-3"></div>
+            </div>
+
+            <!-- Departments Section -->
+            <div id="departments" class="section d-none">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Manage Departments</h2>
+                    <div>
+                        <a href="archived-departments.html" class="btn btn-outline-info me-2">
+                            <i class="bi bi-archive"></i> View Archived Departments
+                        </a>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#departmentModal">
+                            <i class="bi bi-plus-lg"></i> Add Department
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="row g-2">
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" class="form-control border-start-0" id="departmentSearchInput"
+                                    placeholder="Search by name, building, or head...">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select" id="departmentBuildingFilter">
+                                <option value="">All Buildings</option>
+                                <option value="Building A">Building A</option>
+                                <option value="Building B">Building B</option>
+                                <option value="Building C">Building C</option>
+                                <option value="Building D">Building D</option>
+                                <option value="Building E">Building E</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped" id="departmentsTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Building</th>
+                                <th>Department Head</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="departmentsTableBody">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="departmentsPaginationControls" class="mt-3"></div>
+            </div>
+
+            <!-- Courses Section -->
+            <div id="courses" class="section d-none">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Manage Courses</h2>
+                    <div>
+                        <a href="archived-courses.html" class="btn btn-outline-danger me-2">
+                            <i class="bi bi-archive"></i> View Archived Courses
+                        </a>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#courseModal">
+                            <i class="bi bi-plus-lg"></i> Add Course
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" class="form-control border-start-0" id="courseSearchInput"
+                                    placeholder="Search by code, name, or instructor...">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="courseDepartmentFilter">
+                                <option value="">All Departments</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="courseCreditFilter">
+                                <option value="">All Credits</option>
+                                <option value="1">1 Credit</option>
+                                <option value="2">2 Credits</option>
+                                <option value="3">3 Credits</option>
+                                <option value="4">4 Credits</option>
+                                <option value="5">5 Credits</option>
+                                <option value="6">6 Credits</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped" id="coursesTable">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Name</th>
+                                <th>Department</th>
+                                <th>Instructor</th>
+                                <th>Credits</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="coursesTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="coursesPaginationControls" class="mt-3"></div>
+            </div>
+
+            <!-- Enrollments Section -->
+            <div id="enrollments" class="section d-none">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Manage Enrollments</h2>
+                    <div class="d-flex gap-2">
+                        <a href="rejected-enrollments.html" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> View Rejected Enrollments
+                        </a>
+                        <div class="input-group" style="width: 300px;">
+                            <span class="input-group-text bg-white border-end-0">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text" class="form-control border-start-0" id="enrollmentSearchInput"
+                                placeholder="Search student, course, code...">
+                        </div>
+                        <select class="form-select" id="enrollmentStatusFilter" style="width: 150px;">
+                            <option value="">All Status</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Enrolled">Enrolled</option>
+                            <option value="Completed">Completed</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped" id="enrollmentsTable">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Course</th>
+                                <th>Code</th>
+                                <th>Department</th>
+                                <th>Credits</th>
+                                <th>Status</th>
+                                <th>Grade</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="enrollmentsTableBody">
+                            <tr>
+                                <td colspan="9" class="text-center text-muted">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="enrollmentsPaginationControls" class="mt-3"></div>
+            </div>
+
+            <!-- Profile Section -->
+            <div id="profile" class="section d-none profile-container">
+                <!-- Profile Hero Section -->
+                <div class="profile-hero">
+                    <button class="profile-edit-btn" onclick="adminDashboard.showEditProfileForm()">
+                        <i class="bi bi-pencil"></i> Edit Profile
+                    </button>
+
+                    <div id="profileDisplayView">
+                        <div class="profile-avatar-section">
+                            <div class="profile-avatar admin-avatar">
+                                <i class="bi bi-shield-fill-check"></i>
+                                <div class="profile-status-badge"></div>
+                            </div>
+                            <div class="profile-hero-info">
+                                <h1><span id="displayFirstName">-</span> <span id="displayLastName">-</span></h1>
+                                <div class="role-badge">
+                                    <i class="bi bi-shield-check"></i> Administrator
+                                </div>
+                                <div class="profile-meta">
+                                    <div class="profile-meta-item">
+                                        <i class="bi bi-envelope-fill"></i>
+                                        <span id="displayEmail">-</span>
+                                    </div>
+                                    <div class="profile-meta-item">
+                                        <i class="bi bi-telephone-fill"></i>
+                                        <span id="displayContactNumber">Not provided</span>
+                                    </div>
+                                    <div class="profile-meta-item">
+                                        <i class="bi bi-calendar-plus"></i>
+                                        <span>Joined: <span id="displayCreatedDate">-</span></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Content Cards -->
+                <div class="profile-content">
+                    <div class="profile-info-card admin-card">
+                        <div class="card-icon">
+                            <i class="bi bi-shield-lock"></i>
+                        </div>
+                        <h3>Access Level</h3>
+                        <p class="value">
+                            <span class="info-badge warning-badge">
+                                <i class="bi bi-key-fill"></i> Full Access
+                            </span>
+                        </p>
+                    </div>
+
+                    <div class="profile-info-card admin-card">
+                        <div class="card-icon">
+                            <i class="bi bi-gear-fill"></i>
+                        </div>
+                        <h3>Role</h3>
+                        <p class="value">
+                            <span class="info-badge success-badge">
+                                <i class="bi bi-award-fill"></i> System Admin
+                            </span>
+                        </p>
+                    </div>
+
+                    <div class="profile-info-card admin-card">
+                        <div class="card-icon">
+                            <i class="bi bi-calendar-check"></i>
+                        </div>
+                        <h3>Status</h3>
+                        <p class="value">
+                            <span class="info-badge success-badge">
+                                <i class="bi bi-check-circle-fill"></i> Active
+                            </span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Profile Edit View -->
+                <div id="profileEditView" class="profile-edit-form d-none">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="mb-0">
+                            <i class="bi bi-pencil-square text-primary"></i> Edit Profile
+                        </h2>
+                        <button class="btn btn-outline-secondary" onclick="adminDashboard.showDisplayProfileView()">
+                            <i class="bi bi-arrow-left"></i> Back to Profile
+                        </button>
+                    </div>
+
+                    <form id="profileForm">
+                        <div class="form-section">
+                            <div class="form-section-title">
+                                <i class="bi bi-person-fill"></i>
+                                <span>Personal Information</span>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">First Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="profileFirstName" required
+                                        placeholder="Enter first name">
+                                    <small class="text-muted">Letters only, max 50 characters</small>
+                                    <div id="firstNameError" class="text-danger small mt-1"></div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="profileLastName" required
+                                        placeholder="Enter last name">
+                                    <small class="text-muted">Letters only, max 50 characters</small>
+                                    <div id="lastNameError" class="text-danger small mt-1"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <div class="form-section-title">
+                                <i class="bi bi-envelope-fill"></i>
+                                <span>Contact Information</span>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="profileEmail" disabled
+                                        placeholder="Email (read-only)">
+                                    <small class="text-muted">
+                                        <i class="bi bi-lock-fill"></i> Email cannot be changed
+                                    </small>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Contact Number</label>
+                                    <input type="tel" class="form-control" id="profileContactNumber"
+                                        placeholder="01012345678" maxlength="11">
+                                    <small class="text-muted">Must start with 010, 011, 012, or 015 (optional)</small>
+                                    <div id="contactNumberError" class="text-danger small mt-1"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <div class="form-section-title">
+                                <i class="bi bi-shield-lock-fill"></i>
+                                <span>Password Security</span>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Current Password <span
+                                            class="text-danger">*</span></label>
+                                    <input type="password" class="form-control" id="currentPassword" required
+                                        placeholder="Enter your current password">
+                                    <small class="text-muted">Required for security verification</small>
+                                    <div id="passwordError" class="text-danger small mt-1"></div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">New Password <span
+                                            class="text-muted">(optional)</span></label>
+                                    <input type="password" class="form-control" id="newPassword"
+                                        placeholder="Leave blank to keep current password">
+                                    <small class="text-muted">Min 8 chars: uppercase, lowercase, number, special
+                                        char</small>
+                                    <div id="newPasswordError" class="text-danger small mt-1"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="profile-info-alert">
+                            <i class="bi bi-info-circle-fill"></i>
+                            <strong>Important:</strong> Your full name should contain only letters. Phone numbers must
+                            start with 010, 011, 012, or 015 (last 8 digits cannot be all same).
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-save">
+                                <i class="bi bi-check-lg"></i> Save Changes
+                            </button>
+                            <button type="button" class="btn btn-cancel"
+                                onclick="adminDashboard.showDisplayProfileView()">
+                                <i class="bi bi-x-lg"></i> Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Instructor Modal -->
+    <div class="modal fade" id="instructorModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-gradient"
+                    style="background: linear-gradient(135deg, var(--sage-600) 0%, var(--sage-700) 100%); color: white;">
+                    <h5 class="modal-title" id="instructorModalTitle">
+                        <i class="bi bi-person-workspace"></i> Add Instructor
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Business Rules Info (shown in create mode) -->
+                    <div class="alert alert-info" id="instructorBusinessRules">
+                        <h6 class="alert-heading"><i class="bi bi-info-circle"></i> Business Rules</h6>
+                        <ul class="mb-0 small">
+                            <li>Email must be in university format (e.g., user@example.edu.eg)</li>
+                            <li>Password: min 8 chars, UPPERCASE, lowercase, number, special char (@$!%*?&)</li>
+                            <li>Names: letters, spaces, hyphens, apostrophes only (5-150 chars total)</li>
+                            <li>Contact: must start with 010, 011, 012, or 015 (last 8 digits cannot be all same)</li>
+                            <li>Department assignment required</li>
+                        </ul>
+                    </div>
+
+                    <!-- Edit Mode Info -->
+                    <div class="alert alert-warning d-none" id="instructorEditInfo">
+                        <h6 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Edit Mode</h6>
+                        <p class="mb-0 small">As an admin, you can only change the department assignment. Personal
+                            details can only be updated by the instructor themselves.</p>
+                    </div>
+
+                    <form id="instructorForm" class="needs-validation" novalidate>
+                        <div class="row">
+                            <!-- Email -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                    <input type="email" class="form-control" id="instructorEmail" required
+                                        placeholder="instructor@university.edu.eg"
+                                        pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(edu|ac)\.[a-zA-Z]{2,}$">
+                                </div>
+                                <div class="invalid-feedback" id="instructorEmailError">
+                                    <i class="bi bi-exclamation-circle"></i> Must be university format (e.g.,
+                                    user@example.edu.eg or user@example.ac.eg)
+                                </div>
+                            </div>
+
+                            <!-- Department -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Department <span
+                                        class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-building"></i></span>
+                                    <select class="form-select" id="instructorDepartment" required>
+                                        <option value="">Select Department</option>
+                                    </select>
+                                </div>
+                                <div class="invalid-feedback" id="instructorDepartmentError">
+                                    <i class="bi bi-exclamation-circle"></i> Please select a department for the
+                                    instructor
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- First Name -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">First Name <span
+                                        class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                    <input type="text" class="form-control" id="instructorFirstName" required
+                                        placeholder="John" maxlength="50" pattern="^[a-zA-Z\s\-']+$">
+                                </div>
+                                <div class="invalid-feedback" id="instructorFirstNameError">
+                                    <i class="bi bi-exclamation-circle"></i> Use only letters, spaces, hyphens, or
+                                    apostrophes (max 50 chars)
+                                </div>
+                            </div>
+
+                            <!-- Last Name -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Last Name <span
+                                        class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                    <input type="text" class="form-control" id="instructorLastName" required
+                                        placeholder="Smith" maxlength="50" pattern="^[a-zA-Z\s\-']+$">
+                                </div>
+                                <div class="invalid-feedback" id="instructorLastNameError">
+                                    <i class="bi bi-exclamation-circle"></i> Use only letters, spaces, hyphens, or
+                                    apostrophes (max 50 chars)
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Contact Number -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Contact Number <span
+                                        class="text-muted">(optional)</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-phone"></i></span>
+                                    <input type="tel" class="form-control" id="instructorPhone"
+                                        placeholder="01012345678" maxlength="11" pattern="^(010|011|012|015)\d{8}$">
+                                </div>
+                                <div class="invalid-feedback" id="instructorPhoneError">
+                                    <i class="bi bi-exclamation-circle"></i> Must start with 010, 011, 012, or 015
+                                    followed by 8 digits (last 8 digits cannot be all the same)
+                                </div>
+                            </div>
+
+                            <!-- Password (Create mode only) -->
+                            <div class="col-md-6 mb-3" id="instructorPasswordField">
+                                <label class="form-label fw-semibold">Password <span
+                                        class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                    <input type="password" class="form-control" id="instructorPassword"
+                                        placeholder="Strong password" minlength="8" maxlength="100">
+                                    <button class="btn btn-outline-secondary" type="button"
+                                        id="toggleInstructorPassword">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="invalid-feedback" id="instructorPasswordError">
+                                    <i class="bi bi-exclamation-circle"></i> Min 8 chars: must include UPPERCASE,
+                                    lowercase, number, and special char (@$!%*?&)
+                                </div>
+                                <div class="password-strength mt-1" id="instructorPasswordStrength">
+                                    <div class="progress" style="height: 4px;">
+                                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                    <small class="text-muted d-block mt-1">
+                                        <span id="strengthText" class="text-muted">-</span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" id="saveInstructorBtn">
+                        <i class="bi bi-check-lg"></i> <span id="instructorBtnText">Add Instructor</span>
+                        <span class="spinner-border spinner-border-sm ms-2 d-none" id="instructorBtnSpinner"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Modal -->
+    <div class="modal fade" id="studentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-gradient"
+                    style="background: linear-gradient(135deg, #6b8ba8 0%, #567291 100%); color: white;">
+                    <h5 class="modal-title" id="studentModalTitle">
+                        <i class="bi bi-people"></i> Add Student
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Business Rules Info -->
+                    <div class="alert alert-info" id="studentBusinessRules">
+                        <h6 class="alert-heading"><i class="bi bi-info-circle"></i> Business Rules</h6>
+                        <ul class="mb-0 small">
+                            <li>Email must be university format (e.g., user@example.edu.eg)</li>
+                            <li>Password: min 8 chars, UPPERCASE, lowercase, number, special (@$!%*?&)</li>
+                            <li>Names: letters, spaces, hyphens, apostrophes only (5-150 chars total)</li>
+                            <li>Contact: must start with 010, 011, 012, or 015 (last 8 digits cannot be all same)</li>
+                            <li>Student Code: auto-generated (format: YYYY-DEPT-XXX)</li>
+                            <li>Level: 1-4 required</li>
+                            <li>Department assignment required</li>
+                        </ul>
+                    </div>
+
+                    <!-- Edit Mode Info -->
+                    <div class="alert alert-warning d-none" id="studentEditInfo">
+                        <h6 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Edit Mode</h6>
+                        <p class="mb-0 small">Admin can only change Level and Department. Personal details locked for
+                            data integrity.</p>
+                    </div>
+
+                    <form id="studentForm" class="needs-validation" novalidate>
+                        <div class="row">
+                            <!-- Email -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                    <input type="email" class="form-control" id="studentEmail" required
+                                        placeholder="student@university.edu.eg"
+                                        pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(edu|ac)\.[a-zA-Z]{2,}$">
+                                </div>
+                                <div class="invalid-feedback" id="studentEmailError"></div>
+                            </div>
+
+                            <!-- Department -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Department <span
+                                        class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-building"></i></span>
+                                    <select class="form-select" id="studentDepartment" required>
+                                        <option value="">Select Department</option>
+                                    </select>
+                                </div>
+                                <div class="invalid-feedback" id="studentDepartmentError"></div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- First Name -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">First Name <span
+                                        class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                    <input type="text" class="form-control" id="studentFirstName" required
+                                        placeholder="Ahmed" maxlength="50" pattern="^[a-zA-Z\s\-']+$">
+                                </div>
+                                <div class="invalid-feedback" id="studentFirstNameError">Letters only (max 50 chars)
+                                </div>
+                            </div>
+
+                            <!-- Last Name -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Last Name <span
+                                        class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                    <input type="text" class="form-control" id="studentLastName" required
+                                        placeholder="Mohammed" maxlength="50" pattern="^[a-zA-Z\s\-']+$">
+                                </div>
+                                <div class="invalid-feedback" id="studentLastNameError">Letters only (max 50 chars)
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <!-- Contact Number -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Contact Number <span
+                                        class="text-muted">(optional)</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-phone"></i></span>
+                                    <input type="tel" class="form-control" id="studentPhone" placeholder="01012345678"
+                                        maxlength="11" pattern="^(010|011|012|015)\d{8}$">
+                                </div>
+                                <div class="invalid-feedback" id="studentPhoneError"></div>
+                            </div>
+
+                            <!-- Level -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Level <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-layers"></i></span>
+                                    <select class="form-select" id="studentLevel" required>
+                                        <option value="">Select Level</option>
+                                        <option value="1">Level 1 (Freshman)</option>
+                                        <option value="2">Level 2 (Sophomore)</option>
+                                        <option value="3">Level 3 (Junior)</option>
+                                        <option value="4">Level 4 (Senior)</option>
+                                    </select>
+                                </div>
+                                <div class="invalid-feedback" id="studentLevelError">Please select a level</div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <!-- Password (Create mode only) -->
+                            <div class="col-12 mb-3" id="studentPasswordField">
+                                <label class="form-label fw-semibold">Password <span
+                                        class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                    <input type="password" class="form-control" id="studentPassword"
+                                        placeholder="Strong password" minlength="8" maxlength="100">
+                                    <button class="btn btn-outline-secondary" type="button" id="toggleStudentPassword">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="password-strength mt-1" id="studentPasswordStrength">
+                                    <div class="progress" style="height: 4px;">
+                                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                    <small class="text-muted">Password strength: <span
+                                            id="studentStrengthText">-</span></small>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" id="saveStudentBtn">
+                        <i class="bi bi-check-lg"></i> <span id="studentBtnText">Add Student</span>
+                        <span class="spinner-border spinner-border-sm ms-2 d-none" id="studentBtnSpinner"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Department Modal -->
+    <div class="modal fade" id="departmentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-gradient"
+                    style="background: linear-gradient(135deg, #c9905e 0%, #a87c51 100); color: white;">
+                    <h5 class="modal-title" id="departmentModalTitle">
+                        <i class="bi bi-building"></i> Add Department
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Business Rules Info -->
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading"><i class="bi bi-info-circle"></i> Business Rules</h6>
+                        <ul class="mb-0 small">
+                            <li>Department name: 3-100 characters, unique across system</li>
+                            <li>Building: Required (A-E), indicates physical location</li>
+                            <li>Department Head: Optional - can assign later to avoid circular dependency</li>
+                            <li>Only one instructor can be head of a department</li>
+                        </ul>
+                    </div>
+                    <form id="departmentForm" class="needs-validation" novalidate>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Department Name <span
+                                        class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-building-fill"></i></span>
+                                    <input type="text" class="form-control" id="departmentName" required
+                                        placeholder="e.g., Computer Science" minlength="3" maxlength="100">
+                                    <div class="invalid-feedback" id="departmentNameError">3-100 characters required
+                                    </div>
+                                </div>
+                                <small class="text-muted">Unique, descriptive department name</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Building <span
+                                        class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
+                                    <select class="form-select" id="departmentBuilding" required>
+                                        <option value="">Select Building</option>
+                                        <option value="Building A">Building A</option>
+                                        <option value="Building B">Building B</option>
+                                        <option value="Building C">Building C</option>
+                                        <option value="Building D">Building D</option>
+                                        <option value="Building E">Building E</option>
+                                    </select>
+                                    <div class="invalid-feedback">Please select a building</div>
+                                </div>
+                                <small class="text-muted">Physical location of department</small>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label class="form-label fw-semibold">Department Head (Instructor) <span
+                                        class="text-muted">(Optional)</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                                    <select class="form-select" id="departmentHead">
+                                        <option value="">No Head (Assign Later)</option>
+                                    </select>
+                                </div>
+                                <small class="text-muted"><i class="bi bi-info-circle"></i> Can be assigned later to
+                                    avoid circular dependency during creation</small>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" id="saveDepartmentBtn">
+                        <i class="bi bi-check-lg"></i> <span id="departmentBtnText">Save Department</span>
+                        <span class="spinner-border spinner-border-sm ms-2 d-none" id="departmentBtnSpinner"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Course Modal -->
+    <div class="modal fade" id="courseModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-gradient"
+                    style="background: linear-gradient(135deg, #8b7d6f 0%, #6d6156 100%); color: white;">
+                    <h5 class="modal-title" id="courseModalTitle">
+                        <i class="bi bi-book"></i> Add Course
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Business Rules Info -->
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading"><i class="bi bi-info-circle"></i> Business Rules & Constraints</h6>
+                        <ul class="mb-0 small">
+                            <li>Course name: 3-80 characters, must contain at least one letter</li>
+                            <li>Credit hours: 1-6 (standard academic range)</li>
+                            <li><strong>Instructor limits:</strong> Max 2 courses, Max 12 total credit hours</li>
+                            <li>Department restriction enforced for student enrollments</li>
+                            <li>Course code auto-generated by system</li>
+                        </ul>
+                    </div>
+
+                    <form id="courseForm" class="needs-validation" novalidate>
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label class="form-label fw-semibold">Course Name <span
+                                        class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-book-fill"></i></span>
+                                    <input type="text" class="form-control" id="courseName" required
+                                        placeholder="e.g., Introduction to Programming" minlength="3" maxlength="80">
+                                    <div class="invalid-feedback" id="courseNameError">3-80 characters, must contain
+                                        letters</div>
+                                </div>
+                                <small class="text-muted">Descriptive course name (must contain at least one
+                                    letter)</small>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-semibold">Credit Hours <span
+                                        class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-award"></i></span>
+                                    <input type="number" class="form-control" id="courseCredits" min="1" max="6"
+                                        required placeholder="1-6">
+                                    <div class="invalid-feedback">1-6 credits</div>
+                                </div>
+                                <small class="text-muted">Academic credits (1-6)</small>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Department <span
+                                        class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-building"></i></span>
+                                    <select class="form-select" id="courseDepartment" required>
+                                        <option value="">Select Department</option>
+                                    </select>
+                                </div>
+                                <small class="text-muted">Determines course availability for students</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Instructor <span
+                                        class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-person-workspace"></i></span>
+                                    <select class="form-select" id="courseInstructor" required>
+                                        <option value="">Select Department First</option>
+                                    </select>
+                                    <div class="invalid-feedback">Please select instructor</div>
+                                </div>
+                                <small class="text-muted" id="instructorWorkloadInfo">Instructor workload info will
+                                    appear here</small>
+                            </div>
+                        </div>
+                        <!-- Workload Warning -->
+                        <div class="alert alert-warning d-none" id="instructorWorkloadWarning">
+                            <i class="bi bi-exclamation-triangle"></i> <strong>Workload Limit:</strong> <span
+                                id="workloadMessage"></span>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" id="saveCourseBtn">
+                        <i class="bi bi-check-lg"></i> <span id="courseBtnText">Add Course</span>
+                        <span class="spinner-border spinner-border-sm ms-2 d-none" id="courseBtnSpinner"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Choice Modal (Soft or Hard Delete) -->
+    <div class="modal fade" id="deleteChoiceModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-danger">
+                <div class="modal-header border-0 bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle-fill"></i> Choose Delete Type
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Warning/Info Container (will be populated dynamically) -->
+                    <div id="deleteWarning" class="mb-3"></div>
+
+                    <p class="mb-3"><strong>How would you like to delete this course?</strong></p>
+
+                    <div class="card mb-2">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="bi bi-archive text-warning"></i> Archive (Soft Delete)
+                            </h6>
+                            <p class="card-text small text-muted mb-2">
+                                Archives the course but keeps all data. You can restore it later from the Deleted
+                                Courses page.
+                            </p>
+                            <button type="button" id="softDeleteBtn" class="btn btn-warning btn-sm w-100"
+                                onclick="adminDashboard.confirmSoftDeleteCourse()">
+                                <i class="bi bi-archive"></i> Archive Course
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card border-danger">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="bi bi-trash-fill text-danger"></i> Permanent Delete
+                            </h6>
+                            <p class="card-text small text-muted mb-2">
+                                <strong>⚠️ Warning:</strong> Permanently removes the course from the database. This
+                                action cannot be undone!
+                            </p>
+                            <button type="button" id="hardDeleteBtn" class="btn btn-danger btn-sm w-100"
+                                onclick="adminDashboard.confirmHardDeleteCourse()">
+                                <i class="bi bi-trash-fill"></i> Delete Forever
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Archive/Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-danger">
+                <div class="modal-header border-0 bg-danger text-white">
+                    <h5 class="modal-title" id="deleteModalTitle">
+                        <i class="bi bi-exclamation-triangle-fill"></i> Confirm Action
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="deleteModalBody">
+                    <!-- Dynamic content will be injected here -->
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                        <i class="bi bi-check-circle me-1"></i>Confirm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Reassign Instructor Modal -->
+    <div class="modal fade" id="reassignInstructorModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title" id="reassignModalTitle">
+                        <i class="bi bi-arrow-left-right"></i> Reassign Courses & Department Head Role
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning border-warning"
+                        style="border-left: 5px solid #ffc107; background-color: #fff8e1;">
+                        <h6 class="alert-heading text-warning"><i class="bi bi-exclamation-triangle-fill"></i>
+                            Reassignment Required</h6>
+                        <p class="mb-0" id="reassignmentReason">This instructor has active data that must be reassigned
+                            before archiving.</p>
+                    </div>
+
+                    <div id="reassignmentInfo" class="mb-3">
+                        <!-- Will be populated dynamically -->
+                    </div>
+
+                    <form id="reassignInstructorForm">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">What to Reassign:</label>
+                            <div class="border rounded p-3 bg-light">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="reassignCoursesCheck" checked>
+                                    <label class="form-check-label" for="reassignCoursesCheck">
+                                        <i class="bi bi-book"></i> <span id="coursesLabel">Courses (0)</span>
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="reassignHeadCheck" checked>
+                                    <label class="form-check-label" for="reassignHeadCheck">
+                                        <i class="bi bi-person-badge"></i> <span id="headLabel">Department Head Role
+                                            (No)</span>
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block mt-2">
+                                    <i class="bi bi-info-circle"></i> Select what you want to reassign to the
+                                    replacement instructor
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                Select Replacement Instructor <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="replacementInstructor" required>
+                                <option value="">Loading instructors...</option>
+                            </select>
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle"></i> Only instructors from the same department are shown
+                            </small>
+                            <div class="invalid-feedback">Please select a replacement instructor</div>
+                        </div>
+
+                        <div id="workloadValidation" class="alert alert-info d-none">
+                            <!-- Workload validation info will appear here -->
+                        </div>
+                    </form>
+
+                    <div class="alert alert-info border-info small"
+                        style="border-left: 5px solid #0dcaf0; background-color: #d1ecf1;">
+                        <h6 class="fw-bold text-info"><i class="bi bi-info-circle-fill"></i> What will be reassigned:
+                        </h6>
+                        <ul class="mb-0">
+                            <li id="reassignCourses">Courses: <span class="fw-bold">--</span></li>
+                            <li id="reassignDeptHead">Department Head: <span class="fw-bold">--</span></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-warning px-4" id="confirmReassignBtn">
+                        <i class="bi bi-arrow-left-right"></i> Reassign & Archive
+                        <span class="spinner-border spinner-border-sm ms-2 d-none" id="reassignSpinner"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enrollment Modal -->
+    <div class="modal fade" id="enrollmentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="enrollmentModalTitle">Add Enrollment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="enrollmentForm">
+                        <div class="mb-3">
+                            <label class="form-label">Student <span class="text-danger">*</span></label>
+                            <select class="form-select" id="enrollmentStudent" required>
+                                <option value="">Select Student</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Course <span class="text-danger">*</span></label>
+                            <select class="form-select" id="enrollmentCourse" required>
+                                <option value="">Select Course</option>
+                            </select>
+                            <small class="text-muted">Only courses from student's department will be shown</small>
+                        </div>
+                        <div class="alert alert-info small">
+                            <i class="bi bi-info-circle"></i> The system will automatically validate:
+                            <ul class="mb-0 mt-2">
+                                <li>Department restrictions</li>
+                                <li>Credit limits (21/semester, 36/year)</li>
+                                <li>Duplicate enrollments</li>
+                            </ul>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveEnrollmentBtn">Enroll Student</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alertContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+        crossorigin="anonymous"></script>
+    <script src="../js/notifications.js"></script>
+    <script src="../js/cache.js"></script>
+    <script src="../js/pagination.js"></script>
+    <script src="../js/api.js?v=20251128011"></script>
+    <script src="../js/dashboard.js?v=20251128011"></script>
+    <script src="../js/admin-dashboard.js?v=20251128014"></script>
+    <!-- Admin Dashboard - Split Files (Load in Order) -->
+    <script src="../js/Admin Dashboard/admin-form-validation.js"></script>
+    <script src="../js/Admin Dashboard/admin-dashboard-core.js"></script>
+    <script src="../js/Admin Dashboard/admin-validation-charts.js"></script>
+    <script src="../js/Admin Dashboard/admin-crud-instructors.js"></script>
+    <script src="../js/Admin Dashboard/admin-crud-students-courses.js"></script>
+    <script src="../js/Admin Dashboard/admin-crud-departments-enrollments.js"></script>
+    <script src="../js/Admin Dashboard/admin-pagination.js"></script>
+    <!-- Mobile Navigation Toggle -->
+    <button class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Toggle Navigation">
+        <i class="bi bi-list"></i>
+    </button>
+    <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+
+    <script>
+        // Icon sidebar navigation
+        document.querySelectorAll('.icon-sidebar-item[data-section]').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.icon-sidebar-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+
+                // Close mobile menu after selection
+                if (window.innerWidth <= 768) {
+                    document.querySelector('.icon-sidebar').classList.remove('mobile-open');
+                    document.getElementById('mobileNavOverlay').classList.remove('active');
+                }
+            });
+        });
+
+        // Mobile navigation toggle
+        const mobileNavToggle = document.getElementById('mobileNavToggle');
+        const mobileNavOverlay = document.getElementById('mobileNavOverlay');
+        const iconSidebar = document.querySelector('.icon-sidebar');
+
+        mobileNavToggle.addEventListener('click', () => {
+            iconSidebar.classList.toggle('mobile-open');
+            mobileNavOverlay.classList.toggle('active');
+        });
+
+        mobileNavOverlay.addEventListener('click', () => {
+            iconSidebar.classList.remove('mobile-open');
+            mobileNavOverlay.classList.remove('active');
+        });
+    </script>
+</body>
+
+</html>

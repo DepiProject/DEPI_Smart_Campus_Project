@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - Smart Campus</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="../css/modern-theme.css">
+    <link rel="stylesheet" href="../css/utilities.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="stylesheet" href="../css/profile.css">
+    <style>
+        body {
+            background: var(--cream-50);
+            padding-left: 80px;
+        }
+
+        .main-content {
+            margin-left: 0;
+            padding: 2rem;
+        }
+
+        /* Search Box Styling */
+        .search-box {
+            position: relative;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            z-index: 1;
+        }
+
+        .search-box input {
+            padding-left: 45px;
+            border-radius: 25px;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .search-box input:focus {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+            outline: none;
+        }
+
+        /* Modern Table Styling */
+        .modern-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            background: white;
+        }
+
+        .modern-table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .modern-table thead th {
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            padding: 1.2rem 1rem;
+            border: none;
+            white-space: nowrap;
+        }
+
+        .modern-table tbody tr {
+            transition: all 0.3s ease;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .modern-table tbody tr:hover {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+            transform: scale(1.01);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.2);
+            position: relative;
+            z-index: 1;
+        }
+
+        .modern-table tbody td {
+            padding: 1.2rem 1rem;
+            vertical-align: middle;
+            border: none;
+        }
+
+        .modern-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        /* Enhanced Badge Styles */
+        .modern-table .badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            letter-spacing: 0.3px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Course Name Styling */
+        .modern-table td strong {
+            color: #2d3748;
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .modern-table td small {
+            color: #718096;
+            font-size: 0.85rem;
+        }
+
+        /* Grade Highlight */
+        .modern-table td:nth-child(4) strong {
+            font-size: 1.2rem;
+            color: #667eea;
+            font-weight: 800;
+        }
+
+        /* Card Enhancements */
+        .card {
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-bottom: 3px solid #667eea !important;
+        }
+
+        .card-header h5 {
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        /* Icon styling in headers */
+        .card-header i {
+            font-size: 1.3rem;
+        }
+
+        /* Status badge custom colors */
+        .badge.bg-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        }
+
+        .badge.bg-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        }
+
+        .badge.bg-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+        }
+
+        .badge.bg-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+            color: white !important;
+        }
+
+        .badge.bg-info {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+        }
+
+        /* Loading state */
+        .spinner-border {
+            width: 2rem;
+            height: 2rem;
+            border-width: 0.3rem;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding-left: 0;
+            }
+
+            .icon-sidebar {
+                display: none;
+            }
+
+            .search-box {
+                width: 100% !important;
+                margin-top: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Icon Sidebar Navigation -->
+    <div class="icon-sidebar">
+        <a href="#dashboard" data-section="dashboard" class="icon-sidebar-item active">
+            <i class="bi bi-speedometer2"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="#courses" data-section="courses" class="icon-sidebar-item">
+            <i class="bi bi-book"></i>
+            <span>Courses</span>
+        </a>
+        <a href="#attendance" data-section="attendance" class="icon-sidebar-item">
+            <i class="bi bi-calendar-check"></i>
+            <span>Attendance</span>
+        </a>
+        <a href="#grades" data-section="grades" class="icon-sidebar-item">
+            <i class="bi bi-trophy"></i>
+            <span>Grades</span>
+        </a>
+        <a href="#exams" data-section="exams" class="icon-sidebar-item">
+            <i class="bi bi-file-earmark-text"></i>
+            <span>Exams</span>
+        </a>
+        <a href="#profile" data-section="profile" class="icon-sidebar-item">
+            <i class="bi bi-person-circle"></i>
+            <span>Profile</span>
+        </a>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="modern-nav">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <span class="navbar-brand mb-0 h5 text-white fw-bold">
+                <i class="bi bi-mortarboard-fill"></i> Smart Campus Student
+            </span>
+            <div class="dropdown">
+                <button class="btn user-dropdown-btn dropdown-toggle" type="button" id="userDropdown"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-person-circle"></i> <span id="userName">Student</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end user-dropdown-menu" aria-labelledby="userDropdown">
+                    <li><a class="dropdown-item" href="#profile" data-section="profile"
+                            onclick="document.querySelector('.icon-sidebar-item[data-section=profile]').click()"><i
+                                class="bi bi-person-circle"></i> My Profile</a></li>
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+                    <li><a class="dropdown-item text-danger" href="#" id="logoutBtn"><i
+                                class="bi bi-box-arrow-right"></i>
+                            Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center py-4">
+                <h1 class="h2">Student Dashboard</h1>
+            </div>
+
+            <!-- Dashboard Overview -->
+            <div id="dashboard" class="section">
+                <div class="row g-4 mb-4">
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100 hover-card hover-lift">
+                            <div class="card-body text-center position-relative">
+                                <div class="stat-icon stat-icon-primary mx-auto animate-float">
+                                    <i class="bi bi-book-fill"></i>
+                                </div>
+                                <h6 class="card-title text-muted text-uppercase small">Enrolled Courses</h6>
+                                <h2 class="card-text counter" id="totalEnrolledCourses">--</h2>
+                                <small class="text-muted"><i class="bi bi-calendar3"></i> This semester</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100 hover-card hover-lift">
+                            <div class="card-body text-center position-relative">
+                                <div class="stat-icon stat-icon-success mx-auto animate-float"
+                                    style="animation-delay: 0.1s;">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                </div>
+                                <h6 class="card-title text-muted text-uppercase small">Attendance</h6>
+                                <h2 class="card-text text-success counter" id="studentAttendance">--</h2>
+                                <small class="text-success"><i class="bi bi-graph-up-arrow"></i> Good
+                                    standing</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100 hover-card hover-lift">
+                            <div class="card-body text-center position-relative">
+                                <div class="stat-icon stat-icon-warning mx-auto animate-float"
+                                    style="animation-delay: 0.2s;">
+                                    <i class="bi bi-trophy-fill"></i>
+                                </div>
+                                <h6 class="card-title text-muted text-uppercase small">GPA</h6>
+                                <h2 class="card-text text-warning counter" id="studentGPA">--</h2>
+                                <small class="text-muted">Out of 4.0</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100 hover-card hover-lift">
+                            <div class="card-body text-center position-relative">
+                                <div class="stat-icon stat-icon-info mx-auto animate-float"
+                                    style="animation-delay: 0.3s;">
+                                    <i class="bi bi-credit-card-fill"></i>
+                                </div>
+                                <h6 class="card-title text-muted text-uppercase small">Total Credits</h6>
+                                <h2 class="card-text text-info counter" id="studentCredits">--</h2>
+                                <small class="text-muted">Enrolled this semester</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visual Charts Section -->
+                <div class="row g-4 mt-4">
+                    <div class="col-lg-6">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0"><i class="bi bi-pie-chart-fill text-primary"></i> Performance Overview
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="performanceChart" style="max-height: 300px;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0"><i class="bi bi-bar-chart-fill text-success"></i> Credits Distribution
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="creditsChart" style="max-height: 300px;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Courses Section -->
+            <div id="courses" class="section d-none">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="text-gradient"><i class="bi bi-book-fill me-2"></i>My Courses</h2>
+                    <button class="btn btn-primary btn-icon" data-bs-toggle="modal" data-bs-target="#enrollModal">
+                        <i class="bi bi-plus-lg"></i> Enroll Course
+                    </button>
+                </div>
+
+                <!-- Enrolled Courses -->
+                <div class="card border-0 shadow-sm mb-5">
+                    <div class="card-header bg-white border-0 py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="bi bi-book-fill text-primary me-2"></i>Enrolled Courses</h5>
+                            <div class="search-box" style="width: 300px;">
+                                <i class="bi bi-search"></i>
+                                <input type="text" id="coursesSearchInput" class="form-control"
+                                    placeholder="Search courses...">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover modern-table mb-0" id="coursesTable">
+                                <thead>
+                                    <tr>
+                                        <th><i class="bi bi-journal-bookmark me-2"></i>Course Name</th>
+                                        <th><i class="bi bi-building me-2"></i>Department</th>
+                                        <th><i class="bi bi-person-workspace me-2"></i>Instructor</th>
+                                        <th><i class="bi bi-award me-2"></i>Credits</th>
+                                        <th><i class="bi bi-check-circle me-2"></i>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="coursesTableBody">
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted">
+                                            <div class="py-4">
+                                                <div class="spinner-border text-primary mb-3" role="status">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
+                                                <p class="mb-0">Loading courses...</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Pagination Controls -->
+                        <div class="card-footer bg-white border-0 py-3">
+                            <div id="coursesPaginationControls"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Available Courses to Enroll -->
+                <h5 class="mt-5 mb-3"><i class="bi bi-plus-square-fill text-info me-2"></i>Available Courses in Your
+                    Department</h5>
+                <div class="row" id="availableCoursesContainer">
+                    <div class="col-12 text-center text-muted py-5">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Loading available courses...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance Section -->
+            <div id="attendance" class="section d-none">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="mb-0"><i class="bi bi-calendar-check text-success me-2"></i>Attendance Overview</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover modern-table mb-0" id="attendanceTable">
+                                <thead>
+                                    <tr>
+                                        <th><i class="bi bi-book me-2"></i>Course</th>
+                                        <th><i class="bi bi-check-circle me-2"></i>Present</th>
+                                        <th><i class="bi bi-x-circle me-2"></i>Absent</th>
+                                        <th><i class="bi bi-percent me-2"></i>Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendanceTableBody">
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Pagination Controls -->
+                        <div class="card-footer bg-white border-0 py-3">
+                            <div id="attendancePaginationControls"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grades Section -->
+            <div id="grades" class="section d-none">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0 py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="bi bi-trophy-fill me-2 text-warning"></i>My Grades</h5>
+                            <div class="search-box" style="width: 350px;">
+                                <i class="bi bi-search"></i>
+                                <input type="text" id="gradesSearchInput" class="form-control"
+                                    placeholder="Search by course name...">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover modern-table mb-0" id="gradesTable">
+                                <thead>
+                                    <tr>
+                                        <th>Course</th>
+                                        <th>Credits</th>
+                                        <th>Status</th>
+                                        <th>Final Grade</th>
+                                        <th>Letter Grade</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="gradesTableBody">
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Pagination Controls -->
+                        <div class="card-footer bg-white border-0 py-3">
+                            <div id="gradesPaginationControls"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Exams Section -->
+            <div id="exams" class="section d-none">
+                <h2 class="text-gradient mb-4">
+                    <i class="bi bi-file-earmark-text-fill me-2"></i>My Exams
+                </h2>
+
+                <!-- Available Exams Table -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="mb-0">
+                            <i class="bi bi-list-check me-2 text-primary"></i>Available Exams
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover modern-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th><i class="bi bi-book"></i> Course</th>
+                                        <th><i class="bi bi-file-text"></i> Exam Title</th>
+                                        <th><i class="bi bi-clock"></i> Duration</th>
+                                        <th><i class="bi bi-trophy"></i> Passing Score</th>
+                                        <th><i class="bi bi-award"></i> Total Marks</th>
+                                        <th class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="examsTableBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-4">Loading exams...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Completed Exams Table -->
+                <div class="card border-0 shadow-sm mt-4">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="mb-0">
+                            <i class="bi bi-check-circle me-2 text-success"></i>Completed Exams
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover modern-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Course</th>
+                                        <th>Exam Title</th>
+                                        <th>Submitted Date</th>
+                                        <th>Score</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="completedExamsTableBody">
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">No completed exams yet</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Section -->
+            <div id="profile" class="section d-none profile-container">
+                <!-- Profile Hero Section -->
+                <div class="profile-hero">
+                    <button class="profile-edit-btn" onclick="studentDashboard.showEditProfileForm()">
+                        <i class="bi bi-pencil"></i> Edit Profile
+                    </button>
+
+                    <div id="profileDisplayView">
+                        <div class="profile-avatar-section">
+                            <div class="profile-avatar student-avatar">
+                                <i class="bi bi-mortarboard-fill"></i>
+                                <div class="profile-status-badge"></div>
+                            </div>
+                            <div class="profile-hero-info">
+                                <h1><span id="displayFirstName">-</span> <span id="displayLastName">-</span></h1>
+                                <div class="role-badge">
+                                    <i class="bi bi-mortarboard"></i> Student
+                                </div>
+                                <div class="profile-meta">
+                                    <div class="profile-meta-item">
+                                        <i class="bi bi-hash"></i>
+                                        <span id="displayStudentCode">-</span>
+                                    </div>
+                                    <div class="profile-meta-item">
+                                        <i class="bi bi-envelope-fill"></i>
+                                        <span id="displayEmail">-</span>
+                                    </div>
+                                    <div class="profile-meta-item">
+                                        <i class="bi bi-telephone-fill"></i>
+                                        <span id="displayContactNumber">Not provided</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Content Cards -->
+                <div class="profile-content">
+                    <div class="profile-info-card">
+                        <div class="card-icon">
+                            <i class="bi bi-building"></i>
+                        </div>
+                        <h3>Department</h3>
+                        <p class="value" id="displayDepartment">-</p>
+                    </div>
+
+                    <div class="profile-info-card">
+                        <div class="card-icon">
+                            <i class="bi bi-graph-up-arrow"></i>
+                        </div>
+                        <h3>Academic Level</h3>
+                        <p class="value" id="displayLevel">-</p>
+                    </div>
+
+                    <div class="profile-info-card">
+                        <div class="card-icon">
+                            <i class="bi bi-calendar-check"></i>
+                        </div>
+                        <h3>Status</h3>
+                        <p class="value">
+                            <span class="info-badge success-badge">
+                                <i class="bi bi-check-circle-fill"></i> Active
+                            </span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Profile Edit View -->
+                <div id="profileEditView" class="profile-edit-form d-none">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="mb-0">
+                            <i class="bi bi-pencil-square text-primary"></i> Edit Profile
+                        </h2>
+                        <button class="btn btn-outline-secondary" onclick="studentDashboard.showDisplayProfileView()">
+                            <i class="bi bi-arrow-left"></i> Back to Profile
+                        </button>
+                    </div>
+
+                    <form id="profileForm">
+                        <div class="form-section">
+                            <div class="form-section-title">
+                                <i class="bi bi-person-fill"></i>
+                                <span>Personal Information</span>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">First Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="profileFirstName" required
+                                        placeholder="Enter first name">
+                                    <small class="text-muted">Letters only, max 50 characters</small>
+                                    <div id="firstNameError" class="text-danger small mt-1"></div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="profileLastName" required
+                                        placeholder="Enter last name">
+                                    <small class="text-muted">Letters only, max 50 characters</small>
+                                    <div id="lastNameError" class="text-danger small mt-1"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <div class="form-section-title">
+                                <i class="bi bi-envelope-fill"></i>
+                                <span>Contact Information</span>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Student Code</label>
+                                    <input type="text" class="form-control" id="profileStudentCode" disabled
+                                        placeholder="Auto-generated" readonly>
+                                    <small class="text-muted">
+                                        <i class="bi bi-lock-fill"></i> Student code cannot be changed
+                                    </small>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Contact Number</label>
+                                    <input type="tel" class="form-control" id="profileContactNumber"
+                                        placeholder="01012345678" maxlength="11">
+                                    <small class="text-muted">11 digits (optional)</small>
+                                    <div id="contactNumberError" class="text-danger small mt-1"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="profile-info-alert">
+                            <i class="bi bi-info-circle-fill"></i>
+                            <strong>Note:</strong> Your full name should contain only letters. Phone numbers must be
+                            exactly 11 digits if provided.
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-save">
+                                <i class="bi bi-check-lg"></i> Save Changes
+                            </button>
+                            <button type="button" class="btn btn-cancel"
+                                onclick="studentDashboard.showDisplayProfileView()">
+                                <i class="bi bi-x-lg"></i> Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Enroll Modal -->
+    <div class="modal fade" id="enrollModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Enroll in Course</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="enrollForm">
+                        <div class="alert alert-info mb-3">
+                            <small>
+                                <i class="bi bi-info-circle"></i>
+                                Showing available courses from your department. Select a course to enroll.
+                            </small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Select Course <span class="text-danger">*</span></label>
+                            <select class="form-select" id="courseSelect" required>
+                                <option value="">Loading courses...</option>
+                            </select>
+                            <small class="text-muted d-block mt-2">
+                                Only courses from your department are shown.
+                                Courses you are already enrolled in are excluded.
+                            </small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="enrollBtn">Enroll</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alertContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+        crossorigin="anonymous"></script>
+    <script src="../js/notifications.js"></script>
+    <script src="../js/cache.js"></script>
+    <script src="../js/pagination.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/student-dashboard.js?v=2.4"></script>
+
+    <!-- Mobile Navigation Toggle -->
+    <button class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Toggle Navigation">
+        <i class="bi bi-list"></i>
+    </button>
+    <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+
+    <script>
+        // Icon sidebar navigation
+        document.querySelectorAll('.icon-sidebar-item[data-section]').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.icon-sidebar-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+
+                // Close mobile menu after selection
+                if (window.innerWidth <= 768) {
+                    document.querySelector('.icon-sidebar').classList.remove('mobile-open');
+                    document.getElementById('mobileNavOverlay').classList.remove('active');
+                }
+            });
+        });
+
+        // Mobile navigation toggle
+        const mobileNavToggle = document.getElementById('mobileNavToggle');
+        const mobileNavOverlay = document.getElementById('mobileNavOverlay');
+        const iconSidebar = document.querySelector('.icon-sidebar');
+
+        mobileNavToggle.addEventListener('click', () => {
+            iconSidebar.classList.toggle('mobile-open');
+            mobileNavOverlay.classList.toggle('active');
+        });
+
+        mobileNavOverlay.addEventListener('click', () => {
+            iconSidebar.classList.remove('mobile-open');
+            mobileNavOverlay.classList.remove('active');
+        });
+    </script>
+</body>
+
+</html>

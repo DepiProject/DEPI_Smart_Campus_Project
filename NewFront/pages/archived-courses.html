@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archived Courses - Smart Campus</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="../css/utilities.css">
+    <link rel="stylesheet" href="../css/archived-pages.css">
+</head>
+
+<body>
+    <nav class="modern-navbar">
+        <div class="container-fluid px-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="bi bi-mortarboard-fill text-white" style="font-size: 28px;"></i>
+                    <h1 class="text-white m-0" style="font-size: 20px; font-weight: 700;">Smart Campus</h1>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="admin-dashboard.html" class="btn btn-light"
+                        style="border-radius: 10px; padding: 10px 20px; font-weight: 600;">
+                        <i class="bi bi-grid-fill me-2"></i>Dashboard
+                    </a>
+                    <button id="logoutBtn" class="btn btn-danger"
+                        style="border-radius: 10px; padding: 10px 20px; font-weight: 600;">
+                        <i class="bi bi-box-arrow-right me-2"></i>Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="content-wrapper">
+        <div class="page-header">
+            <div class="page-header-icon">
+                <i class="bi bi-book-fill"></i>
+            </div>
+            <div class="page-header-content">
+                <h1 class="page-title">Archived Courses</h1>
+                <p class="page-subtitle">Manage and restore archived course offerings</p>
+            </div>
+            <button onclick="window.history.back()" class="btn-back">
+                <i class="bi bi-arrow-left"></i>
+                <span>Back</span>
+            </button>
+        </div>
+
+        <div class="search-filter-container">
+            <div class="search-wrapper">
+                <i class="bi bi-search search-icon"></i>
+                <input type="text" id="searchInput" class="search-input-modern"
+                    placeholder="Search by name, code, or instructor...">
+            </div>
+            <div class="filter-wrapper">
+                <i class="bi bi-funnel-fill filter-icon"></i>
+                <select id="departmentFilter" class="filter-select-modern">
+                    <option value="all" selected>All Departments</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #fce7f3, #fbcfe8);">
+                    <i class="bi bi-archive-fill" style="color: #ec4899;"></i>
+                </div>
+                <div class="stat-value" id="totalArchived">0</div>
+                <div class="stat-label">Archived</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #d8e8d8, #c1dcc1);">
+                    <i class="bi bi-arrow-counterclockwise" style="color: #5a8a5a;"></i>
+                </div>
+                <div class="stat-value" id="totalRestored">0</div>
+                <div class="stat-label">Restored</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #e6ebe6, #d1ddd1);">
+                    <i class="bi bi-building" style="color: var(--sage-600);"></i>
+                </div>
+                <div class="stat-value" id="totalDepartments">0</div>
+                <div class="stat-label">Departments</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #f5ead5, #eddcc4);">
+                    <i class="bi bi-star-fill" style="color: #c9905e;"></i>
+                </div>
+                <div class="stat-value" id="totalCredits">0</div>
+                <div class="stat-label">Total Credits</div>
+            </div>
+        </div>
+
+        <div id="coursesList">
+            <div class="text-center py-5">
+                <div class="spinner-border" style="color: #ec4899; width: 3rem; height: 3rem;"></div>
+                <p class="text-muted mt-3">Loading archived courses...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assign & Restore Course Modal -->
+    <div class="modal fade" id="restoreModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-header border-0"
+                    style="background: linear-gradient(135deg, #10b981, #059669); border-radius: 16px 16px 0 0;">
+                    <h5 class="modal-title text-white fw-bold">
+                        <i class="bi bi-person-check-fill me-2"></i>Assign & Restore Course
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-info border-0"
+                        style="background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #1e40af; border-radius: 12px;">
+                        <h6 class="alert-heading fw-bold"><i class="bi bi-info-circle-fill me-2"></i>Instructor
+                            Assignment Required</h6>
+                        <p class="mb-0">To restore this course, you must assign it to an available instructor from the
+                            same department. Select an instructor with sufficient workload capacity:</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-dark">
+                            <i class="bi bi-people-fill me-2" style="color: #10b981;"></i>Available Instructors
+                        </label>
+                        <select class="form-select form-select-lg shadow-sm" id="instructorSelect"
+                            style="border-radius: 12px; border: 2px solid #d1fae5; transition: all 0.3s;">
+                            <option value="">Loading instructors...</option>
+                        </select>
+                        <small class="text-muted d-block mt-2">
+                            <i class="bi bi-shield-check me-1" style="color: #10b981;"></i>Only instructors with
+                            available credit hour capacity are displayed
+                        </small>
+                    </div>
+                    <div id="instructorInfo" class="alert alert-success d-none border-0"
+                        style="background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #065f46; border-radius: 12px;">
+                        <strong><i class="bi bi-person-badge-fill me-2"></i>Selected Instructor:</strong>
+                        <div id="instructorDetails" class="mt-2 fw-semibold"></div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 d-flex justify-content-between p-4"
+                    style="background: #f9fafb; border-radius: 0 0 16px 16px;">
+                    <button type="button" class="btn btn-outline-secondary px-4 py-2" data-bs-dismiss="modal"
+                        style="border-radius: 10px; font-weight: 600;">
+                        <i class="bi bi-x-circle me-2"></i>Cancel (Stay in Archive)
+                    </button>
+                    <button type="button" class="btn px-4 py-2" id="confirmRestoreBtn"
+                        style="background: linear-gradient(135deg, #10b981, #059669); border: none; border-radius: 10px; color: white; font-weight: 600;">
+                        <i class="bi bi-check-circle-fill me-2"></i>Assign & Restore
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-header border-0"
+                    style="background: linear-gradient(135deg, #ef4444, #dc2626); border-radius: 16px 16px 0 0;">
+                    <h5 class="modal-title text-white fw-bold">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirm Delete
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4" id="deleteMessage"></div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete Forever</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/notifications.js"></script>
+    <script src="../js/api.js"></script>
+    <script>
+        let allCourses = [];
+        let restoredToday = 0;
+        let currentFilter = 'all';
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            const token = localStorage.getItem('authToken');
+            if (!token || API.isTokenExpired()) {
+                window.location.href = '../index.html';
+                return;
+            }
+
+            await loadArchivedCourses();
+            document.getElementById('logoutBtn').addEventListener('click', () => {
+                API.logout();
+                window.location.href = '../index.html';
+            });
+        });
+
+        async function loadArchivedCourses() {
+            try {
+                const response = await API.course.getAllIncludingDeleted();
+
+                if (response.success && response.data) {
+                    let courses = Array.isArray(response.data.data) ? response.data.data :
+                        Array.isArray(response.data) ? response.data : [];
+
+                    allCourses = courses.filter(c => c.deletedAt);
+
+                    document.getElementById('totalArchived').textContent = allCourses.length;
+                    document.getElementById('totalRestored').textContent = restoredToday;
+
+                    const departments = [...new Set(allCourses.map(c =>
+                        c.departmentName || c.DepartmentName
+                    ).filter(d => d))];
+                    document.getElementById('totalDepartments').textContent = departments.length;
+
+                    const totalCredits = allCourses.reduce((sum, c) =>
+                        sum + (c.credits || c.creditHours || c.Credits || c.CreditHours || 0), 0
+                    );
+                    document.getElementById('totalCredits').textContent = totalCredits;
+
+                    // Create department filter dropdown
+                    const filterSelect = document.getElementById('departmentFilter');
+                    const deptOptions = departments.map(dept =>
+                        `<option value="${dept}">${dept}</option>`
+                    ).join('');
+                    filterSelect.innerHTML = '<option value="all" selected>All Departments</option>' + deptOptions;
+
+                    // Setup search and filter listeners
+                    document.getElementById('searchInput').addEventListener('input', applyFilters);
+                    document.getElementById('departmentFilter').addEventListener('change', applyFilters);
+
+                    renderCourses(allCourses);
+                }
+            } catch (error) {
+                notifications.error('Error', 'Failed to load courses');
+            }
+        }
+
+        function renderCourses(courses) {
+            const container = document.getElementById('coursesList');
+
+            if (courses.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">
+                            <i class="bi bi-inbox"></i>
+                        </div>
+                        <h3>No Archived Courses Found</h3>
+                        <p>Try adjusting your filter or search</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = courses.map(course => {
+                // Get initials from course name (first 2 letters or first letter of first two words)
+                const nameParts = (course.name || 'C').trim().split(' ');
+                const initials = nameParts.length >= 2
+                    ? (nameParts[0][0] + nameParts[1][0]).toUpperCase()
+                    : (course.name || 'C').substring(0, 2).toUpperCase();
+                const deletedDate = course.deletedAt ? new Date(course.deletedAt).toLocaleDateString('en-US', {
+                    year: 'numeric', month: 'short', day: 'numeric'
+                }) : 'Unknown';
+
+                // Handle instructor name - check multiple possible property names
+                const instructorName = course.instructorName || course.InstructorName ||
+                    course.instructorFullName || course.InstructorFullName ||
+                    'Unassigned';
+
+                // Handle other properties with multiple possible names
+                const courseCode = course.code || course.courseCode || course.Code || course.CourseCode || '-';
+                const credits = course.credits || course.creditHours || course.Credits || course.CreditHours || 0;
+                const deptName = course.departmentName || course.DepartmentName || '-';
+
+                return `
+                <div class="entity-card">
+                    <div class="entity-avatar course">${initials}</div>
+                    <div class="entity-info">
+                        <div class="entity-header">
+                            <h3 class="entity-name">${course.name || 'N/A'}</h3>
+                            <span class="status-badge archived">
+                                <i class="bi bi-archive"></i>Archived
+                            </span>
+                            <span class="category-badge">${credits} Credits</span>
+                        </div>
+                        <div class="entity-details">
+                            <div class="info-item">
+                                <i class="bi bi-hash"></i>
+                                <span><strong>Code:</strong> ${courseCode}</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="bi bi-building-fill"></i>
+                                <span>${deptName}</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="bi bi-person-fill"></i>
+                                <span>${instructorName}</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="bi bi-calendar-x-fill"></i>
+                                <span>Archived ${deletedDate}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="entity-actions">
+                        <button onclick="restore(${course.id})" class="action-btn btn-restore">
+                            <i class="bi bi-arrow-counterclockwise"></i>Restore
+                        </button>
+                        <button onclick="confirmDelete(${course.id})" class="action-btn btn-delete">
+                            <i class="bi bi-trash-fill"></i>Delete Forever
+                        </button>
+                    </div>
+                </div>
+            `;
+            }).join('');
+        }
+
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const selectedDept = document.getElementById('departmentFilter').value;
+
+            let filtered = allCourses;
+
+            // Filter by department
+            if (selectedDept !== 'all') {
+                filtered = filtered.filter(c =>
+                    (c.departmentName || c.DepartmentName) === selectedDept
+                );
+            }
+
+            // Filter by search term
+            if (searchTerm) {
+                filtered = filtered.filter(c => {
+                    const name = (c.name || '').toLowerCase();
+                    const code = (c.code || c.courseCode || c.Code || c.CourseCode || '').toLowerCase();
+                    const instructor = (c.instructorName || c.InstructorName || c.instructorFullName || c.InstructorFullName || '').toLowerCase();
+                    const dept = (c.departmentName || c.DepartmentName || '').toLowerCase();
+                    return name.includes(searchTerm) || code.includes(searchTerm) ||
+                        instructor.includes(searchTerm) || dept.includes(searchTerm);
+                });
+            }
+
+            renderCourses(filtered);
+        }
+
+        window.filterByDept = function (dept) {
+            currentFilter = dept;
+            applyFilters();
+        };
+
+        window.restore = async function (courseId) {
+            // Direct restore without validation
+            try {
+                const response = await API.course.restore(courseId);
+                if (response.success) {
+                    notifications.success('Course Restored', 'The course has been successfully restored to active status.');
+                    restoredToday++;
+                    await loadArchivedCourses();
+                } else {
+                    notifications.error('Restore Failed', response.message || 'Unable to restore the course.');
+                }
+            } catch (error) {
+                console.error('Restore error:', error);
+                notifications.error('Error', 'Failed to restore course: ' + (error.message || error));
+            }
+        };
+
+        async function showInstructorSelectionModal(courseId) {
+            try {
+                // Show loading state
+                const modal = new bootstrap.Modal(document.getElementById('restoreModal'));
+                const instructorSelect = document.getElementById('instructorSelect');
+                const instructorInfo = document.getElementById('instructorInfo');
+
+                instructorSelect.innerHTML = '<option value="">Loading available instructors...</option>';
+                instructorInfo.classList.add('d-none');
+
+                // Get available instructors
+                const response = await API.course.getAvailableInstructorsForRestore(courseId);
+
+                if (response.success && response.data && response.data.length > 0) {
+                    // Update modal title with course confirmation
+                    document.querySelector('#restoreModal .modal-title').innerHTML =
+                        '<i class="bi bi-person-check-fill me-2"></i>Assign & Restore Course';
+
+                    // Update alert message
+                    document.querySelector('#restoreModal .alert-info p').textContent =
+                        `Found ${response.data.length} available instructor(s) with sufficient workload capacity. Please select an instructor to assign and restore the course:`;
+
+                    // Populate instructor dropdown with detailed info
+                    instructorSelect.innerHTML = '<option value="">👨‍🏫 Select an Instructor to Assign</option>' +
+                        response.data.map(instr =>
+                            `<option value="${instr.instructorId}" data-details='${JSON.stringify(instr)}'>
+                                ${instr.fullName} - Available (${instr.currentCourseCount || 0}/${instr.maxCourseCount || 4} courses, ${instr.currentCreditHours || 0}/${instr.maxCreditHours || 12} hours)
+                            </option>`
+                        ).join('');
+
+                    // Setup instructor selection handler
+                    instructorSelect.onchange = function () {
+                        if (this.value) {
+                            const selectedOption = this.options[this.selectedIndex];
+                            const instructorData = JSON.parse(selectedOption.getAttribute('data-details'));
+                            const workloadPercent = Math.round((instructorData.totalAfterAssignment / (instructorData.maxCreditHours || 12)) * 100);
+                            const workloadColor = workloadPercent >= 90 ? '#ef4444' : workloadPercent >= 70 ? '#f59e0b' : '#10b981';
+                            document.getElementById('instructorDetails').innerHTML = `
+                                <div class="row g-2 mt-1">
+                                    <div class="col-12"><strong style="color: #065f46;">👨‍🏫 ${instructorData.fullName}</strong></div>
+                                    <div class="col-6"><small>📧 ${instructorData.email || 'N/A'}</small></div>
+                                    <div class="col-6"><small>📞 ${instructorData.contactNumber || 'N/A'}</small></div>
+                                    <div class="col-6"><small><strong>Current Courses:</strong> ${instructorData.currentCourseCount || 0}/${instructorData.maxCourseCount || 4} courses</small></div>
+                                    <div class="col-6"><small><strong>Current Hours:</strong> ${instructorData.currentCreditHours || 0}/${instructorData.maxCreditHours || 12} hours</small></div>
+                                    <div class="col-12"><small><strong>After Assignment:</strong> <span style="color: ${workloadColor}; font-weight: bold;">${(instructorData.currentCourseCount || 0) + 1}/${instructorData.maxCourseCount || 4} courses, ${instructorData.totalAfterAssignment || (instructorData.currentCreditHours || 0) + (instructorData.courseCreditHours || 0)}/${instructorData.maxCreditHours || 12} hours (${workloadPercent}%)</span></small></div>
+                                </div>
+                            `;
+                            instructorInfo.classList.remove('d-none');
+
+                            // Update button text to show clear action
+                            document.getElementById('confirmRestoreBtn').innerHTML =
+                                `<i class="bi bi-check-circle-fill me-2"></i>Assign & Restore Course`;
+                        } else {
+                            instructorInfo.classList.add('d-none');
+                            document.getElementById('confirmRestoreBtn').innerHTML =
+                                '<i class="bi bi-check-circle-fill me-2"></i>Assign & Restore';
+                        }
+                    };
+
+                    // Setup restore button with enhanced feedback
+                    document.getElementById('confirmRestoreBtn').onclick = async function () {
+                        const selectedInstructorId = instructorSelect.value;
+                        if (!selectedInstructorId) {
+                            notifications.error('Instructor Required', 'Please select an instructor from the dropdown list to assign and restore the course.');
+                            return;
+                        }
+
+                        // Validate instructor still has capacity
+                        const selectedOption = instructorSelect.options[instructorSelect.selectedIndex];
+                        const instructorData = JSON.parse(selectedOption.getAttribute('data-details'));
+                        if (instructorData.totalAfterAssignment > instructorData.maxCreditHours) {
+                            notifications.error('Insufficient Capacity',
+                                `${instructorData.fullName} does not have enough available hours. Assignment cannot be completed.`);
+                            return;
+                        }
+
+                        // Show loading state on button
+                        const originalBtn = this.innerHTML;
+                        this.innerHTML = '<i class="spinner-border spinner-border-sm me-2"></i>Assigning & Restoring...';
+                        this.disabled = true;
+
+                        try {
+                            const restoreResponse = await API.course.restoreWithInstructor(courseId, parseInt(selectedInstructorId));
+                            if (restoreResponse.success) {
+                                const selectedInstructorName = instructorSelect.options[instructorSelect.selectedIndex].text.split(' - ')[0];
+                                notifications.show('Course Restored',
+                                    `✅ The course has been successfully assigned to ${selectedInstructorName} and restored to active status. Students can now enroll.`,
+                                    'info', 6000);
+                                restoredToday++;
+                                await loadArchivedCourses();
+                                modal.hide();
+                            } else {
+                                notifications.error('Assignment Failed',
+                                    restoreResponse.message || 'Unable to assign and restore the course. The instructor may have reached their workload limit.');
+                            }
+                        } catch (error) {
+                            let errorMsg = 'An unexpected error occurred during assignment and restoration.';
+                            if (error.message.includes('workload') || error.message.includes('hours') || error.message.includes('capacity')) {
+                                errorMsg = '❌ The selected instructor has insufficient workload capacity. Please select another instructor with available hours.';
+                            } else if (error.message.includes('department')) {
+                                errorMsg = '❌ Instructor must be from the same department as the course. Please verify department assignments.';
+                            } else if (error.message.includes('not found')) {
+                                errorMsg = '❌ Course or instructor not found. Please refresh the page and try again.';
+                            }
+                            notifications.error('Assignment Error', errorMsg);
+                        } finally {
+                            // Reset button state
+                            this.innerHTML = originalBtn;
+                            this.disabled = false;
+                        }
+                    };
+
+                    // Show the modal
+                    modal.show();
+
+                } else {
+                    // No instructors available - show in modal instead of error notification
+                    document.querySelector('#restoreModal .modal-title').innerHTML =
+                        '<i class="bi bi-exclamation-triangle-fill me-2"></i>No Available Instructors';
+
+                    // Update alert to show as warning
+                    const alertDiv = document.querySelector('#restoreModal .alert-info');
+                    alertDiv.className = 'alert alert-warning border-0';
+                    alertDiv.style.background = 'linear-gradient(135deg, #fef3c7, #fde68a)';
+                    alertDiv.style.color = '#92400e';
+                    alertDiv.querySelector('h6').innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i>Cannot Restore Course';
+                    alertDiv.querySelector('p').innerHTML =
+                        `No instructors are available in this department to handle this course.<br><br>` +
+                        `<strong>Possible reasons:</strong><br>` +
+                        `• All instructors have reached their maximum course limit (<strong>4 courses</strong>)<br>` +
+                        `• All instructors have reached their maximum credit hours (<strong>12 hours</strong>)<br>` +
+                        `• No active instructors are assigned to this course's department<br><br>` +
+                        `<em>Please ensure there are instructors with available capacity in the department before restoring this course.</em>`;
+
+                    // Hide instructor selection
+                    instructorSelect.innerHTML = '<option value="">❌ No instructors available</option>';
+                    instructorSelect.disabled = true;
+
+                    // Disable the restore button
+                    const restoreBtn = document.getElementById('confirmRestoreBtn');
+                    restoreBtn.disabled = true;
+                    restoreBtn.innerHTML = '<i class="bi bi-x-circle me-2"></i>Cannot Restore';
+                    restoreBtn.style.background = '#9ca3af';
+                    restoreBtn.style.cursor = 'not-allowed';
+
+                    // Show the modal
+                    modal.show();
+                }
+            } catch (error) {
+                console.error('Error loading instructors:', error);
+                let errorMsg = 'Unable to load instructor information.';
+                if (error.message.includes('404')) {
+                    errorMsg = 'Course not found or may have been already restored.';
+                } else if (error.message.includes('network')) {
+                    errorMsg = 'Network error. Please check your connection and try again.';
+                }
+                notifications.error('Loading Error', errorMsg);
+            }
+        }
+
+        window.confirmDelete = function (id) {
+            const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            document.getElementById('deleteMessage').innerHTML = `
+                <div class="alert alert-danger border-danger" style="border-left: 5px solid #dc3545; background-color: #ffe6e6;">
+                    <h6 class="text-danger fw-bold mb-3"><i class="bi bi-exclamation-triangle-fill"></i> WARNING!</h6>
+                    <p class="text-danger fw-bold mb-2">⛔ This will permanently delete the course!</p>
+                    <p class="mb-0"><small>This action cannot be undone. All course data will be lost.</small></p>
+                </div>
+            `;
+            window.deleteCourseId = id;
+            modal.show();
+        };
+
+        document.getElementById('confirmDeleteBtn').addEventListener('click', async function () {
+            try {
+                const response = await API.course.permanentDelete(window.deleteCourseId);
+                bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+
+                if (response.success || (response.Success !== undefined ? response.Success : response.success)) {
+                    notifications.success('Success', 'Course permanently deleted!');
+                    await loadArchivedCourses();
+                } else {
+                    const message = response.message || response.Message || 'Failed to delete course';
+                    notifications.error('Error', message);
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+                notifications.error('Error', 'Failed to delete course: ' + (error.message || error));
+            }
+        });
+    </script>
+</body>
+
+</html>
