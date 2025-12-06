@@ -797,7 +797,8 @@ const API = {
     exam: {
         // Get all exams
         async getAll(pageNumber = 1, pageSize = 10) {
-            return API.request(`/Exam?pageNumber=${pageNumber}&pageSize=${pageSize}`, {
+            const timestamp = new Date().getTime();
+            return API.request(`/Exam?pageNumber=${pageNumber}&pageSize=${pageSize}&_=${timestamp}`, {
                 method: 'GET'
             });
         },
@@ -811,37 +812,95 @@ const API = {
 
         // Create exam
         async create(examData) {
-            return API.request('/Exam', {
+            console.log('\n========== API.exam.create ==========');
+            console.log('📥 Input examData:', examData);
+            
+            // Convert to PascalCase for C# backend
+            const dto = {
+                Title: examData.title || examData.Title,
+                CourseId: examData.courseId || examData.CourseId,
+                Duration: examData.duration || examData.Duration,
+                TotalPoints: examData.totalPoints || examData.TotalPoints,
+                ExamDate: examData.examDate || examData.ExamDate,
+                Description: examData.description || examData.Description
+            };
+            
+            console.log('📤 Converted DTO (PascalCase):', dto);
+            console.log('🔍 DTO Validation:');
+            console.log('  - Title:', dto.Title, '(type:', typeof dto.Title, ', empty:', !dto.Title, ')');
+            console.log('  - CourseId:', dto.CourseId, '(type:', typeof dto.CourseId, ', valid:', dto.CourseId > 0, ')');
+            console.log('  - Duration:', dto.Duration, '(type:', typeof dto.Duration, ', valid:', dto.Duration > 0, ')');
+            console.log('  - TotalPoints:', dto.TotalPoints, '(type:', typeof dto.TotalPoints, ', valid:', dto.TotalPoints > 0, ')');
+            console.log('  - ExamDate:', dto.ExamDate, '(type:', typeof dto.ExamDate, ')');
+            
+            const response = await API.request('/Exam', {
                 method: 'POST',
-                body: examData
+                body: dto
             });
+            
+            console.log('📥 API Response:', response);
+            if (!response.success) {
+                console.error('❌ Exam Creation Failed:');
+                console.error('  - Status:', response.status);
+                console.error('  - Error:', response.error);
+                console.error('  - Message:', response.Message);
+                console.error('  - Full Data:', response.data);
+            }
+            
+            return response;
         },
 
         // Update exam
-        async update(id, examData) {
-            return API.request(`/Exam/${id}`, {
+        async update(id, courseId, examData) {
+            return API.request(`/Exam/${id}/course/${courseId}`, {
                 method: 'PUT',
                 body: examData
             });
         },
 
         // Delete exam
-        async delete(id) {
-            return API.request(`/Exam/${id}`, {
+        async delete(id, courseId) {
+            return API.request(`/Exam/${id}/course/${courseId}`, {
                 method: 'DELETE'
             });
         },
 
         // Add question to exam
         async addQuestion(questionData) {
-            return API.request('/Exam/questions', {
+            console.log('📝 Adding question:', questionData);
+            
+            // Convert to PascalCase for C# backend
+            const dto = {
+                ExamId: questionData.examId || questionData.ExamId,
+                CourseId: questionData.courseId || questionData.CourseId,
+                QuestionText: questionData.questionText || questionData.QuestionText,
+                OrderNumber: questionData.orderNumber || questionData.OrderNumber,
+                Score: questionData.score || questionData.Score,
+                MCQOptions: (questionData.mcqOptions || questionData.MCQOptions || []).map((opt, idx) => ({
+                    OptionText: opt.optionText || opt.OptionText || opt.text,
+                    OrderNumber: opt.orderNumber || opt.OrderNumber || (idx + 1),
+                    IsCorrect: opt.isCorrect || opt.IsCorrect
+                }))
+            };
+            
+            console.log('📤 Question DTO:', dto);
+            
+            const response = await API.request('/Exam/questions', {
                 method: 'POST',
-                body: questionData
+                body: dto
             });
+            
+            console.log('📥 Question response:', response);
+            return response;
         },
 
         // Get exam questions
-        async getQuestions(examId) {
+        async getQuestions(examId, courseId) {
+            if (courseId) {
+                return API.request(`/Exam/${examId}/course/${courseId}/with-questions`, {
+                    method: 'GET'
+                });
+            }
             return API.request(`/Exam/${examId}/questions`, {
                 method: 'GET'
             });

@@ -12,8 +12,8 @@ using University.Infra.Data;
 namespace University.Infra.Migrations
 {
     [DbContext(typeof(UniversityDbContext))]
-    [Migration("20251129120335_AddMustChangePasswordToAppUser")]
-    partial class AddMustChangePasswordToAppUser
+    [Migration("20251205210804_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -208,9 +208,6 @@ namespace University.Infra.Migrations
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("datetimeoffset");
-
-                    b.Property<bool?>("MustChangePassword")
-                        .HasColumnType("bit");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)

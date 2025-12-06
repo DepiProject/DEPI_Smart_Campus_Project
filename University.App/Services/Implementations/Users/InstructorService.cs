@@ -113,8 +113,8 @@ namespace University.App.Services.Implementations.Users
                 FirstName = dto.FirstName,
                 LastName = dto.LastName,
                 Role = "Instructor",
-                EmailConfirmed = true,
-                MustChangePassword = true // Force password change on first login
+                EmailConfirmed = true
+                //MustChangePassword = true // Force password change on first login
             };
 
             // Create user with validated password (meets security requirements)

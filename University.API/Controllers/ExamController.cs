@@ -8,6 +8,7 @@ namespace University.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class ExamController : ControllerBase
     {
         private readonly IExamService _examService;
@@ -18,6 +19,7 @@ namespace University.API.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin, Instructor")]
         public async Task<IActionResult> GetAllExams()
         {
             try
@@ -36,6 +38,7 @@ namespace University.API.Controllers
         }
 
         [HttpGet("course/{courseId}")]
+        [Authorize(Roles = "Instructor")]
         public async Task<IActionResult> GetCourseExams(int courseId)
         {
             if (courseId <= 0)
@@ -71,10 +74,10 @@ namespace University.API.Controllers
             {
                 return NotFound(new { success = false, message = ex.Message });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
-            }
+            // catch (Exception ex)
+            // {
+            //     return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
+            // }
         }
 
         [HttpGet("{id}/course/{courseId}/with-questions")]
@@ -100,56 +103,92 @@ namespace University.API.Controllers
 
 
         [HttpPost]
-        [Authorize(Roles = "Admin,Instructor")]
+        [Authorize(Roles = "Instructor")]
         public async Task<IActionResult> CreateExam([FromBody] CreateExamDto dto)
         {
+            Console.WriteLine("\n========== CREATE EXAM REQUEST RECEIVED ==========");
+            
             // Ensure we use the authenticated user's id as the instructor id to prevent spoofing
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            Console.WriteLine($"[AUTH] User ID Claim: {userIdClaim}");
+            
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
             {
+                Console.WriteLine($"[ERROR] Invalid user token");
                 return Unauthorized(new { success = false, message = "Invalid user token" });
             }
 
             // Set the instructor id from the token (ignore any client-provided instructorId)
             dto.InstructorId = userId;
+            Console.WriteLine($"[INFO] Instructor ID set to: {userId}");
+            Console.WriteLine($"[INFO] Received DTO - Title: '{dto.Title}', CourseId: {dto.CourseId}, Duration: {dto.Duration}, TotalPoints: {dto.TotalPoints}, ExamDate: {dto.ExamDate}");
 
             if (!ModelState.IsValid)
-                return BadRequest(new { success = false, errors = ModelState });
+            {
+                Console.WriteLine($"[ERROR] ModelState Invalid");
+                foreach (var key in ModelState.Keys)
+                {
+                    var errors = ModelState[key].Errors;
+                    foreach (var error in errors)
+                    {
+                        Console.WriteLine($"  - {key}: {error.ErrorMessage}");
+                    }
+                }
+                return BadRequest(new { success = false, message = "Validation failed", errors = ModelState });
+            }
 
             try
             {
+                Console.WriteLine($"[INFO] Calling ExamService.AddExam...");
                 var exam = await _examService.AddExam(dto);
 
                 if (exam == null)
+                {
+                    Console.WriteLine($"[ERROR] ExamService.AddExam returned null");
                     return BadRequest(new { success = false, message = "Failed to create exam" });
+                }
 
-                return CreatedAtAction(
-                    nameof(GetExamById),
-                    new
+                // Extract the ExamId (temporarily stored in InstructorId field)
+                var examId = exam.InstructorId; // Service stores ExamId here
+                Console.WriteLine($"[SUCCESS] Exam created successfully with ID: {examId}");
+                
+                return Ok(new
+                {
+                    success = true,
+                    message = "Exam created successfully",
+                    data = new
                     {
-                        success = true,
-                        message = "Exam created successfully",
-                        data = exam
+                        ExamId = examId,
+                        Title = exam.Title,
+                        CourseId = exam.CourseId,
+                        Duration = exam.Duration,
+                        TotalPoints = exam.TotalPoints,
+                        ExamDate = exam.ExamDate
                     }
-                );
+                });
             }
-
             catch (ArgumentException ex)
             {
+                Console.WriteLine($"[ERROR] ArgumentException: {ex.Message}");
+                Console.WriteLine($"[STACK] {ex.StackTrace}");
                 return BadRequest(new { success = false, message = "Validation error", error = ex.Message });
             }
             catch (InvalidOperationException ex)
             {
+                Console.WriteLine($"[ERROR] InvalidOperationException: {ex.Message}");
+                Console.WriteLine($"[STACK] {ex.StackTrace}");
                 return BadRequest(new { success = false, message = "Operation failed", error = ex.Message });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
+                Console.WriteLine($"[ERROR] Unexpected Exception: {ex.Message}");
+                Console.WriteLine($"[STACK] {ex.StackTrace}");
+                return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message, stackTrace = ex.StackTrace });
             }
         }
 
         [HttpPut("{id}/course/{courseId}")]
-        [Authorize(Roles = "Admin,Instructor")]
+        [Authorize(Roles = "Instructor")]
         public async Task<IActionResult> UpdateExam(int id, int courseId, [FromBody] UpdateExamDto dto)
         {
             if (id <= 0 || courseId <= 0)
@@ -178,7 +217,7 @@ namespace University.API.Controllers
         }
 
         [HttpDelete("{id}/course/{courseId}")]
-        [Authorize(Roles = "Admin,Instructor")]
+        [Authorize(Roles = "Instructor")]
         public async Task<IActionResult> DeleteExam(int id, int courseId)
         {
             if (id <= 0 || courseId <= 0)
@@ -208,7 +247,7 @@ namespace University.API.Controllers
 
 
         [HttpGet("{examId}/questions")]
-        [Authorize(Roles = "Admin,Instructor")]
+        [Authorize(Roles = "Instructor")]
         public async Task<IActionResult> GetExamQuestions(int examId)
         {
             if (examId <= 0)
@@ -231,7 +270,7 @@ namespace University.API.Controllers
 
 
         [HttpGet("{examId}/questions/{questionId}")]
-        [Authorize(Roles = "Admin,Instructor")]
+        [Authorize(Roles = "Instructor")]
         public async Task<IActionResult> GetQuestionById(int examId, int questionId)
         {
             try
@@ -247,16 +286,35 @@ namespace University.API.Controllers
 
 
         [HttpPost("questions")]
-        [Authorize(Roles = "Admin,Instructor")]
+        [Authorize(Roles = "Instructor")]
         public async Task<IActionResult> AddQuestion([FromBody] CreateQuestionDto dto)
         {
-       
+            Console.WriteLine("\n========== ADD EXAM QUESTION ==========");
+            Console.WriteLine($"[INFO] ExamId: {dto?.ExamId}, CourseId: {dto?.CourseId}");
+            Console.WriteLine($"[INFO] QuestionText: '{dto?.QuestionText}'");
+            Console.WriteLine($"[INFO] Score: {dto?.Score}, OrderNumber: {dto?.OrderNumber}");
+            Console.WriteLine($"[INFO] MCQOptions count: {dto?.MCQOptions?.Count ?? 0}");
+            
             try
             {
                 if (!ModelState.IsValid)
+                {
+                    Console.WriteLine("[ERROR] ModelState Invalid:");
+                    foreach (var key in ModelState.Keys)
+                    {
+                        var errors = ModelState[key].Errors;
+                        foreach (var error in errors)
+                        {
+                            Console.WriteLine($"  - {key}: {error.ErrorMessage}");
+                        }
+                    }
                     return BadRequest(new { success = false, errors = ModelState });
+                }
 
+                Console.WriteLine("[INFO] Calling AddExamQuestion service...");
                 var question = await _examService.AddExamQuestion(dto);
+                
+                Console.WriteLine($"[SUCCESS] Question added with ID: {question?.QuestionId}");
                 return CreatedAtAction(
                     nameof(GetQuestionById),
                     new { examId = dto.ExamId, courseId = dto.CourseId, questionId = question?.QuestionId },
@@ -265,13 +323,15 @@ namespace University.API.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[ERROR] Exception: {ex.Message}");
+                Console.WriteLine($"[STACK] {ex.StackTrace}");
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
 
 
         [HttpPut("{examId}/questions/{questionId}")]
-        [Authorize(Roles = "Admin,Instructor")]
+        [Authorize(Roles = "Instructor")]
         public async Task<IActionResult> UpdateQuestion(
             int examId,
             int questionId,
@@ -292,7 +352,7 @@ namespace University.API.Controllers
         }
 
         [HttpDelete("{examId}/questions/{questionId}")]
-        [Authorize(Roles = "Admin,Instructor")]
+        [Authorize(Roles = "Instructor")]
         public async Task<IActionResult> DeleteQuestion(int examId, int questionId)
         {
             try
@@ -308,10 +368,5 @@ namespace University.API.Controllers
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
-
-
-
-
-
     }
 }

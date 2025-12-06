@@ -8,9 +8,6 @@ namespace University.Core.Entities
         public string LastName { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty; // Admin, Student, Instructor
 
-        // Password Management - Force change on first login
-        public bool? MustChangePassword { get; set; }
-
         // Soft Delete
         public bool IsDeleted { get; set; } = false;
         public DateTime? DeletedAt { get; set; }
