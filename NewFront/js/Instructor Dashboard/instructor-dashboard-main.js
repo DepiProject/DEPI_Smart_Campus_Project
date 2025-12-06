@@ -41,48 +41,55 @@ class InstructorDashboard {
     }
 
     // ===== SECTION NAVIGATION =====
-    handleSectionNavigation(e) {
-        e.preventDefault();
-        const sectionName = e.target.closest('[data-section]')?.getAttribute('data-section');
-        
-        if (!sectionName) return;
+   handleSectionNavigation(e) {
+    e.preventDefault();
+    const sectionName = e.target.closest('[data-section]')?.getAttribute('data-section');
+    
+    if (!sectionName) return;
 
-        console.log('📍 Navigating to section:', sectionName);
+    console.log('📍 Navigating to section:', sectionName);
 
-        // Update active nav link
-        document.querySelectorAll('[data-section]').forEach(link => {
-            link.classList.remove('active');
-        });
-        e.target.closest('[data-section]').classList.add('active');
+    // Update active nav link
+    document.querySelectorAll('[data-section]').forEach(link => {
+        link.classList.remove('active');
+    });
+    e.target.closest('[data-section]').classList.add('active');
 
-        // Show/hide sections
-        document.querySelectorAll('.section').forEach(section => {
-            section.classList.add('d-none');
-        });
-        document.getElementById(sectionName)?.classList.remove('d-none');
+    // Show/hide sections
+    document.querySelectorAll('.section').forEach(section => {
+        section.classList.add('d-none');
+    });
+    document.getElementById(sectionName)?.classList.remove('d-none');
 
-        // Load data for specific sections
-        switch (sectionName) {
-            case 'courses':
-                this.loadCourses();
-                break;
-            case 'students':
-                this.loadStudents();
-                break;
-            case 'exams':
-                this.loadExams();
-                break;
-            case 'attendance':
-                this.loadAttendance();
-                break;
-            case 'enrollments':
-                this.loadCourseFilterForEnrollments();
-                break;
-            case 'profile':
-                this.loadProfile();
-                break;
-        }
+    // Load data for specific sections
+    switch (sectionName) {
+        case 'courses':
+            this.loadCourses();
+            break;
+
+        case 'students':
+            this.loadStudents();
+            break;
+
+        case 'exams':
+            this.loadExams();             // Load exam list
+            this.loadExamCourses();       // ⭐ LOAD DROPDOWN COURSES
+            break;
+
+        case 'attendance':
+            this.loadAttendance();
+            break;
+
+        case 'enrollments':
+            this.loadCourseFilterForEnrollments();
+            break;
+
+        case 'profile':
+            this.loadProfile();
+            break;
     }
+}
+
 
     // ===== DASHBOARD DATA LOADING =====
     async loadDashboardData() {

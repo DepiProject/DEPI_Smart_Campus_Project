@@ -1070,21 +1070,266 @@ InstructorDashboard.prototype.searchExams = function(searchTerm) {
 };
 
 
-// ===== LOAD COURSES FOR DROPDOWN - ULTIMATE FIX =====
-InstructorDashboard.prototype.loadExamCourses = async function() {
-    console.log('🚀 [loadExamCourses] ULTIMATE FIX START');
+// ===== LOAD COURSES FOR DROPDOWN =====
+// InstructorDashboard.prototype.loadExamCourses = async function() {
+//     console.log('🔵 [loadExamCourses] START');
+//     console.log('🔵 Current instructor courses cache:', this.instructorCourses);
     
-    const courseSelect = document.getElementById('examCourse');
+//     const courseSelect = document.getElementById('examCourse') || document.getElementById('examCourseSelect');
+//     if (!courseSelect) {
+//         console.error('❌ No course select element found');
+//         return;
+//     }
+
+//     // Show loading
+//     courseSelect.innerHTML = '<option value="">Loading courses...</option>';
+//     courseSelect.disabled = true;
+
+//     try {
+//         // Get instructor ID
+//         let instructorId = this.currentInstructorId;
+//         console.log('🔵 Instructor ID from dashboard:', instructorId);
+        
+//         // Fallback 1: From localStorage
+//         if (!instructorId) {
+//             const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+//             instructorId = userInfo.InstructorId || userInfo.instructorId || userInfo.id || userInfo.Id;
+//             console.log('🔵 Instructor ID from localStorage:', instructorId);
+//         }
+
+//         // Fallback 2: Fetch profile
+//         if (!instructorId) {
+//             console.log('🔵 Fetching profile to get instructor ID...');
+//             const profileResponse = await API.instructor.getMyProfile();
+            
+//             if (profileResponse.success && profileResponse.data) {
+//                 const profile = profileResponse.data.data || profileResponse.data.Data || profileResponse.data;
+//                 instructorId = profile.instructorId || profile.InstructorId || profile.id || profile.Id;
+//                 this.currentInstructorId = instructorId;
+//                 console.log('🔵 Instructor ID from profile:', instructorId);
+//             }
+//         }
+
+//         if (!instructorId) {
+//             console.error('❌ No instructor ID available');
+//             courseSelect.innerHTML = '<option value="">Unable to load courses. Please login again.</option>';
+//             courseSelect.disabled = true;
+//             return;
+//         }
+
+//         // Use cached courses if available
+//         if (this.instructorCourses && this.instructorCourses.length > 0) {
+//             console.log('✅ Using cached courses:', this.instructorCourses.length);
+//             const validCourses = this.instructorCourses;
+            
+//             courseSelect.innerHTML = '<option value="">Select a Course</option>';
+            
+//             validCourses.forEach((course, idx) => {
+//                 const courseId = course.CourseId || course.courseId || course.id || course.Id;
+//                 const name = course.CourseName || course.courseName || course.Name || course.name;
+//                 const code = course.CourseCode || course.courseCode || course.Code || course.code || '';
+                
+//                 const label = code ? `${code} - ${name}` : name;
+                
+//                 const option = document.createElement('option');
+//                 // Critical: Set value as string of the numeric ID
+//                 const idString = String(parseInt(courseId, 10));
+//                 option.value = idString;
+//                 option.setAttribute('data-course-id', idString);
+//                 option.textContent = label;
+//                 courseSelect.appendChild(option);
+                
+//                 console.log(`✅ Added cached course option [${idx}]:`, { courseId, idString, label, optionValue: option.value });
+//             });
+
+//             courseSelect.disabled = false;
+//             console.log('✅ [loadExamCourses] SUCCESS (from cache) - Dropdown has', courseSelect.options.length, 'options');
+//             return;
+//         }
+
+//         // Fetch courses from API
+//         console.log('🔵 Fetching courses from API for instructor:', instructorId);
+//         const response = await API.request(`/Course/instructor/${instructorId}`, {
+//             method: 'GET'
+//         });
+        
+//         console.log('🔵 API Response:', response);
+
+//         if (!response.success) {
+//             console.error('❌ API returned error:', response);
+//             courseSelect.innerHTML = '<option value="">No courses assigned to you</option>';
+//             courseSelect.disabled = true;
+//             return;
+//         }
+
+//         // Extract courses array
+//         let courses = [];
+        
+//         if (Array.isArray(response.data)) {
+//             courses = response.data;
+//         } else if (response.data) {
+//             courses = response.data.data || 
+//                      response.data.Data || 
+//                      response.data.items ||
+//                      response.data.Items ||
+//                      [];
+            
+//             if (!Array.isArray(courses) && typeof response.data === 'object') {
+//                 courses = [response.data];
+//             }
+//         }
+
+//         console.log('🔵 Extracted courses:', courses);
+
+//         // Validate courses
+//         const validCourses = courses.filter(c => {
+//             if (!c || typeof c !== 'object') return false;
+            
+//             const id = c.CourseId || c.courseId || c.id || c.Id;
+//             const name = c.CourseName || c.courseName || c.Name || c.name;
+            
+//             return id && parseInt(id) > 0 && name;
+//         });
+
+//         console.log('🔵 Valid courses count:', validCourses.length);
+
+//         // Cache courses
+//         this.instructorCourses = validCourses;
+
+//         if (validCourses.length === 0) {
+//             courseSelect.innerHTML = '<option value="">No courses assigned to you</option>';
+//             courseSelect.disabled = true;
+//             console.warn('⚠️ No valid courses found');
+//             return;
+//         }
+
+//         // Populate dropdown
+//         courseSelect.innerHTML = '<option value="">Select a Course</option>';
+        
+//         validCourses.forEach((course, idx) => {
+//             const courseId = course.CourseId || course.courseId || course.id || course.Id;
+//             const name = course.CourseName || course.courseName || course.Name || course.name;
+//             const code = course.CourseCode || course.courseCode || course.Code || course.code || '';
+            
+//             const label = code ? `${code} - ${name}` : name;
+            
+//             const option = document.createElement('option');
+//             // Critical: Set value as string of the numeric ID
+//             const idString = String(parseInt(courseId, 10));
+//             option.value = idString;
+//             option.setAttribute('data-course-id', idString);
+//             option.textContent = label;
+//             courseSelect.appendChild(option);
+            
+//             console.log(`✅ Added course option [${idx}]:`, { courseId, idString, label, optionValue: option.value });
+//         });
+
+//         courseSelect.disabled = false;
+
+//         console.log('✅ [loadExamCourses] SUCCESS - Dropdown has', courseSelect.options.length, 'options');
+
+//     } catch (error) {
+//         console.error('❌ [loadExamCourses] Error:', error);
+//         courseSelect.innerHTML = '<option value="">No courses found. Please contact admin.</option>';
+//         courseSelect.disabled = true;
+        
+//         if (this.showToast) {
+//             this.showToast('Error', 'Failed to load courses. Please try again.', 'error');
+//         }
+//     }
+// };
+ 
+
+
+InstructorDashboard.prototype.loadExamCourses = async function() {
+    console.log('🔵 [loadExamCourses] START');
+    console.log('🔵 Current instructorCourses cache length:', (this.instructorCourses || []).length);
+
+    // Try common selectors — if select is inside modal, try querying inside modal
+    let courseSelect = document.getElementById('examCourse') || document.getElementById('examCourseSelect');
+
     if (!courseSelect) {
-        console.error('❌ Course select element not found');
+        // extra attempt: find the select inside the modal (if id isn't unique or element was moved)
+        const modalEl = document.getElementById('examModal');
+        if (modalEl) {
+            courseSelect = modalEl.querySelector('#examCourse, #examCourseSelect');
+        }
+    }
+
+    if (!courseSelect) {
+        console.error('❌ No course select element found (tried #examCourse and #examCourseSelect).');
         return;
     }
 
-    // Show loading
-    courseSelect.innerHTML = '<option value="">Loading courses...</option>';
+    // UI: show loading and disable while populating
+    courseSelect.innerHTML = '<option value="0">Loading courses...</option>';
     courseSelect.disabled = true;
 
     try {
+        // Get instructor ID (robust)
+        let instructorId = this.currentInstructorId || null;
+        console.log('🔵 instructorId (initial):', instructorId);
+
+        if (!instructorId) {
+            const userInfoRaw = localStorage.getItem('userInfo');
+            try {
+                const userInfo = userInfoRaw ? JSON.parse(userInfoRaw) : {};
+                instructorId = userInfo.InstructorId || userInfo.instructorId || userInfo.id || userInfo.Id || null;
+                console.log('🔵 instructorId from localStorage:', instructorId);
+            } catch (e) {
+                console.warn('⚠️ Failed to parse userInfo from localStorage', e);
+            }
+        }
+
+        if (!instructorId) {
+            console.log('🔵 Fetching profile to get instructor ID...');
+            const profileResponse = await API.instructor.getMyProfile();
+            if (profileResponse && profileResponse.success && profileResponse.data) {
+                const profile = profileResponse.data.data || profileResponse.data.Data || profileResponse.data;
+                instructorId = profile?.instructorId || profile?.InstructorId || profile?.id || profile?.Id || null;
+                this.currentInstructorId = instructorId;
+                console.log('🔵 instructorId from profile:', instructorId);
+            }
+        }
+
+        if (!instructorId) {
+            console.error('❌ No instructor ID available');
+            courseSelect.innerHTML = '<option value="0">Unable to load courses. Please login again.</option>';
+            courseSelect.disabled = true;
+            return;
+        }
+
+        // If we have cached courses use them (but ensure they are valid objects)
+        if (Array.isArray(this.instructorCourses) && this.instructorCourses.length > 0) {
+            console.log('✅ Using cached courses:', this.instructorCourses.length);
+            populateFromArray(this.instructorCourses, courseSelect);
+            courseSelect.disabled = false;
+            console.log('✅ [loadExamCourses] SUCCESS (from cache) - Dropdown has', courseSelect.options.length, 'options');
+            return;
+        }
+
+        // Fetch from API
+        console.log('🔵 Fetching courses from API for instructor:', instructorId);
+        const response = await API.request(`/Course/instructor/${instructorId}`, { method: 'GET' });
+        console.log('🔵 API response:', response);
+
+        if (!response || !response.success) {
+            console.warn('⚠️ API did not succeed or returned no data:', response);
+            courseSelect.innerHTML = '<option value="0">No courses assigned to you</option>';
+            courseSelect.disabled = true;
+            return;
+        }
+
+        // Extract possible array from many shapes
+        let courses = [];
+        if (Array.isArray(response.data)) {
+            courses = response.data;
+        } else if (response.data) {
+            courses = response.data.data || response.data.Data || response.data.items || response.data.Items || [];
+            if (!Array.isArray(courses) && typeof response.data === 'object') {
+                // Single item wrapped
+                courses = [response.data];
+            }
         // 1. Get instructor ID
         let instructorId = this.currentInstructorId;
         
@@ -1385,24 +1630,23 @@ InstructorDashboard.prototype.extractCourseData = function(course, index) {
     return result;
 };
 
-// ===== EMERGENCY FUNCTIONS =====
-InstructorDashboard.prototype.getEmergencyCourses = function() {
-    return [
-        { id: 101, name: "Computer Science 101", code: "CS101" },
-        { id: 102, name: "Mathematics Basics", code: "MATH101" },
-        { id: 103, name: "Web Development", code: "WEB101" }
-    ];
-};
+        console.log('🔵 Extracted courses (raw):', courses);
 
-InstructorDashboard.prototype.addEmergencyOption = function(courseSelect) {
-    const option = document.createElement('option');
-    option.value = "999";
-    option.setAttribute('data-course-id', "999");
-    option.textContent = "CS999 - Emergency Course";
-    courseSelect.appendChild(option);
-    courseSelect.disabled = false;
-    console.log('🆘 Added emergency course option');
-};
+        // Validate and normalize
+        const validCourses = courses.filter(c => {
+            if (!c || typeof c !== 'object') return false;
+            const id = c.CourseId || c.courseId || c.id || c.Id;
+            const name = c.CourseName || c.courseName || c.Name || c.name;
+            return id != null && name;
+        }).map(c => {
+            // normalize keys to avoid shape pain later
+            return {
+                raw: c,
+                CourseId: c.CourseId || c.courseId || c.id || c.Id,
+                CourseName: c.CourseName || c.courseName || c.Name || c.name,
+                CourseCode: c.CourseCode || c.courseCode || c.Code || c.code || ''
+            };
+        });
 
 InstructorDashboard.prototype.loadEmergencyCoursesNow = function() {
     const courseSelect = document.getElementById('examCourse');
@@ -1432,150 +1676,144 @@ InstructorDashboard.prototype.loadEmergencyCoursesNow = function() {
     console.log('✅ Emergency courses loaded');
 };
 
-// ===== DEBUG FUNCTION =====
-InstructorDashboard.prototype.debugCourseData = async function() {
-    console.log('=== DEBUG COURSE DATA ===');
-    
-    const instructorId = this.currentInstructorId || 
-                        JSON.parse(localStorage.getItem('userInfo'))?.InstructorId;
-    
-    console.log('1. Instructor ID:', instructorId);
-    
-    if (instructorId) {
-        try {
-            const response = await API.request(`/Course/instructor/${instructorId}`, {
-                method: 'GET'
-            });
-            
-            console.log('2. API Response:', response);
-            console.log('3. Response success:', response.success);
-            
-            if (response.data) {
-                console.log('4. Response data type:', typeof response.data);
-                console.log('5. Response data keys:', Object.keys(response.data));
-                
-                // Deep inspection
-                console.log('6. Deep inspection of response.data:');
-                console.dir(response.data);
-                
-                // Check for arrays at any level
-                function findArrays(obj, path = '') {
-                    for (const key in obj) {
-                        const currentPath = path ? `${path}.${key}` : key;
-                        if (Array.isArray(obj[key])) {
-                            console.log(`   Found array at ${currentPath}:`, obj[key]);
-                            if (obj[key].length > 0) {
-                                console.log(`   First item:`, obj[key][0]);
-                            }
-                        } else if (obj[key] && typeof obj[key] === 'object') {
-                            findArrays(obj[key], currentPath);
-                        }
-                    }
-                }
-                
-                findArrays(response.data);
-            }
-        } catch (error) {
-            console.error('API Debug Error:', error);
+        this.instructorCourses = validCourses;
+
+        if (validCourses.length === 0) {
+            courseSelect.innerHTML = '<option value="0">No courses assigned to you</option>';
+            courseSelect.disabled = true;
+            console.warn('⚠️ No valid courses found after validation');
+            return;
         }
+
+        populateFromArray(validCourses, courseSelect);
+        courseSelect.disabled = false;
+        console.log('✅ [loadExamCourses] SUCCESS - Dropdown has', courseSelect.options.length, 'options');
+
+    } catch (err) {
+        console.error('❌ [loadExamCourses] Error:', err);
+        courseSelect.innerHTML = '<option value="0">No courses found. Please contact admin.</option>';
+        courseSelect.disabled = true;
+        if (this.showToast) this.showToast('Error', 'Failed to load courses. Please try again.', 'error');
     }
-    
-    console.log('7. Current cached courses:', this.instructorCourses);
-    console.log('=== END DEBUG ===');
+
+    // helper to populate a select from array of normalized course objects
+    function populateFromArray(arr, selectEl) {
+        selectEl.innerHTML = '<option value="0">Select a Course</option>';
+        arr.forEach((course, idx) => {
+            const raw = course.raw || course;
+            const courseId = (course.CourseId != null) ? course.CourseId : (raw.CourseId || raw.courseId || raw.id || raw.Id);
+            const name = course.CourseName || raw.CourseName || raw.courseName || raw.Name || raw.name || 'Unnamed Course';
+            const code = course.CourseCode || raw.CourseCode || raw.courseCode || raw.Code || raw.code || '';
+            const label = code ? `${code} - ${name}` : name;
+
+            // Ensure value is numeric string when possible, fallback to original string
+            let idString = '0';
+            const parsed = parseInt(String(courseId || '').trim(), 10);
+            if (!isNaN(parsed) && parsed > 0) idString = String(parsed);
+            else if (courseId != null) idString = String(courseId);
+
+            const option = document.createElement('option');
+            option.value = idString;
+            option.setAttribute('data-course-id', idString);
+            option.textContent = label;
+            selectEl.appendChild(option);
+
+            console.log(`✅ Added course option [${idx}]:`, { courseId, idString, label });
+        });
+    }
 };
 
-// ===== POPULATE DROPDOWN - FIXED FOR NaN =====
-InstructorDashboard.prototype.populateDropdownWithCourses = function(courseSelect, courses) {
-    console.log('📝 Populating dropdown with', courses.length, 'courses');
-    
-    // Clear dropdown
-    courseSelect.innerHTML = '<option value="">Select a Course</option>';
-    
-    let validCount = 0;
-    
-    courses.forEach((course, index) => {
-        // Extract course data
-        const courseId = course.CourseId || course.courseId || course.id || course.Id;
-        const courseName = course.CourseName || course.courseName || course.Name || course.name;
-        const courseCode = course.CourseCode || course.courseCode || course.Code || course.code || '';
-        
-        // Validate course
-        if (!courseId || !courseName) {
-            console.warn(`⚠️ Skipping course without ID/name:`, course);
-            return;
-        }
-        
-        // **FIX: Handle NaN and invalid IDs**
-        let parsedId;
-        
-        // Convert to number carefully
-        if (courseId === 'NaN' || courseId === 'null' || courseId === 'undefined') {
-            console.error(`❌ Invalid course ID string: "${courseId}" for "${courseName}"`);
-            return;
-        }
-        
-        parsedId = parseInt(courseId, 10);
-        
-        // **FIX: Check for NaN AFTER parsing**
-        if (isNaN(parsedId)) {
-            console.error(`❌ Course ID is NaN after parsing: "${courseId}" → ${parsedId}`);
-            
-            // Try to extract number from course code
-            if (courseCode) {
-                const codeMatch = courseCode.match(/\d+/);
-                if (codeMatch) {
-                    parsedId = parseInt(codeMatch[0], 10);
-                    console.log(`🔄 Extracted ID from course code: ${parsedId}`);
+
+
+
+//gather data function 
+InstructorDashboard.prototype.gatherExamData = function() {
+    const title = document.getElementById('examTitle')?.value.trim() || '';
+    const courseSelect = document.getElementById('examCourse') || document.getElementById('examCourseSelect');
+
+    let courseId = 0;
+    if (courseSelect) {
+        const rawValue = (courseSelect.value || '').toString().trim();
+        console.log('🔍 Raw courseSelect.value:', rawValue);
+        // Treat '0' or '' as no selection
+        if (rawValue && rawValue !== '0') {
+            const parsed = parseInt(rawValue, 10);
+            if (!isNaN(parsed) && parsed > 0) {
+                courseId = parsed;
+            } else {
+                // fallback to selected option's data attribute or dataset
+                const selectedOption = courseSelect.options[courseSelect.selectedIndex] || null;
+                const dataCourseId = selectedOption?.getAttribute('data-course-id') || selectedOption?.dataset?.courseId || '';
+                const dataParsed = parseInt(String(dataCourseId || '').trim(), 10);
+                if (!isNaN(dataParsed) && dataParsed > 0) courseId = dataParsed;
+                else {
+                    // try parsing any numeric substring inside value
+                    const numericMatch = (rawValue.match(/-?\d+/) || [null])[0];
+                    if (numericMatch) {
+                        const nm = parseInt(numericMatch, 10);
+                        if (!isNaN(nm) && nm > 0) courseId = nm;
+                    }
                 }
             }
-            
-            // If still NaN, use a temporary ID
-            if (isNaN(parsedId)) {
-                parsedId = 1000 + index; // Temporary unique ID
-                console.log(`🔄 Using temporary ID: ${parsedId} for "${courseName}"`);
-            }
-        }
-        
-        // Check if ID is positive
-        if (parsedId <= 0) {
-            console.error(`❌ Course ID is <= 0: ${parsedId} for "${courseName}"`);
-            parsedId = 1000 + index; // Use temporary ID
-        }
-        
-        // Create option
-        const option = document.createElement('option');
-        const idString = String(parsedId);
-        
-        // **FIX: Set both value and data-course-id**
-        option.value = idString;
-        option.setAttribute('data-course-id', idString);
-        
-        // Set display text
-        const displayText = courseCode ? `${courseCode} - ${courseName}` : courseName;
-        option.textContent = displayText;
-        
-        // Add to dropdown
-        courseSelect.appendChild(option);
-        validCount++;
-        
-        console.log(`✅ Added course [${index}]: ID=${parsedId}, Text="${displayText}"`);
-    });
-    
-    // Enable/disable dropdown
-    if (validCount > 0) {
-        courseSelect.disabled = false;
-        console.log(`🎉 Successfully added ${validCount} courses to dropdown`);
-        
-        // **FIX: Auto-select first course if only one exists**
-        if (validCount === 1 && courseSelect.options.length > 1) {
-            courseSelect.selectedIndex = 1;
-            console.log('🔄 Auto-selected the only available course');
+        } else if (courseSelect.selectedIndex > 0) {
+            // final fallback: selected option attribute
+            const selectedOption = courseSelect.options[courseSelect.selectedIndex];
+            const dataCourseId = selectedOption?.getAttribute('data-course-id') || selectedOption?.dataset?.courseId || selectedOption?.value;
+            const parsed = parseInt(String(dataCourseId || '').trim(), 10);
+            if (!isNaN(parsed) && parsed > 0) courseId = parsed;
         }
     } else {
         courseSelect.innerHTML = '<option value="">No valid courses found</option>';
         courseSelect.disabled = true;
         console.error('❌ No valid courses to display');
     }
+
+    console.log('🔍 Course Select Debug:', {
+        elementPresent: !!courseSelect,
+        rawValue: courseSelect?.value,
+        selectedIndex: courseSelect?.selectedIndex,
+        computedCourseId: courseId
+    });
+
+    const duration = parseInt(document.getElementById('examDuration')?.value || 0, 10);
+    const totalMarks = parseInt(document.getElementById('examTotalMarks')?.value || 0, 10);
+    const passingScore = parseInt(document.getElementById('examPassingScore')?.value || 0, 10);
+    const description = document.getElementById('examDescription')?.value.trim() || '';
+
+    // questions gathering unchanged except logging
+    const questions = [];
+    const container = document.getElementById('questionsContainer');
+    if (container) {
+        const qcards = container.querySelectorAll('.question-card');
+        qcards.forEach(card => {
+            const qid = card.getAttribute('data-qid');
+            const qtext = (card.querySelector('.question-text')?.value || '').trim();
+            const options = [];
+            const optionItems = card.querySelectorAll('.option-item');
+            optionItems.forEach(opt => {
+                const optText = (opt.querySelector('.option-text')?.value || '').trim();
+                const radio = opt.querySelector(`input[type="radio"][name="correct_${qid}"]`);
+                const isCorrect = !!(radio && radio.checked);
+                if (optText.length > 0) options.push({ text: optText, isCorrect });
+            });
+            if (qtext && options.length > 0) questions.push({ text: qtext, options });
+        });
+    }
+
+    const data = {
+        title,
+        courseId,
+        durationMinutes: duration,
+        totalMarks,
+        passingScore,
+        description,
+        questions
+    };
+
+    console.log('✅ Final gathered exam data:', data);
+    return data;
+};
+
 };
   
 // ===== QUESTION MANAGEMENT =====
