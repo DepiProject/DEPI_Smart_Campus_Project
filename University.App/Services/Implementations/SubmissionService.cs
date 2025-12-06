@@ -3,7 +3,7 @@ using University.App.Interfaces;
 using University.App.Services.IServices;
 using University.Core.Entities;
 
-namespace SmartCampus.App.Services.Implementations
+namespace University.App.Services.Implementations
 {
     public class SubmissionService : ISubmissionService
     {
@@ -30,10 +30,6 @@ namespace SmartCampus.App.Services.Implementations
             var exam = await _submissionRepository.GetExamWithQuestionsAsync(examId);
             if (exam == null)
                 throw new InvalidOperationException("Exam not found.");
-
-            // Check if exam is available
-            if (exam.ExamDate > DateTime.UtcNow)
-                throw new InvalidOperationException("This exam is not available yet.");
 
             // Check exam has questions
             if (exam.ExamQuestions == null || exam.ExamQuestions.Count == 0)
@@ -99,25 +95,51 @@ namespace SmartCampus.App.Services.Implementations
             foreach (var answerDto in dto.Answers)
             {
                 if (answerDto.QuestionId <= 0)
+                {
+                    Console.WriteLine($"Skipping answer with invalid QuestionId: {answerDto.QuestionId}");
                     continue;
+                }
 
                 var question = await _submissionRepository.GetQuestionByIdAsync(answerDto.QuestionId);
-                if (question == null || question.ExamId != dto.ExamId)
+                if (question == null)
+                {
+                    Console.WriteLine($"Question not found for QuestionId: {answerDto.QuestionId}");
                     continue;
+                }
+                
+                if (question.ExamId != dto.ExamId)
+                {
+                    Console.WriteLine($"Question belongs to different exam. Expected: {dto.ExamId}, Actual: {question.ExamId}");
+                    continue;
+                }
 
                 bool isCorrect = false;
                 decimal pointsAwarded = 0;
+
+                Console.WriteLine($"Processing question {answerDto.QuestionId} with {question.Options.Count} options");
+                foreach (var opt in question.Options)
+                {
+                    Console.WriteLine($"  Option {opt.OptionId}: IsCorrect={opt.IsCorrect}, Text='{opt.OptionText}'");
+                }
 
                 var selectedOption = question.Options
                     .FirstOrDefault(o => o.OptionId == answerDto.SelectedOptionId);
 
                 var correctOption = question.Options.FirstOrDefault(o => o.IsCorrect);
 
+                Console.WriteLine($"Selected option: {selectedOption?.OptionId} (IsCorrect: {selectedOption?.IsCorrect})");
+                Console.WriteLine($"Correct option: {correctOption?.OptionId} (IsCorrect: {correctOption?.IsCorrect})");
+
                 if (selectedOption != null && selectedOption.IsCorrect)
                 {
                     isCorrect = true;
                     pointsAwarded = question.Score;
                     correctAnswers++;
+                    Console.WriteLine($"✅ Answer is CORRECT! Points awarded: {pointsAwarded}");
+                }
+                else
+                {
+                    Console.WriteLine($"❌ Answer is INCORRECT. Selected: {selectedOption?.OptionId}, Correct: {correctOption?.OptionId}");
                 }
 
                 questionResults.Add(new QuestionResultDto
@@ -142,7 +164,12 @@ namespace SmartCampus.App.Services.Implementations
                     PointsAwarded = pointsAwarded
                 };
 
+                Console.WriteLine($"Saving answer: SubmissionId={examAnswer.SubmissionId}, QuestionId={examAnswer.QuestionId}, SelectedOptionId={examAnswer.SelectedOptionId}");
                 await _submissionRepository.AddAnswerAsync(examAnswer);
+                
+                // Save each answer immediately to ensure it's persisted
+                await _submissionRepository.SaveChangesAsync();
+                Console.WriteLine($"✅ Answer saved to database for Question {examAnswer.QuestionId}");
 
                 totalScore += pointsAwarded;
             }

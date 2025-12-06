@@ -1351,6 +1351,123 @@ html {
     scroll-behavior: smooth;
 }
 
+/* ==================== STUDENT DASHBOARD ENHANCEMENTS ==================== */
+
+/* Integrate with admin-enhanced stat cards */
+.stat-card-enhanced {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+}
+
+.stat-number {
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: #ffffff !important;
+}
+
+/* Ensure proper counter animation for student dashboard */
+.counter {
+    display: inline-block;
+    animation: countUp 0.6s ease;
+}
+
+@keyframes countUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Chart card integration with admin styles */
+.chart-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.chart-card:hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.chart-card-header {
+    padding: 1.5rem;
+    border-bottom: 2px solid #e7e5e4;
+    background: linear-gradient(135deg, #faf8f5 0%, #fdfcfb 100%);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chart-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #476247;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.chart-card-body {
+    padding: 1.5rem;
+    min-height: 300px;
+}
+
+/* Course cards in enrollment section */
+.course-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    border: 2px solid transparent;
+}
+
+.course-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+    border-color: #476247;
+}
+
+.course-card-header {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #476247 0%, #3a4f3a 100%);
+    color: white;
+}
+
+.course-card-body {
+    padding: 1.5rem;
+}
+
+.course-card-footer {
+    padding: 1rem 1.5rem;
+    background: #f9fafb;
+    border-top: 1px solid #e7e5e4;
+}
+
+/* Integration with modern table styles */
+.modern-table-wrapper {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+/* Ensure counter text consistency */
+.stat-number .counter {
+    color: #ffffff !important;
+}
+
 /* ==================== ACCESSIBILITY ==================== */
 .sr-only {
     position: absolute;

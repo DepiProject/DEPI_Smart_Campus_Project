@@ -306,7 +306,7 @@
                 }[enrollment.status] || 'badge-sage';
 
                 const initials = (enrollment.studentName || 'NA').split(' ').map(n => n[0]).join('').substring(0, 2);
-                const enrollDate = (enrollment.enrollmentDate || enrollment.EnrollmentDate || enrollment.enrolledAt) 
+                const enrollDate = (enrollment.enrollmentDate || enrollment.EnrollmentDate || enrollment.enrolledAt)
                     ? new Date(enrollment.enrollmentDate || enrollment.EnrollmentDate || enrollment.enrolledAt).toLocaleDateString('en-US', {
                         month: 'short', day: 'numeric', year: 'numeric'
                     }) : 'N/A';
@@ -382,7 +382,6 @@
                 <div style="background: var(--cream-100); padding: 1rem; border-radius: 12px; border: 1px solid var(--sage-200);">
                     <p style="margin: 0.5rem 0;"><strong>Student:</strong> ${enrollment.studentName}</p>
                     <p style="margin: 0.5rem 0;"><strong>Course:</strong> ${enrollment.courseName}</p>
-                    <p style="margin: 0.5rem 0;"><strong>Credits:</strong> ${enrollment.courseCredits || 0}</p>
                 </div>
             `;
 

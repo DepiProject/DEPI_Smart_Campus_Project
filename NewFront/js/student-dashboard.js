@@ -343,38 +343,33 @@ class StudentDashboard {
                             console.log('✅ Total Credits:', totalCredits);
                         }
                         
-                        // Calculate GPA
-                        const gradesEnrollments = Array.isArray(studentEnrollments)
-                            ? studentEnrollments.filter(e => {
-                                const finalGrade = e.finalGrade || e.FinalGrade;
-                                return finalGrade && finalGrade > 0;
-                              })
-                            : [];
-                        
-                        if (gradesEnrollments.length > 0) {
-                            const totalGrade = gradesEnrollments.reduce((sum, e) => {
-                                const grade = e.finalGrade || e.FinalGrade || 0;
-                                return sum + grade;
-                            }, 0);
-                            const gpa = (totalGrade / gradesEnrollments.length / 25).toFixed(2);
-                            
-                            const gpaEl = document.getElementById('studentGPA');
-                            if (gpaEl) {
-                                gpaEl.textContent = gpa;
-                            }
-                            console.log('✅ GPA:', gpa);
-                        } else {
-                            const gpaEl = document.getElementById('studentGPA');
-                            if (gpaEl) {
-                                gpaEl.textContent = '0.0';
+                        // Display student level from studentInfo
+                        const levelEl = document.getElementById('studentLevel');
+                        if (levelEl && this.studentInfo) {
+                            const level = this.studentInfo.level || this.studentInfo.Level || 'N/A';
+                            levelEl.textContent = level;
+                            console.log('✅ Student Level:', level);
+                        } else if (levelEl) {
+                            // Fallback: Load profile to get level
+                            try {
+                                const profileResponse = await API.student.getMyProfile();
+                                if (profileResponse.success && profileResponse.data) {
+                                    const profile = profileResponse.data.Data || profileResponse.data.data || profileResponse.data;
+                                    const level = profile.level || profile.Level || 'N/A';
+                                    levelEl.textContent = level;
+                                    console.log('✅ Student Level (from profile):', level);
+                                }
+                            } catch (err) {
+                                console.warn('⚠️ Could not load student level:', err);
+                                levelEl.textContent = 'N/A';
                             }
                         }
                     }
                 } catch (error) {
-                    console.error('❌ Error loading GPA/Credits:', error);
-                    const gpaEl = document.getElementById('studentGPA');
-                    if (gpaEl) {
-                        gpaEl.textContent = '0.0';
+                    console.error('❌ Error loading Credits:', error);
+                    const levelEl = document.getElementById('studentLevel');
+                    if (levelEl) {
+                        levelEl.textContent = 'N/A';
                     }
                     const creditsEl = document.getElementById('studentCredits');
                     if (creditsEl) {
@@ -1735,7 +1730,16 @@ class StudentDashboard {
             const enrollments = coursesResponse.success && coursesResponse.data ? 
                 (coursesResponse.data.Data || coursesResponse.data.data || coursesResponse.data || []) : [];
             
-            const enrolledCourseIds = enrollments.map(e => e.CourseId || e.courseId);
+            console.log('📚 Raw enrollments:', enrollments);
+            
+            // Extract course IDs with better fallback handling
+            const enrolledCourseIds = enrollments.map(e => {
+                // Try multiple possible field names
+                const courseId = e.CourseId || e.courseId || e.Course?.CourseId || e.Course?.courseId;
+                console.log('  Enrollment:', e, '→ CourseId:', courseId);
+                return courseId;
+            }).filter(id => id != null); // Remove undefined/null values
+            
             console.log('📚 Enrolled course IDs:', enrolledCourseIds);
             
             // Load all exams
@@ -1748,7 +1752,9 @@ class StudentDashboard {
                 // Filter exams for enrolled courses only
                 const availableExams = allExams.filter(exam => {
                     const courseId = exam.CourseId || exam.courseId;
-                    return enrolledCourseIds.includes(courseId);
+                    const isEnrolled = enrolledCourseIds.includes(courseId);
+                    console.log(`  Exam "${exam.Title || exam.title}" (CourseId: ${courseId}) - Enrolled: ${isEnrolled}`);
+                    return isEnrolled;
                 });
                 
                 console.log('✅ Available exams for student:', availableExams);
@@ -1757,7 +1763,7 @@ class StudentDashboard {
                 if (availableExams.length === 0) {
                     examsTableBody.innerHTML = `
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
+                            <td colspan="5" class="text-center text-muted py-4">
                                 <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
                                 <p class="mt-2">No exams available yet</p>
                             </td>
@@ -1775,8 +1781,7 @@ class StudentDashboard {
                         
                         const title = exam.Title || exam.title || 'Untitled Exam';
                         const duration = exam.Duration || exam.duration || 0;
-                        const passingScore = exam.PassingScore || exam.passingScore || 0;
-                        const totalMarks = exam.TotalMarks || exam.totalMarks || 0;
+                        const totalMarks = exam.TotalPoints || exam.totalPoints || exam.TotalMarks || exam.totalMarks || 0;
                         const examId = exam.ExamId || exam.examId || exam.Id || exam.id;
                         
                         return `
@@ -1792,11 +1797,6 @@ class StudentDashboard {
                                     </span>
                                 </td>
                                 <td>
-                                    <span class="badge bg-warning text-dark">
-                                        ${passingScore}%
-                                    </span>
-                                </td>
-                                <td>
                                     <strong class="text-success">${totalMarks}</strong>
                                 </td>
                                 <td class="text-center">
@@ -1809,7 +1809,7 @@ class StudentDashboard {
                     }).join('');
                 }
             } else {
-                examsTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Failed to load exams</td></tr>';
+                examsTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Failed to load exams</td></tr>';
             }
             
             // Load completed exams (submissions)

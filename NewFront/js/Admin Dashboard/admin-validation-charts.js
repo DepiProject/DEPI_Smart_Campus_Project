@@ -182,6 +182,7 @@ AdminDashboard.prototype.setupStudentFormValidation = function() {
     const lastNameField = document.getElementById('studentLastName');
     const phoneField = document.getElementById('studentPhone');
     const passwordField = document.getElementById('studentPassword');
+    const togglePassword = document.getElementById('toggleStudentPassword');
 
     if (emailField) {
         emailField.addEventListener('blur', () => {
@@ -238,6 +239,16 @@ AdminDashboard.prototype.setupStudentFormValidation = function() {
             } else if (value) {
                 this.clearStudentFieldError('studentPassword');
             }
+        });
+    }
+
+    if (togglePassword) {
+        togglePassword.addEventListener('click', () => {
+            const type = passwordField.type === 'password' ? 'text' : 'password';
+            passwordField.type = type;
+            const icon = togglePassword.querySelector('i');
+            icon.classList.toggle('bi-eye');
+            icon.classList.toggle('bi-eye-slash');
         });
     }
 };

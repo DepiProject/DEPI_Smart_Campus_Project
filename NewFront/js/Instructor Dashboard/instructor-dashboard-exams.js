@@ -868,28 +868,57 @@ InstructorDashboard.prototype.loadExams = async function() {
         // Store courses for later use
         this.instructorCourses = courses;
 
-        // Get all exams (add timestamp to prevent caching)
-        const response = await API.exam.getAll(1, 100);
+        // Get all exams for this instructor (includes deleted exams by default)
+        const response = await API.exam.getAllForInstructor(this.currentInstructorId, true);
         
         if (response.success && response.data) {
-            const allExams = response.data.Data || response.data.data || response.data || [];
-            console.log('✅ All exams loaded:', allExams);
+            let allExams = response.data.Data || response.data.data || response.data || [];
+            console.log('✅ All instructor exams loaded (including deleted):', allExams);
+            console.log('📊 Detailed Exam Status Check:', allExams.map(e => ({
+                id: e.ExamId || e.examId,
+                title: e.Title || e.title,
+                courseId: e.CourseId || e.courseId,
+                IsDeleted: e.IsDeleted,
+                isDeleted: e.isDeleted,
+                'IsDeleted check': e.IsDeleted || e.isDeleted,
+                rawExam: e
+            })));
             
-            // Filter for instructor's courses
-            const instructorExams = allExams.filter(exam => {
-                const examCourseId = exam.CourseId || exam.courseId;
-                const courseMatch = courses.find(c => {
-                    const cid = c.CourseId || c.courseId || c.id || c.Id;
-                    return cid && parseInt(cid, 10) === parseInt(examCourseId, 10);
-                });
-                return courseMatch !== undefined;
-            });
+            // Fetch questions count for each exam
+            const examsWithQuestions = await Promise.all(allExams.map(async (exam) => {
+                try {
+                    const examId = exam.ExamId || exam.examId || exam.Id || exam.id;
+                    const questionsResponse = await API.request(`/Exam/${examId}/questions`, { method: 'GET' });
+                    if (questionsResponse.success && questionsResponse.data) {
+                        const questions = questionsResponse.data.Data || questionsResponse.data.data || questionsResponse.data || [];
+                        exam.Questions = questions;
+                        exam.QuestionCount = questions.length;
+                        console.log(`✅ Exam ${examId}: ${questions.length} questions loaded`);
+                    }
+                } catch (err) {
+                    console.warn('⚠️ Could not fetch questions for exam', exam.ExamId || exam.examId, err);
+                    exam.Questions = [];
+                    exam.QuestionCount = 0;
+                }
+                return exam;
+            }));
             
-            console.log('✅ Instructor exams filtered:', instructorExams.length, 'exams');
+            allExams = examsWithQuestions;
+            console.log('✅ All instructor exams with questions loaded:', allExams);
             
-            this.allExams = instructorExams;
-            this.renderExams(instructorExams);
-            this.updateExamStats(instructorExams);
+            // No need to filter - API already returns only instructor's exams
+            this.allExams = allExams;
+            
+            // Use pagination manager if available
+            if (instructorPaginationManagers && instructorPaginationManagers.exams) {
+                instructorPaginationManagers.exams.setData(allExams);
+                instructorPaginationManagers.exams.renderControls('examsPaginationControls');
+            } else {
+                // Fallback to direct rendering if pagination not available
+                this.renderExams(allExams);
+            }
+            
+            this.updateExamStats(allExams);
             
             if (examsSearchInput) {
                 examsSearchInput.addEventListener('keyup', () => {
@@ -901,7 +930,7 @@ InstructorDashboard.prototype.loadExams = async function() {
             if (examsTableBody) {
                 examsTableBody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-4">
+                        <td colspan="8" class="text-center text-muted py-4">
                             <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
                             <p class="mt-2">No exams found. Click "Create New Exam" to get started!</p>
                         </td>
@@ -912,7 +941,7 @@ InstructorDashboard.prototype.loadExams = async function() {
     } catch (error) {
         console.error('❌ Error loading exams:', error);
         if (examsTableBody) {
-            examsTableBody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Error loading exams: ' + error.message + '</td></tr>';
+            examsTableBody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Error loading exams: ' + error.message + '</td></tr>';
         }
     }
 };
@@ -960,16 +989,12 @@ InstructorDashboard.prototype.renderExams = function(exams) {
         
         const title = exam.Title || exam.title || 'Untitled Exam';
         const duration = exam.Duration || exam.duration || 0;
-        const questionCount = exam.QuestionCount || exam.questionCount || 0;
-        const submissionCount = exam.SubmissionCount || exam.submissionCount || 0;
-        const avgScore = exam.AverageScore || exam.averageScore || 0;
+        const totalPoints = exam.TotalPoints || exam.totalPoints || 0;
         const examId = exam.ExamId || exam.examId || exam.Id || exam.id;
         
-        // Submission badge class
-        const submissionBadgeClass = submissionCount > 0 ? 'badge-submissions' : 'badge-no-submissions';
-        
-        // Score color
-        const scoreClass = avgScore >= 70 ? 'text-success' : avgScore >= 50 ? 'text-warning' : 'text-danger';
+        // Get questions from the exam object
+        const questions = exam.Questions || exam.questions || exam.ExamQuestions || exam.examQuestions || [];
+        const questionCount = questions.length || exam.QuestionCount || exam.questionCount || 0;
         
         return `
             <tr>
@@ -991,18 +1016,20 @@ InstructorDashboard.prototype.renderExams = function(exams) {
                     </span>
                 </td>
                 <td>
-                    <span class="exam-badge ${submissionBadgeClass}">
-                        <i class="bi bi-people-fill"></i> ${submissionCount}
-                    </span>
+                    <strong class="text-primary" style="font-size: 1.1rem;">${totalPoints} pts</strong>
                 </td>
                 <td>
-                    <strong class="${scoreClass}" style="font-size: 1.1rem;">${avgScore.toFixed(1)}%</strong>
+                    <span class="badge ${exam.IsDeleted || exam.isDeleted ? 'bg-danger' : 'bg-success'}" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+                        <i class="bi ${exam.IsDeleted || exam.isDeleted ? 'bi-lock-fill' : 'bi-unlock-fill'}"></i>
+                        ${exam.IsDeleted || exam.isDeleted ? 'Closed' : 'Active'}
+                    </span>
                 </td>
                 <td>
                     <div class="action-btn-group">
                         <button class="action-btn btn-questions" 
                                 onclick="instructorDashboard.manageQuestions(${examId}, ${courseId})" 
-                                title="Manage Questions (Add/Delete)">
+                                title="Manage Questions (Add/Delete)"
+                                ${exam.IsDeleted || exam.isDeleted ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
                             <i class="bi bi-question-circle-fill"></i>
                         </button>
                         <button class="action-btn btn-view" 
@@ -1012,14 +1039,17 @@ InstructorDashboard.prototype.renderExams = function(exams) {
                         </button>
                         <button class="action-btn btn-edit" 
                                 onclick="instructorDashboard.editExam(${examId})" 
-                                title="Edit Exam Details">
+                                title="Edit Exam Details"
+                                ${exam.IsDeleted || exam.isDeleted ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
                             <i class="bi bi-pencil-square"></i>
                         </button>
+                        ${exam.IsDeleted || exam.isDeleted ? '' : `
                         <button class="action-btn btn-delete" 
                                 onclick="instructorDashboard.closeExam(${examId})" 
                                 title="Close Exam">
                             <i class="bi bi-lock-fill"></i>
                         </button>
+                        `}
                     </div>
                 </td>
             </tr>
@@ -1066,7 +1096,14 @@ InstructorDashboard.prototype.searchExams = function(searchTerm) {
         return title.includes(search) || courseName.includes(search);
     });
     
-    this.renderExams(filtered);
+    // Use pagination manager if available
+    if (instructorPaginationManagers && instructorPaginationManagers.exams) {
+        instructorPaginationManagers.exams.setData(filtered);
+        instructorPaginationManagers.exams.renderControls('examsPaginationControls');
+    } else {
+        // Fallback to direct rendering if pagination not available
+        this.renderExams(filtered);
+    }
 };
 
 
@@ -1691,7 +1728,7 @@ InstructorDashboard.prototype.gatherExamData = function() {
         
         if (!courseSelect) {
             console.error('❌ Course select element not found');
-            return { title: '', courseId: 0, durationMinutes: 0, totalMarks: 0, passingScore: 0, description: '', questions: [] };
+            return { title: '', courseId: 0, durationMinutes: 0, totalMarks: 0, questions: [] };
         }
         
         // Debug: Log all dropdown options
@@ -1753,8 +1790,6 @@ InstructorDashboard.prototype.gatherExamData = function() {
         
         const duration = parseInt(document.getElementById('examDuration')?.value || 0, 10);
         const totalMarks = parseInt(document.getElementById('examTotalMarks')?.value || 0, 10);
-        const passingScore = parseInt(document.getElementById('examPassingScore')?.value || 0, 10);
-        const description = document.getElementById('examDescription')?.value.trim() || '';
         
         const questions = [];
         const container = document.getElementById('questionsContainer');
@@ -1791,8 +1826,6 @@ InstructorDashboard.prototype.gatherExamData = function() {
             courseId, 
             durationMinutes: duration, 
             totalMarks, 
-            passingScore, 
-            description, 
             questions 
         };
         
@@ -1806,8 +1839,6 @@ InstructorDashboard.prototype.gatherExamData = function() {
             courseId: 0,
             durationMinutes: 0,
             totalMarks: 0,
-            passingScore: 0,
-            description: '',
             questions: []
         };
     }
@@ -1911,17 +1942,6 @@ InstructorDashboard.prototype.saveExam = async function() {
         return;
     }
     
-    // Validate Passing Score
-    if (!data.passingScore || data.passingScore <= 0) {
-        showFieldError('examPassingScore', 'passingScoreError', 'Passing score is required');
-        return;
-    }
-    
-    if (data.passingScore > data.totalMarks) {
-        showFieldError('examPassingScore', 'passingScoreError', 'Cannot exceed total marks');
-        return;
-    }
-    
     // Questions are now OPTIONAL during exam creation
     // Validate questions only if they are provided
     if (data.questions && data.questions.length > 0) {
@@ -2021,12 +2041,24 @@ InstructorDashboard.prototype.saveExam = async function() {
             throw new Error(examResponse.error || examResponse.message || 'Failed to create exam');
         }
 
-        const examId = examResponse.data?.Data?.ExamId || 
-                      examResponse.data?.data?.ExamId || 
+        // The API wrapper returns: { success, status, data: <server response> }
+        // The server returns: { success, message, data: { ExamId, ... } }
+        // So we need to access: examResponse.data.data.ExamId
+        const examId = examResponse.data?.data?.ExamId || 
+                      examResponse.data?.data?.examId ||
+                      examResponse.data?.Data?.ExamId || 
                       examResponse.data?.ExamId ||
                       examResponse.data?.examId;
                       
+        console.log('🔍 Checking exam ID from response:', {
+            'examResponse.data': examResponse.data,
+            'examResponse.data.data': examResponse.data?.data,
+            'examResponse.data.data.ExamId': examResponse.data?.data?.ExamId,
+            'finalExamId': examId
+        });
+                      
         if (!examId) {
+            console.error('❌ Could not extract exam ID. Full response:', examResponse);
             throw new Error('No exam ID returned from server');
         }
 
@@ -2126,7 +2158,6 @@ InstructorDashboard.prototype.gatherExamData = function() {
         const duration = parseInt(document.getElementById('examDuration')?.value || 0);
         const totalMarks = parseInt(document.getElementById('examTotalMarks')?.value || 0);
         const passingScore = parseInt(document.getElementById('examPassingScore')?.value || 0);
-        const description = document.getElementById('examDescription')?.value.trim() || '';
         
         const questions = [];
         const container = document.getElementById('questionsContainer');
@@ -2168,7 +2199,6 @@ InstructorDashboard.prototype.gatherExamData = function() {
             durationMinutes: duration,
             totalMarks: totalMarks,
             passingScore: passingScore,
-            description: description,
             questions: questions
         };
         
@@ -2179,8 +2209,6 @@ InstructorDashboard.prototype.gatherExamData = function() {
             courseId: 0,
             durationMinutes: 0,
             totalMarks: 0,
-            passingScore: 0,
-            description: '',
             questions: []
         };
     }
@@ -2207,7 +2235,6 @@ InstructorDashboard.prototype.resetExamForm = function() {
 // ===== SETUP EXAM FORM VALIDATION LISTENERS =====
 InstructorDashboard.prototype.setupExamFormListeners = function() {
     const totalMarksInput = document.getElementById('examTotalMarks');
-    const passingScoreInput = document.getElementById('examPassingScore');
     const titleInput = document.getElementById('examTitle');
     const durationInput = document.getElementById('examDuration');
     const courseSelect = document.getElementById('examCourse');
@@ -2234,8 +2261,8 @@ InstructorDashboard.prototype.setupExamFormListeners = function() {
         }
     };
     
-    // Auto-calculate default passing score (50% of total marks)
-    if (totalMarksInput && passingScoreInput) {
+    // Validate total marks
+    if (totalMarksInput) {
         totalMarksInput.addEventListener('input', () => {
             clearFieldError('examTotalMarks', 'totalMarksError');
             const totalMarks = parseInt(totalMarksInput.value) || 0;
@@ -2244,29 +2271,6 @@ InstructorDashboard.prototype.setupExamFormListeners = function() {
                 showFieldError('examTotalMarks', 'totalMarksError', 'Maximum is 100 marks');
                 totalMarksInput.value = 100;
                 return;
-            }
-            
-            if (totalMarks > 0) {
-                const defaultPassing = Math.floor(totalMarks / 2);
-                // Only auto-set if user hasn't manually changed it or it's still 0
-                const currentPassing = parseInt(passingScoreInput.value) || 0;
-                if (currentPassing === 0 || currentPassing === Math.floor((parseInt(totalMarksInput.dataset.previousValue) || 0) / 2)) {
-                    passingScoreInput.value = defaultPassing;
-                }
-                passingScoreInput.max = totalMarks;
-                totalMarksInput.dataset.previousValue = totalMarks;
-            }
-        });
-        
-        // Validate passing score doesn't exceed total marks
-        passingScoreInput.addEventListener('input', () => {
-            clearFieldError('examPassingScore', 'passingScoreError');
-            const totalMarks = parseInt(totalMarksInput.value) || 0;
-            const passingScore = parseInt(passingScoreInput.value) || 0;
-            
-            if (passingScore > totalMarks) {
-                showFieldError('examPassingScore', 'passingScoreError', 'Cannot exceed total marks');
-                passingScoreInput.value = totalMarks;
             }
         });
     }
@@ -2435,14 +2439,6 @@ InstructorDashboard.prototype.displayExamDetails = function(exam) {
                         <label class="form-label fw-bold">Total Points</label>
                         <p class="form-control-plaintext">${exam.TotalPoints || exam.totalPoints || 0}</p>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold">Passing Score</label>
-                        <p class="form-control-plaintext">${exam.PassingScore || exam.passingScore || 0}</p>
-                    </div>
-                    <div class="col-md-12 mb-3">
-                        <label class="form-label fw-bold">Description</label>
-                        <p class="form-control-plaintext">${exam.Description || exam.description || 'No description'}</p>
-                    </div>
                 </div>
             </div>
         </div>
@@ -2495,8 +2491,6 @@ InstructorDashboard.prototype.editExam = async function(examId) {
         
         document.getElementById('editExamDurationField').value = exam.Duration || exam.duration || 60;
         document.getElementById('editExamTotalMarksField').value = exam.TotalPoints || exam.totalPoints || 0;
-        document.getElementById('editExamPassingScoreField').value = exam.PassingScore || exam.passingScore || 0;
-        document.getElementById('editExamDescriptionField').value = exam.Description || exam.description || '';
         
         // Open the edit modal
         const editModal = new bootstrap.Modal(document.getElementById('editExamModal'));
@@ -2519,8 +2513,6 @@ InstructorDashboard.prototype.saveExamEdit = async function() {
         const examDate = document.getElementById('editExamDateField').value;
         const duration = parseInt(document.getElementById('editExamDurationField').value);
         const totalMarks = parseFloat(document.getElementById('editExamTotalMarksField').value);
-        const passingScore = parseFloat(document.getElementById('editExamPassingScoreField').value);
-        const description = document.getElementById('editExamDescriptionField').value.trim();
         
         // Validation
         if (!title || title.length < 3) {
@@ -2548,11 +2540,6 @@ InstructorDashboard.prototype.saveExamEdit = async function() {
         
         if (totalMarks < 1 || totalMarks > 100) {
             this.showToast('Error', 'Total marks must be between 1-100', 'error');
-            return;
-        }
-        
-        if (passingScore < 1 || passingScore > totalMarks) {
-            this.showToast('Error', 'Passing score must be between 1 and total marks', 'error');
             return;
         }
         
@@ -2596,40 +2583,7 @@ InstructorDashboard.prototype.saveExamEdit = async function() {
     }
 };
 
-
-InstructorDashboard.prototype.closeExam = async function(examId) {
-    console.log('🔒 Close exam:', examId);
-    
-    try {
-        // Find the exam to get its courseId
-        const exam = this.allExams?.find(e => {
-            const id = e.ExamId || e.examId || e.Id || e.id;
-            return id === examId;
-        });
-        
-        if (!exam) {
-            this.showToast('Error', 'Exam not found', 'error');
-            return;
-        }
-        
-        const courseId = exam.CourseId || exam.courseId;
-        const examTitle = exam.Title || exam.title || 'this exam';
-        console.log('🔒 Closing exam:', examId, 'from course:', courseId);
-        
-        const response = await API.exam.delete(examId, courseId);
-        
-        if (response.success) {
-            this.showToast('Success', `Exam "${examTitle}" has been closed. Students can no longer submit answers.`, 'success');
-            await this.loadExams();
-        } else {
-            this.showToast('Error', response.message || 'Failed to close exam', 'error');
-        }
-    } catch (error) {
-        console.error('Error closing exam:', error);
-        this.showToast('Error', 'Failed to close exam: ' + error.message, 'error');
-    }
-};
-
+// Note: closeExam function is defined later in the file (line ~2938)
 // Backward compatibility alias
 InstructorDashboard.prototype.deleteExam = InstructorDashboard.prototype.closeExam;
 
@@ -2921,7 +2875,7 @@ InstructorDashboard.prototype.saveQuestion = async function() {
             questionText: questionText,
             score: score,
             orderNumber: orderNumber,
-            mCQOptions: options
+            mcqOptions: options  // Changed from mCQOptions to mcqOptions to match API
         };
         
         console.log('📝 Saving question:', questionData);
@@ -2948,9 +2902,56 @@ InstructorDashboard.prototype.saveQuestion = async function() {
 
 // ===== CLOSE EXAM =====
 InstructorDashboard.prototype.closeExam = async function(examId) {
-    if (!confirm('Are you sure you want to close this exam? Students will no longer be able to take it.')) {
+    console.log('🔒 Close exam requested:', examId);
+    
+    // Find the exam to get its details
+    const exam = this.allExams?.find(e => {
+        const id = e.ExamId || e.examId || e.Id || e.id;
+        return id === examId;
+    });
+    
+    if (!exam) {
+        this.showToast('Error', 'Exam not found', 'error');
         return;
     }
     
-    this.showToast('Info', 'Close exam feature will be implemented soon', 'info');
+    const courseId = exam.CourseId || exam.courseId;
+    const examTitle = exam.Title || exam.title || 'this exam';
+    
+    // Show a lightweight confirmation modal
+    const modal = document.createElement('div');
+    modal.innerHTML = `
+        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10000; background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); min-width: 400px;">
+            <h5 style="margin-bottom: 1rem; color: #dc2626;"><i class="bi bi-exclamation-triangle-fill me-2"></i>Close Exam?</h5>
+            <p style="margin-bottom: 0.5rem; color: #1f2937; font-weight: 600;">${examTitle}</p>
+            <p style="margin-bottom: 1.5rem; color: #6b7280;">Students will no longer be able to take this exam. The exam will remain visible in the table with a "Closed" status.</p>
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button id="cancelCloseBtn" style="padding: 0.5rem 1.5rem; border: 2px solid #e5e7eb; background: white; color: #374151; border-radius: 8px; cursor: pointer; font-weight: 500;">Cancel</button>
+                <button id="confirmCloseBtn" style="padding: 0.5rem 1.5rem; border: none; background: #dc2626; color: white; border-radius: 8px; cursor: pointer; font-weight: 600;"><i class="bi bi-lock-fill me-1"></i>Close Exam</button>
+            </div>
+        </div>
+        <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999;"></div>
+    `;
+    document.body.appendChild(modal);
+    
+    modal.querySelector('#cancelCloseBtn').onclick = () => modal.remove();
+    modal.querySelector('#confirmCloseBtn').onclick = async () => {
+        modal.remove();
+        
+        try {
+            console.log('🔒 Calling DELETE API for exam:', examId, 'course:', courseId);
+            const response = await API.exam.delete(examId, courseId);
+            
+            if (response.success) {
+                this.showToast('Success', `Exam "${examTitle}" has been closed. It will now appear with a "Closed" status.`, 'success');
+                // Reload exams to refresh the UI
+                await this.loadExams();
+            } else {
+                this.showToast('Error', response.message || 'Failed to close exam', 'error');
+            }
+        } catch (error) {
+            console.error('Error closing exam:', error);
+            this.showToast('Error', 'Failed to close exam: ' + error.message, 'error');
+        }
+    };
 };

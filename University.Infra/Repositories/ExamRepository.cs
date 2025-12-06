@@ -16,20 +16,44 @@ namespace University.Infra.Repositories
 
         // ===== EXAM CRUD =====
 
-        public async Task<IEnumerable<Exam>> GetAllExams()
+        public async Task<IEnumerable<Exam>> GetAllExams(bool includeDeleted = false)
         {
-            return await _context.Exams
-                .Include(e => e.Course)
-                .Where(e => !e.IsDeleted)
-                .ToListAsync();
+            IQueryable<Exam> query = _context.Exams.Include(e => e.Course);
+            
+            if (!includeDeleted)
+            {
+                query = query.Where(e => !e.IsDeleted);
+            }
+            
+            return await query.ToListAsync();
         }
 
-        public async Task<IEnumerable<Exam>> GetAllExamsForCourse(int courseId)
+        public async Task<IEnumerable<Exam>> GetAllExamsForCourse(int courseId, bool includeDeleted = false)
         {
-            return await _context.Exams
+            IQueryable<Exam> query = _context.Exams
                 .Include(e => e.Course)
-                .Where(e => e.CourseId == courseId && !e.IsDeleted)
-                .ToListAsync();
+                .Where(e => e.CourseId == courseId);
+
+            if (!includeDeleted)
+            {
+                query = query.Where(e => !e.IsDeleted);
+            }
+
+            return await query.ToListAsync();
+        }
+
+        public async Task<IEnumerable<Exam>> GetAllExamsForInstructor(int instructorId, bool includeDeleted = true)
+        {
+            IQueryable<Exam> query = _context.Exams
+                .Include(e => e.Course)
+                .Where(e => e.Course.InstructorId == instructorId);
+
+            if (!includeDeleted)
+            {
+                query = query.Where(e => !e.IsDeleted);
+            }
+
+            return await query.ToListAsync();
         }
 
         public async Task<Exam?> GetExamById(int id, int courseId)

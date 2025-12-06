@@ -26,6 +26,7 @@ namespace University.API.Controllers
             return Ok(instructors);
         }
 
+        // To enhance Performance 
         [HttpGet("paginated")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllPaginated([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
@@ -150,13 +151,7 @@ namespace University.API.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] CreateInstructorDto dto)
         {
-            // VALIDATION ENHANCED: Check ModelState validity
-            // Validates all data annotations from CreateInstructorDto:
-            // - Email format and uniqueness
-            // - Password strength requirements (uppercase, lowercase, digits, special chars)
-            // - Name length and format constraints
-            // - Phone number format (11 digits)
-            // - Cross-field validation (FullName contains FirstName and LastName)
+
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
             try
@@ -175,11 +170,7 @@ namespace University.API.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateInstructorDto dto)
         {
-            // VALIDATION ENHANCED: Check ModelState validity for update operations
-            // Validates UpdateInstructorDto constraints:
-            // - FullName is required and meets length requirements
-            // - ContactNumber (if provided) must be exactly 11 characters
-            // - DepartmentId (if provided) must be a positive integer
+
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 

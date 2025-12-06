@@ -129,6 +129,7 @@ namespace University.App.Services.Implementations
             {
                 EnrollmentId = e.EnrollmentId,
                 StudentId = e.StudentId,
+                CourseId = e.CourseId,
                 StudentCode = e.Student?.StudentCode ?? "N/A",
                 StudentName = e.Student?.FullName ?? "Unknown",
                 CourseName = e.Course?.Name ?? "Unknown",
@@ -154,6 +155,7 @@ namespace University.App.Services.Implementations
             {
                 EnrollmentId = e.EnrollmentId,
                 StudentId = e.StudentId,
+                CourseId = e.CourseId,
                 StudentCode = e.Student?.StudentCode ?? "N/A",
                 StudentEmail = e.Student?.User?.Email ?? "N/A",
                 StudentName = e.Student?.FullName ?? "Unknown",
@@ -227,6 +229,7 @@ namespace University.App.Services.Implementations
                 {
                     EnrollmentId = enrollment.EnrollmentId,
                     StudentId = enrollment.StudentId,
+                    CourseId = enrollment.CourseId,
                     StudentCode = enrollment.Student?.StudentCode ?? "N/A",
                     StudentEmail = enrollment.Student?.User?.Email ?? "N/A",
                     StudentName = enrollment.Student?.FullName ?? "",
@@ -280,6 +283,7 @@ namespace University.App.Services.Implementations
             {
                 EnrollmentId = enrollment.EnrollmentId,
                 StudentId = enrollment.StudentId,
+                CourseId = enrollment.CourseId,
                 StudentCode = enrollment.Student?.StudentCode ?? "N/A",
                 StudentEmail = enrollment.Student?.User?.Email ?? "N/A",
                 StudentName = enrollment.Student?.FullName ?? "",
@@ -412,6 +416,7 @@ namespace University.App.Services.Implementations
             {
                 EnrollmentId = e.EnrollmentId,
                 StudentId = e.StudentId,
+                CourseId = e.CourseId,
                 StudentCode = e.Student?.StudentCode ?? "N/A",
                 StudentEmail = e.Student?.User?.Email ?? "N/A",
                 StudentName = e.Student?.FullName ?? "Unknown",
@@ -436,6 +441,7 @@ namespace University.App.Services.Implementations
             {
                 EnrollmentId = e.EnrollmentId,
                 StudentId = e.StudentId,
+                CourseId = e.CourseId,
                 StudentCode = e.Student?.StudentCode ?? "N/A",
                 StudentEmail = e.Student?.User?.Email ?? "N/A",
                 StudentName = e.Student?.FullName ?? "Unknown",

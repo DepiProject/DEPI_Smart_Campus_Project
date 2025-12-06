@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,15 +12,31 @@
     <link rel="stylesheet" href="../css/utilities.css">
     <link rel="stylesheet" href="../css/dashboard.css">
     <style>
+        /* Color Palette Integration */
+        :root {
+            --sage: #476247;
+            --sage-light: #5a7a5a;
+            --warm: #8b7d6f;
+            --warm-light: #a89485;
+            --beige: #c9905e;
+            --cream: #6b8ba8;
+            --cream-light: #8ba5c0;
+        }
+
         body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            padding-top: 80px;
+            background: linear-gradient(135deg, #f5f7f5 0%, #f0ede8 100%);
+            padding-top: 0;
+        }
+
+        h2 {
+            color: var(--sage);
+            font-weight: 700;
         }
 
         .attendance-search-wrapper {
             position: relative;
             max-width: 600px;
-            margin: 2rem auto;
+            margin: 1rem auto;
         }
 
         .attendance-search-input {
@@ -27,13 +44,13 @@
             border-radius: 50px;
             padding: 1rem 3rem 1rem 3.5rem;
             font-size: 1rem;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transition: all 0.3s cubic-bezier(0.35, 0, 0.65, 1);
+            box-shadow: 0 4px 16px rgba(71, 98, 71, 0.08);
         }
 
         .attendance-search-input:focus {
-            border-color: #4f46e5;
-            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.2);
+            border-color: var(--sage);
+            box-shadow: 0 8px 24px rgba(71, 98, 71, 0.15);
             outline: none;
         }
 
@@ -42,95 +59,223 @@
             left: 1.25rem;
             top: 50%;
             transform: translateY(-50%);
-            color: #9ca3af;
+            color: var(--sage);
             font-size: 1.25rem;
         }
 
         .attendance-table-card {
-            border-radius: 12px;
+            border-radius: 18px;
             overflow: hidden;
             border: none;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 20px rgba(71, 98, 71, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .attendance-table-card:hover {
+            box-shadow: 0 8px 32px rgba(71, 98, 71, 0.15);
         }
 
         .attendance-table thead {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            background: linear-gradient(135deg, var(--sage) 0%, #3a4f3a 100%);
             color: white;
+        }
+
+        .attendance-table thead th {
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
         }
 
         .attendance-table tbody tr {
             transition: all 0.2s ease;
+            border-bottom: 1px solid #f0ede8;
         }
 
         .attendance-table tbody tr:hover {
-            background-color: #f3f4f6;
-            transform: scale(1.01);
+            background-color: rgba(71, 98, 71, 0.05);
+            transform: scale(1.005);
         }
 
         .status-select {
             border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 0.5rem;
+            border-radius: 10px;
+            padding: 0.5rem 0.75rem;
             font-size: 0.875rem;
             transition: all 0.2s ease;
+            font-weight: 500;
+            color: var(--sage);
         }
 
         .status-select:focus {
-            border-color: #4f46e5;
+            border-color: var(--sage);
             outline: none;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            box-shadow: 0 0 0 3px rgba(71, 98, 71, 0.1);
         }
 
         .mark-btn {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            background: linear-gradient(135deg, var(--sage) 0%, #3a4f3a 100%);
             border: none;
-            padding: 0.75rem 2rem;
-            border-radius: 10px;
+            padding: 0.875rem 2.5rem;
+            border-radius: 12px;
             font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            transition: all 0.3s cubic-bezier(0.35, 0, 0.65, 1);
+            box-shadow: 0 4px 16px rgba(71, 98, 71, 0.25);
             color: white;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
         }
 
         .mark-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 28px rgba(71, 98, 71, 0.35);
+        }
+
+        .mark-btn:active {
+            transform: translateY(-1px);
         }
 
         .back-btn {
-            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            background: linear-gradient(135deg, var(--sage) 0%, #3a4f3a 100%);
             border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 10px;
-            font-weight: 600;
+            padding: 0.875rem 2rem;
+            border-radius: 12px;
+            font-weight: 700;
             color: white;
             text-decoration: none;
             display: inline-block;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+            transition: all 0.3s cubic-bezier(0.35, 0, 0.65, 1);
+            box-shadow: 0 4px 16px rgba(71, 98, 71, 0.25);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
         }
 
         .back-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 28px rgba(71, 98, 71, 0.35);
             color: white;
         }
 
+        .back-btn:active {
+            transform: translateY(-1px);
+        }
+
         .recent-activity-item {
-            padding: 0.75rem;
-            border-left: 3px solid #10b981;
-            background: #f9fafb;
-            border-radius: 6px;
+            padding: 1rem;
+            border-left: 4px solid var(--sage);
+            background: linear-gradient(135deg, rgba(71, 98, 71, 0.05) 0%, rgba(71, 98, 71, 0.02) 100%);
+            border-radius: 10px;
             margin-bottom: 0.75rem;
             transition: all 0.2s ease;
         }
 
         .recent-activity-item:hover {
-            background: #f3f4f6;
-            transform: translateX(4px);
+            background: linear-gradient(135deg, rgba(71, 98, 71, 0.08) 0%, rgba(71, 98, 71, 0.04) 100%);
+            transform: translateX(6px);
+            box-shadow: 0 4px 12px rgba(71, 98, 71, 0.1);
+        }
+
+        /* Status Badge Colors */
+        .status-badge-present {
+            background: linear-gradient(135deg, var(--sage) 0%, #3a4f3a 100%);
+        }
+
+        .status-badge-absent {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        .status-badge-late {
+            background: linear-gradient(135deg, var(--beige) 0%, #a87c51 100%);
+        }
+
+        .date-input-wrapper {
+            position: relative;
+        }
+
+        .date-input-wrapper .form-control {
+            border-color: #e5e7eb;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            color: var(--sage);
+            font-weight: 500;
+        }
+
+        .date-input-wrapper .form-control:focus {
+            border-color: var(--sage);
+            box-shadow: 0 0 0 3px rgba(71, 98, 71, 0.1);
+        }
+
+        /* Card Header Enhanced */
+        .card-header {
+            background: linear-gradient(135deg, var(--sage) 0%, #3a4f3a 100%) !important;
+            border-bottom: 3px solid rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .card-header h5 {
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 1rem;
+            letter-spacing: 0.5px;
+        }
+
+        .card-header small {
+            opacity: 0.9;
+            font-size: 0.85rem;
+        }
+
+        /* Alternative header for recent activity */
+        .recent-activity-header {
+            background: linear-gradient(135deg, var(--warm) 0%, #6d6156 100%) !important;
+        }
+
+        /* Table enhancements */
+        .table-responsive {
+            border-radius: 15px;
+            padding: 0;
+        }
+
+        .card-body {
+            padding: 1.25rem;
+        }
+
+        /* Loading and empty states */
+        .empty-state {
+            padding: 2rem;
+            text-align: center;
+            color: var(--warm);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            opacity: 0.3;
+            color: var(--sage);
+            margin-bottom: 1rem;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .attendance-table thead {
+                font-size: 0.8rem;
+            }
+
+            .attendance-table tbody td {
+                font-size: 0.9rem;
+            }
+
+            .mark-btn {
+                padding: 0.75rem 1.5rem;
+            }
+
+            .back-btn {
+                padding: 0.6rem 1.25rem;
+                font-size: 0.9rem;
+            }
         }
     </style>
 </head>
+
 <body>
     <!-- Navigation -->
     <nav class="modern-nav">
@@ -144,39 +289,40 @@
                     <i class="bi bi-person-circle"></i> <span id="userName">Instructor</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end user-dropdown-menu" aria-labelledby="userDropdown">
-                    <li><a class="dropdown-item" href="instructor-dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+                    <li><a class="dropdown-item" href="instructor-dashboard.html"><i class="bi bi-speedometer2"></i>
+                            Dashboard</a></li>
                     <li>
                         <hr class="dropdown-divider">
                     </li>
-                    <li><a class="dropdown-item text-danger" href="#" id="logoutBtn"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                    <li><a class="dropdown-item text-danger" href="#" id="logoutBtn"><i
+                                class="bi bi-box-arrow-right"></i> Logout</a></li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid py-4">
-        <div class="mb-4">
+    <div class="container-fluid p-3">
+        <div class="mb-2">
             <a href="instructor-dashboard.html?refresh=true#attendance" class="back-btn">
                 <i class="bi bi-arrow-left me-2"></i>Back to Attendance Dashboard
             </a>
         </div>
 
-        <h2 class="mb-4"><i class="bi bi-calendar-check me-2" style="color: #10b981;"></i>Mark Student Attendance</h2>
+        <h2 class="mb-3 mt-2"><i class="bi bi-calendar-check me-2" style="color: var(--sage);"></i>Mark Student
+            Attendance</h2>
 
         <!-- Search Bar -->
         <div class="attendance-search-wrapper">
             <i class="bi bi-search attendance-search-icon"></i>
-            <input type="text" 
-                   class="form-control attendance-search-input" 
-                   id="courseSearchAttendance" 
-                   placeholder="Search by course name or course code..."
-                   onkeyup="markAttendancePage.searchCourseForAttendance()">
+            <input type="text" class="form-control attendance-search-input" id="courseSearchAttendance"
+                placeholder="Search by course name or course code..."
+                onkeyup="markAttendancePage.searchCourseForAttendance()">
         </div>
 
         <!-- Attendance Table -->
         <div id="attendanceTableSection">
             <div class="card attendance-table-card mb-3">
-                <div class="card-header text-white border-0" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 1rem;">
+                <div class="card-header text-white border-0" style="padding: 1.25rem;">
                     <div class="row align-items-center">
                         <div class="col-md-8">
                             <h5 class="mb-0"><i class="bi bi-table me-2"></i>Student Attendance</h5>
@@ -184,7 +330,10 @@
                         </div>
                         <div class="col-md-4">
                             <label for="attendanceDate" class="form-label text-white mb-1 small">Select Date:</label>
-                            <input type="date" class="form-control form-control-sm" id="attendanceDate" onchange="markAttendancePage.loadStudentsForAttendance()">
+                            <div class="date-input-wrapper">
+                                <input type="date" class="form-control form-control-sm" id="attendanceDate"
+                                    onchange="markAttendancePage.loadStudentsForAttendance()">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -214,7 +363,7 @@
             </div>
 
             <!-- Mark Attendance Button -->
-            <div class="text-center mb-4 d-none" id="markAttendanceBtn">
+            <div class="text-center mb-3 d-none" id="markAttendanceBtn">
                 <button class="btn mark-btn" onclick="markAttendancePage.markBulkAttendance()">
                     <i class="bi bi-check-circle-fill me-2"></i>Mark Attendance
                 </button>
@@ -222,10 +371,10 @@
         </div>
 
         <!-- Recent Activity Section -->
-        <div class="row mt-4">
+        <div class="row mt-3">
             <div class="col-12">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header text-white border-0" style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); padding: 1.25rem;">
+                <div class="card border-0 shadow-sm" style="border-radius: 18px; overflow: hidden;">
+                    <div class="card-header text-white border-0 recent-activity-header" style="padding: 1.25rem;">
                         <h5 class="mb-0"><i class="bi bi-activity me-2"></i>Recent Attendance Activity</h5>
                         <small class="text-white-50">Last 10 attendance records across all courses</small>
                     </div>
@@ -246,4 +395,5 @@
     <script src="../js/api.js"></script>
     <script src="../js/mark-attendance.js"></script>
 </body>
+
 </html>

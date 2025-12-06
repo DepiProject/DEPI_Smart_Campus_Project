@@ -480,7 +480,7 @@ AdminDashboard.prototype.executeDelete = async function() {
             let toastType;
             
             if (action === 'archive') {
-                toastType = 'warning';
+                toastType = 'success';
                 if (type === 'course') {
                     successMessage = '📦 Course archived successfully! Can be restored from archived courses.';
                 } else if (type === 'student') {

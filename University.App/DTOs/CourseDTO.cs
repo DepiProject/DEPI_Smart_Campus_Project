@@ -230,6 +230,14 @@ namespace University.App.DTOs
         public int? StudentId { get; set; }
 
         /// <summary>
+        /// Course identifier
+        /// - Required: Links enrollment to specific course
+        /// - Used for filtering exams and course materials
+        /// </summary>
+        [Range(1, int.MaxValue)]
+        public int CourseId { get; set; }
+
+        /// <summary>
         /// Student code for display
         /// - Display: e.g., "CS20240001"
         /// </summary>

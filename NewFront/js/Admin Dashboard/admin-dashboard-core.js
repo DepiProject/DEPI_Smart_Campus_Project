@@ -165,16 +165,32 @@ class AdminDashboard {
         
         const borderColors = {
             'danger': '#dc3545',
-            'success': '#198754',
+            'success': '#10b981',
             'warning': '#ffc107',
             'info': '#0dcaf0'
         };
 
+        const bgColors = {
+            'danger': '#fee2e2',
+            'success': '#d1fae5',
+            'warning': '#fef3c7',
+            'info': '#cfe2ff'
+        };
+
+        const textColors = {
+            'danger': '#991b1b',
+            'success': '#065f46',
+            'warning': '#92400e',
+            'info': '#084298'
+        };
+
         const borderStyle = `border-left: 5px solid ${borderColors[alertClass] || borderColors.info};`;
+        const bgStyle = `background-color: ${bgColors[alertClass] || bgColors.info};`;
+        const textStyle = `color: ${textColors[alertClass] || textColors.info};`;
         
         const toastHtml = `
             <div class="alert alert-${alertClass} alert-dismissible fade show shadow-sm" role="alert" 
-                 style="${borderStyle} border-radius: 8px; padding: 1rem 1.5rem; margin-bottom: 1rem;">
+                 style="${borderStyle} ${bgStyle} ${textStyle} border-radius: 8px; padding: 1rem 1.5rem; margin-bottom: 1rem; border: none;">
                 <div class="d-flex align-items-start">
                     <i class="bi bi-${icon} fs-4 me-3 mt-1"></i>
                     <div class="flex-grow-1">

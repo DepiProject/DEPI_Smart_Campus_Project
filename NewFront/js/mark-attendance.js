@@ -571,41 +571,51 @@ class MarkAttendancePage {
                 const status = record.status || record.Status || '';
                 const date = new Date(record.date || record.Date);
                 const formattedDate = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                const formattedTime = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
                 
                 let icon = '';
-                let colorClass = '';
+                let badgeClass = '';
+                let borderColor = '';
                 switch (status.toLowerCase()) {
                     case 'present':
                         icon = 'check-circle-fill';
-                        colorClass = 'text-success';
+                        badgeClass = 'status-badge-present';
+                        borderColor = '#476247';
                         break;
                     case 'absent':
                         icon = 'x-circle-fill';
-                        colorClass = 'text-danger';
+                        badgeClass = 'status-badge-absent';
+                        borderColor = '#e74c3c';
                         break;
                     case 'late':
                         icon = 'clock-fill';
-                        colorClass = 'text-warning';
+                        badgeClass = 'status-badge-late';
+                        borderColor = '#c9905e';
                         break;
                     case 'excused':
                         icon = 'info-circle-fill';
-                        colorClass = 'text-info';
+                        badgeClass = 'status-badge-present';
+                        borderColor = '#6b8ba8';
                         break;
                 }
 
                 return `
-                    <div class="recent-activity-item">
-                        <div class="d-flex align-items-start">
-                            <i class="bi bi-${icon} ${colorClass} me-2 mt-1"></i>
-                            <div class="flex-grow-1">
-                                <p class="mb-0 small"><strong>${studentName}</strong></p>
-                                <p class="mb-0 small text-muted">
-                                    <i class="bi bi-book"></i> ${courseCode ? courseCode + ' - ' : ''}${courseName}
+                    <div class="recent-activity-item" style="border-left-color: ${borderColor};">
+                        <div class="d-flex align-items-start gap-2">
+                            <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: linear-gradient(135deg, ${borderColor}20 0%, ${borderColor}10 100%); flex-shrink: 0;">
+                                <i class="bi bi-${icon}" style="color: ${borderColor}; font-size: 1.25rem;"></i>
+                            </div>
+                            <div class="flex-grow-1" style="min-width: 0;">
+                                <p class="mb-2" style="font-weight: 600; color: #476247; margin: 0;"><strong>${studentName}</strong></p>
+                                <p class="mb-1 small" style="color: #8b7d6f; margin: 0;">
+                                    <i class="bi bi-book me-1"></i>${courseCode ? courseCode + ' - ' : ''}${courseName}
                                 </p>
-                                <p class="mb-0 small text-muted">
-                                    <i class="bi bi-calendar-event"></i> ${formattedDate} - 
-                                    <span class="badge badge-sm bg-${colorClass.replace('text-', '')}">${status}</span>
-                                </p>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <small style="color: #999;">
+                                        <i class="bi bi-calendar3 me-1"></i>${formattedDate} ${formattedTime}
+                                    </small>
+                                    <span class="badge ${badgeClass} text-white" style="font-size: 0.75rem; padding: 0.35rem 0.6rem;">${status}</span>
+                                </div>
                             </div>
                         </div>
                     </div>

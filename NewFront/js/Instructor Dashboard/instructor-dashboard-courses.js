@@ -61,6 +61,25 @@ InstructorDashboard.prototype.loadCourses = async function() {
                 const credits = course.creditHours || course.credits || course.Credits || 3;
                 const department = course.departmentName || course.DepartmentName || 'N/A';
                 
+                // Get first letters of course name (up to 2 characters)
+                const courseInitials = courseName
+                    .split(' ')
+                    .slice(0, 2)
+                    .map(word => word[0])
+                    .join('')
+                    .toUpperCase();
+                
+                // Color palette matching dashboard theme
+                const colors = [
+                    { bg: 'linear-gradient(135deg, #476247 0%, #3a4f3a 100%)', hex: '#476247' }, // Sage
+                    { bg: 'linear-gradient(135deg, #8b7d6f 0%, #6d6156 100%)', hex: '#8b7d6f' }, // Warm
+                    { bg: 'linear-gradient(135deg, #c9905e 0%, #a87c51 100%)', hex: '#c9905e' }, // Beige
+                    { bg: 'linear-gradient(135deg, #6b8ba8 0%, #567291 100%)', hex: '#6b8ba8' }  // Cream
+                ];
+                
+                const colorIndex = index % colors.length;
+                const colorPalette = colors[colorIndex];
+                
                 return `
                 <div class="col-md-6 course-card" data-course-code="${courseCode}" data-course-name="${courseName}">
                     <div class="card border-0 h-100" style="box-shadow: 0 4px 16px rgba(0,0,0,0.08); border-radius: 16px; overflow: hidden; transition: all 0.3s ease;"
@@ -71,36 +90,36 @@ InstructorDashboard.prototype.loadCourses = async function() {
                                 <div class="flex-grow-1">
                                     <div class="d-flex align-items-center mb-2">
                                         <div class="rounded-circle d-flex align-items-center justify-content-center" 
-                                             style="width: 48px; height: 48px; background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); margin-right: 1rem;">
-                                            <i class="bi bi-book text-white" style="font-size: 1.5rem;"></i>
+                                             style="width: 48px; height: 48px; background: ${colorPalette.bg}; margin-right: 1rem; font-weight: 700; font-size: 1.2rem; color: white;">
+                                            ${courseInitials}
                                         </div>
                                         <div>
                                             <h5 class="card-title mb-0" style="font-weight: 700; font-size: 1.25rem; color: #1f2937;">${courseName}</h5>
-                                            <span class="badge" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); font-size: 0.7rem; margin-top: 0.25rem;">ACTIVE</span>
+                                            <span class="badge" style="background: ${colorPalette.hex}; font-size: 0.7rem; margin-top: 0.25rem; color: white;">ACTIVE</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             <div class="mb-3">
                                 <div class="d-flex align-items-center mb-2">
-                                    <i class="bi bi-code-square text-primary me-2" style="font-size: 1.1rem;"></i>
-                                    <span style="font-weight: 600; color: #4f46e5; font-size: 1rem;">${courseCode}</span>
+                                    <i class="bi bi-code-square me-2" style="font-size: 1.1rem; color: ${colorPalette.hex};"></i>
+                                    <span style="font-weight: 600; color: ${colorPalette.hex}; font-size: 1rem;">${courseCode}</span>
                                 </div>
                                 <div class="d-flex align-items-center mb-2">
-                                    <i class="bi bi-award text-warning me-2" style="font-size: 1.1rem;"></i>
+                                    <i class="bi bi-award me-2" style="font-size: 1.1rem; color: #c9905e;"></i>
                                     <span class="text-muted" style="font-size: 0.95rem;">${credits} Credit Hours</span>
                                 </div>
                                 <div class="d-flex align-items-center">
-                                    <i class="bi bi-building text-info me-2" style="font-size: 1.1rem;"></i>
+                                    <i class="bi bi-building me-2" style="font-size: 1.1rem; color: #6b8ba8;"></i>
                                     <span class="text-muted" style="font-size: 0.95rem;">${department}</span>
                                 </div>
                             </div>
                             <hr style="margin: 1.5rem 0; border-color: #e5e7eb;">
                             <button class="btn w-100" 
                                 onclick="instructorDashboard.viewCourseDetailsPage('${courseCode}')"
-                                style="background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); color: white; border: none; padding: 0.75rem; border-radius: 10px; font-weight: 600; transition: all 0.3s ease;"
-                                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(79, 70, 229, 0.4)'"
-                                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                                style="background: ${colorPalette.bg}; color: white; border: none; padding: 0.75rem; border-radius: 10px; font-weight: 600; transition: all 0.3s ease;"
+                                onmouseover="this.style.opacity='0.9'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.2)'"
+                                onmouseout="this.style.opacity='1'; this.style.transform='translateY(0)'; this.style.boxShadow='none'">
                                 <i class="bi bi-arrow-right-circle me-2"></i> View Details
                             </button>
                         </div>

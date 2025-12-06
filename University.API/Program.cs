@@ -2,12 +2,11 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using SmartCampus.App.Services.Implementations;
+using University.App.Services.Implementations;
 using System.Text;
 using University.App.Interfaces;
 using University.App.Interfaces.Courses;
 using University.App.Interfaces.Users;
-using University.App.Services.Implementations;
 using University.App.Services.Implementations.Users;
 using University.App.Services.IServices;
 using University.App.Services.IServices.Users;

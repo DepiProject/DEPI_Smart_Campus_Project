@@ -123,7 +123,7 @@ function renderStudentsTable(students) {
             <td>${student.studentCode || 'N/A'}</td>
             <td>${student.fullName || 'N/A'}</td>
             <td><small>${student.email || student.Email || '-'}</small></td>
-            <td><span class="badge bg-info">${student.level || 'N/A'}</span></td>
+            <td>${student.level || 'N/A'}</td>
             <td><small>${student.departmentName || student.DepartmentName || 'Not Assigned'}</small></td>
             <td>${student.contactNumber || '-'}</td>
             <td>

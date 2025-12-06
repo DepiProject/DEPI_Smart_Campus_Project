@@ -41,7 +41,6 @@
     font-size: 3rem;
     margin-bottom: 1rem;
     opacity: 0.9;
-    animation: float 3s ease-in-out infinite;
 }
 
 .stat-card-content {
@@ -59,10 +58,16 @@
 }
 
 .stat-number {
-    font-size: 2.5rem;
-    font-weight: 700;
+    font-size: 3.5rem;
+    font-weight: 800;
     margin: 0.5rem 0;
     line-height: 1;
+    color: #ffffff !important;
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.stat-number .counter {
+    color: #ffffff !important;
 }
 
 .stat-trend {
@@ -75,19 +80,7 @@
 }
 
 .stat-card-shimmer {
-    position: absolute;
-    top: -50%;
-    right: -50%;
-    width: 200%;
-    height: 200%;
-    background: linear-gradient(
-        45deg,
-        transparent 30%,
-        rgba(255, 255, 255, 0.1) 50%,
-        transparent 70%
-    );
-    animation: shimmer 3s infinite;
-    pointer-events: none;
+    display: none;
 }
 
 @keyframes shimmer {

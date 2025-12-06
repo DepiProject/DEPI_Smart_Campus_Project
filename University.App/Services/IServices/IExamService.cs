@@ -5,8 +5,9 @@ namespace University.App.Services.IServices
     public interface IExamService
     {
         // EXAM CRUD 
-        Task<IEnumerable<ExamDTO>> GetAllExams();
-        Task<IEnumerable<ExamDTO>> GetAllExamsForCourse(int courseId);
+        Task<IEnumerable<ExamDTO>> GetAllExams(bool includeDeleted = false);
+        Task<IEnumerable<ExamDTO>> GetAllExamsForCourse(int courseId, bool includeDeleted = false);
+        Task<IEnumerable<ExamDTO>> GetAllExamsForInstructor(int instructorId, bool includeDeleted = true);
         Task<ExamDTO?> GetExamById(int id, int courseId);
         Task<ExamWithQuestionsDTO?> GetExamWithQuestions(int id, int courseId);
         Task<CreateExamDto?> AddExam(CreateExamDto dto);

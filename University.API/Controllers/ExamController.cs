@@ -19,12 +19,12 @@ namespace University.API.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Admin, Instructor")]
-        public async Task<IActionResult> GetAllExams()
+        [Authorize(Roles = "Admin, Instructor, Student")]
+        public async Task<IActionResult> GetAllExams([FromQuery] bool includeDeleted = false)
         {
             try
             {
-                var exams = await _examService.GetAllExams();
+                var exams = await _examService.GetAllExams(includeDeleted);
                 return Ok(new { success = true, data = exams });
             }
             catch (InvalidOperationException ex)
@@ -39,14 +39,36 @@ namespace University.API.Controllers
 
         [HttpGet("course/{courseId}")]
         [Authorize(Roles = "Instructor")]
-        public async Task<IActionResult> GetCourseExams(int courseId)
+        public async Task<IActionResult> GetCourseExams(int courseId, [FromQuery] bool includeDeleted = false)
         {
             if (courseId <= 0)
                 return BadRequest(new { success = false, message = "Invalid course ID" });
 
             try
             {
-                var exams = await _examService.GetAllExamsForCourse(courseId);
+                var exams = await _examService.GetAllExamsForCourse(courseId, includeDeleted);
+                return Ok(new { success = true, data = exams });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
+            }
+        }
+
+        [HttpGet("instructor/{instructorId}")]
+        [Authorize(Roles = "Instructor")]
+        public async Task<IActionResult> GetInstructorExams(int instructorId, [FromQuery] bool includeDeleted = true)
+        {
+            if (instructorId <= 0)
+                return BadRequest(new { success = false, message = "Invalid instructor ID" });
+
+            try
+            {
+                var exams = await _examService.GetAllExamsForInstructor(instructorId, includeDeleted);
                 return Ok(new { success = true, data = exams });
             }
             catch (ArgumentException ex)
@@ -60,6 +82,7 @@ namespace University.API.Controllers
         }
 
         [HttpGet("{id}/course/{courseId}")]
+        [Authorize(Roles = "Admin, Instructor, Student")]
         public async Task<IActionResult> GetExamById(int id, int courseId)
         {
             if (id <= 0 || courseId <= 0)
@@ -81,6 +104,7 @@ namespace University.API.Controllers
         }
 
         [HttpGet("{id}/course/{courseId}/with-questions")]
+        [Authorize(Roles = "Admin, Instructor, Student")]
         public async Task<IActionResult> GetExamWithQuestions(int id, int courseId)
         {
             if (id <= 0 || courseId <= 0)

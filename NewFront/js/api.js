@@ -4,7 +4,7 @@
 // =====================================================
 
 const API = {
-    // baseURL: 'https://smartcampus-university.runasp.net/api',
+   // baseURL: 'http://depi-university.runasp.net/api',
     baseURL: 'http://localhost:5175/api',
 
     // Get token dynamically to always use the latest
@@ -796,9 +796,19 @@ const API = {
     // ===== EXAM ENDPOINTS =====
     exam: {
         // Get all exams
-        async getAll(pageNumber = 1, pageSize = 10) {
+        async getAll(pageNumber = 1, pageSize = 10, includeDeleted = false) {
             const timestamp = new Date().getTime();
-            return API.request(`/Exam?pageNumber=${pageNumber}&pageSize=${pageSize}&_=${timestamp}`, {
+            console.log(`🔍 API.exam.getAll called with includeDeleted=${includeDeleted}`);
+            return API.request(`/Exam?includeDeleted=${includeDeleted}&_=${timestamp}`, {
+                method: 'GET'
+            });
+        },
+
+        // Get all exams for instructor (includes deleted by default)
+        async getAllForInstructor(instructorId, includeDeleted = true) {
+            const timestamp = new Date().getTime();
+            console.log(`🔍 API.exam.getAllForInstructor called for instructor ${instructorId} with includeDeleted=${includeDeleted}`);
+            return API.request(`/Exam/instructor/${instructorId}?includeDeleted=${includeDeleted}&_=${timestamp}`, {
                 method: 'GET'
             });
         },

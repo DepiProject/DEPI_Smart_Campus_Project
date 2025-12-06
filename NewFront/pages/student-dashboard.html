@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="../css/utilities.css">
     <link rel="stylesheet" href="../css/dashboard.css">
     <link rel="stylesheet" href="../css/profile.css">
+    <link rel="stylesheet" href="../css/admin-enhanced.css">
     <style>
         body {
             background: var(--cream-50);
@@ -262,55 +263,64 @@
             <!-- Dashboard Overview -->
             <div id="dashboard" class="section">
                 <div class="row g-4 mb-4">
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-100 hover-card hover-lift">
-                            <div class="card-body text-center position-relative">
-                                <div class="stat-icon stat-icon-primary mx-auto animate-float">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="stat-card-enhanced sage-gradient">
+                            <div class="stat-card-content">
+                                <div class="stat-card-icon">
                                     <i class="bi bi-book-fill"></i>
                                 </div>
-                                <h6 class="card-title text-muted text-uppercase small">Enrolled Courses</h6>
-                                <h2 class="card-text counter" id="totalEnrolledCourses">--</h2>
-                                <small class="text-muted"><i class="bi bi-calendar3"></i> This semester</small>
+                                <h6 class="stat-label">Enrolled Courses</h6>
+                                <h2 class="stat-number"><span class="counter" id="totalEnrolledCourses">--</span></h2>
+                                <div class="stat-trend">
+                                    <i class="bi bi-calendar3"></i>
+                                    <span>This semester</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-100 hover-card hover-lift">
-                            <div class="card-body text-center position-relative">
-                                <div class="stat-icon stat-icon-success mx-auto animate-float"
-                                    style="animation-delay: 0.1s;">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="stat-card-enhanced cream-gradient">
+                            <div class="stat-card-content">
+                                <div class="stat-card-icon">
                                     <i class="bi bi-check-circle-fill"></i>
                                 </div>
-                                <h6 class="card-title text-muted text-uppercase small">Attendance</h6>
-                                <h2 class="card-text text-success counter" id="studentAttendance">--</h2>
-                                <small class="text-success"><i class="bi bi-graph-up-arrow"></i> Good
-                                    standing</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-100 hover-card hover-lift">
-                            <div class="card-body text-center position-relative">
-                                <div class="stat-icon stat-icon-warning mx-auto animate-float"
-                                    style="animation-delay: 0.2s;">
-                                    <i class="bi bi-trophy-fill"></i>
+                                <h6 class="stat-label">Attendance</h6>
+                                <h2 class="stat-number"><span class="counter"
+                                        id="studentAttendance">--</span><span>%</span></h2>
+                                <div class="stat-trend">
+                                    <i class="bi bi-graph-up-arrow"></i>
+                                    <span>Good standing</span>
                                 </div>
-                                <h6 class="card-title text-muted text-uppercase small">GPA</h6>
-                                <h2 class="card-text text-warning counter" id="studentGPA">--</h2>
-                                <small class="text-muted">Out of 4.0</small>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-100 hover-card hover-lift">
-                            <div class="card-body text-center position-relative">
-                                <div class="stat-icon stat-icon-info mx-auto animate-float"
-                                    style="animation-delay: 0.3s;">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="stat-card-enhanced beige-gradient">
+                            <div class="stat-card-content">
+                                <div class="stat-card-icon">
+                                    <i class="bi bi-mortarboard-fill"></i>
+                                </div>
+                                <h6 class="stat-label">Academic Level</h6>
+                                <h2 class="stat-number"><span class="counter" id="studentLevel">--</span></h2>
+                                <div class="stat-trend">
+                                    <i class="bi bi-info-circle"></i>
+                                    <span>Current level</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="stat-card-enhanced warm-gradient">
+                            <div class="stat-card-content">
+                                <div class="stat-card-icon">
                                     <i class="bi bi-credit-card-fill"></i>
                                 </div>
-                                <h6 class="card-title text-muted text-uppercase small">Total Credits</h6>
-                                <h2 class="card-text text-info counter" id="studentCredits">--</h2>
-                                <small class="text-muted">Enrolled this semester</small>
+                                <h6 class="stat-label">Total Credits</h6>
+                                <h2 class="stat-number"><span class="counter" id="studentCredits">--</span></h2>
+                                <div class="stat-trend">
+                                    <i class="bi bi-award"></i>
+                                    <span>This semester</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -319,23 +329,21 @@
                 <!-- Visual Charts Section -->
                 <div class="row g-4 mt-4">
                     <div class="col-lg-6">
-                        <div class="card border-0 shadow-sm h-100">
-                            <div class="card-header bg-white">
-                                <h5 class="mb-0"><i class="bi bi-pie-chart-fill text-primary"></i> Performance Overview
-                                </h5>
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <h5 class="chart-title"><i class="bi bi-pie-chart-fill"></i> Performance Overview</h5>
                             </div>
-                            <div class="card-body">
+                            <div class="chart-card-body">
                                 <canvas id="performanceChart" style="max-height: 300px;"></canvas>
                             </div>
                         </div>
                     </div>
                     <div class="col-lg-6">
-                        <div class="card border-0 shadow-sm h-100">
-                            <div class="card-header bg-white">
-                                <h5 class="mb-0"><i class="bi bi-bar-chart-fill text-success"></i> Credits Distribution
-                                </h5>
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <h5 class="chart-title"><i class="bi bi-bar-chart-fill"></i> Credits Distribution</h5>
                             </div>
-                            <div class="card-body">
+                            <div class="chart-card-body">
                                 <canvas id="creditsChart" style="max-height: 300px;"></canvas>
                             </div>
                         </div>
@@ -503,14 +511,13 @@
                                         <th><i class="bi bi-book"></i> Course</th>
                                         <th><i class="bi bi-file-text"></i> Exam Title</th>
                                         <th><i class="bi bi-clock"></i> Duration</th>
-                                        <th><i class="bi bi-trophy"></i> Passing Score</th>
                                         <th><i class="bi bi-award"></i> Total Marks</th>
                                         <th class="text-center">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="examsTableBody">
                                     <tr>
-                                        <td colspan="6" class="text-center text-muted py-4">Loading exams...</td>
+                                        <td colspan="5" class="text-center text-muted py-4">Loading exams...</td>
                                     </tr>
                                 </tbody>
                             </table>

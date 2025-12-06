@@ -13,6 +13,7 @@ namespace University.App.DTOs
         public int Duration { get; set; }
         public decimal TotalPoints { get; set; }
         public int CourseId { get; set; }
+        public bool IsDeleted { get; set; }
     }
 
     public class ExamWithQuestionsDTO
@@ -24,6 +25,7 @@ namespace University.App.DTOs
         public int Duration { get; set; }
         public decimal TotalPoints { get; set; }
         public int CourseId { get; set; }
+        public bool IsDeleted { get; set; }
         public List<ExamQuestionDTO> Questions { get; set; } = new();
     }
 
@@ -69,6 +71,9 @@ namespace University.App.DTOs
         public int CourseId { get; set; }
 
         public int InstructorId { get; set; }
+
+        [StringLength(1000, ErrorMessage = "Description cannot exceed 1000 characters")]
+        public string? Description { get; set; }
     }
 
     public class CreateQuestionDto

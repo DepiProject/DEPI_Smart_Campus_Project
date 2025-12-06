@@ -35,18 +35,27 @@ namespace University.App.Services.Implementations
 
         // ==================== EXAM CRUD ====================
 
-        public async Task<IEnumerable<ExamDTO>> GetAllExams()
+        public async Task<IEnumerable<ExamDTO>> GetAllExams(bool includeDeleted = false)
         {
-            var exams = await _examRepository.GetAllExams();
+            var exams = await _examRepository.GetAllExams(includeDeleted);
             return exams.Select(MapToExamDTO);
         }
 
-        public async Task<IEnumerable<ExamDTO>> GetAllExamsForCourse(int courseId)
+        public async Task<IEnumerable<ExamDTO>> GetAllExamsForCourse(int courseId, bool includeDeleted = false)
         {
             if (courseId <= 0)
                 throw new ArgumentException("Invalid course ID");
 
-            var exams = await _examRepository.GetAllExamsForCourse(courseId);
+            var exams = await _examRepository.GetAllExamsForCourse(courseId, includeDeleted);
+            return exams.Select(MapToExamDTO);
+        }
+
+        public async Task<IEnumerable<ExamDTO>> GetAllExamsForInstructor(int instructorId, bool includeDeleted = true)
+        {
+            if (instructorId <= 0)
+                throw new ArgumentException("Invalid instructor ID");
+
+            var exams = await _examRepository.GetAllExamsForInstructor(instructorId, includeDeleted);
             return exams.Select(MapToExamDTO);
         }
 
@@ -78,6 +87,7 @@ namespace University.App.Services.Implementations
                 Duration = exam.Duration,
                 TotalPoints = exam.TotalPoints,
                 CourseId = exam.CourseId,
+                IsDeleted = exam.IsDeleted,
                 Questions = exam.ExamQuestions?.Select(MapToQuestionDTO).ToList() ?? new()
             };
         }
@@ -182,6 +192,7 @@ namespace University.App.Services.Implementations
             var exam = new Exam
             {
                 Title = dto.Title?.Trim() ?? throw new ArgumentException("Title is required"),
+                Description = dto.Description?.Trim(),
                 ExamDate = dto.ExamDate,
                 Duration = dto.Duration,
                 TotalPoints = dto.TotalPoints,
@@ -484,7 +495,8 @@ namespace University.App.Services.Implementations
                 ExamDate = exam.ExamDate,
                 Duration = exam.Duration,
                 TotalPoints = exam.TotalPoints,
-                CourseId = exam.CourseId
+                CourseId = exam.CourseId,
+                IsDeleted = exam.IsDeleted
             };
         }
 

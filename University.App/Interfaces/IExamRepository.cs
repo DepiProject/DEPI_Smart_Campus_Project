@@ -4,8 +4,9 @@ namespace University.App.Interfaces
     public interface IExamRepository
     {
         // Exam CRUD
-        Task<IEnumerable<Exam>> GetAllExams();
-        Task<IEnumerable<Exam>> GetAllExamsForCourse(int courseId);
+        Task<IEnumerable<Exam>> GetAllExams(bool includeDeleted = false);
+        Task<IEnumerable<Exam>> GetAllExamsForCourse(int courseId, bool includeDeleted = false);
+        Task<IEnumerable<Exam>> GetAllExamsForInstructor(int instructorId, bool includeDeleted = true);
         Task<Exam?> GetExamById(int id, int courseId);
         Task<Exam?> GetExamByIdWithQuestions(int id, int courseId);
         Task<Exam?> AddExam(Exam exam);

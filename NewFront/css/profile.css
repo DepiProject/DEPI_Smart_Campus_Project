@@ -11,11 +11,11 @@
 
 /* Profile Hero Section */
 .profile-hero {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #476247 0%, #5a7a5a 50%, #6b7c6b 100%);
     border-radius: 24px;
     padding: 3rem 2rem;
     margin-bottom: 2rem;
-    box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 20px 60px rgba(71, 98, 71, 0.3);
     position: relative;
     overflow: hidden;
 }
@@ -62,7 +62,7 @@
     width: 140px;
     height: 140px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    background: linear-gradient(135deg, #476247 0%, #5a7a5a 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -81,15 +81,15 @@
 }
 
 .profile-avatar.student-avatar {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #5a7a5a 0%, #476247 100%);
 }
 
 .profile-avatar.instructor-avatar {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    background: linear-gradient(135deg, #6b7d6f 0%, #487048 100%);
 }
 
 .profile-avatar.admin-avatar {
-    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    background: linear-gradient(135deg, #476247 0%, #7d987d 100%);
 }
 
 .profile-status-badge {
@@ -154,7 +154,7 @@
     z-index: 2;
     padding: 0.75rem 1.5rem;
     background: rgba(255, 255, 255, 0.95);
-    color: #667eea;
+    color: #476247;
     border: none;
     border-radius: 12px;
     font-weight: 600;
@@ -199,16 +199,16 @@
     justify-content: center;
     font-size: 1.5rem;
     margin-bottom: 1rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #5a7a5a 0%, #7d987d 100%);
     color: white;
 }
 
 .profile-info-card.instructor-card .card-icon {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    background: linear-gradient(135deg, #6b7d6f 0%, #a8baa8 100%);
 }
 
 .profile-info-card.admin-card .card-icon {
-    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    background: linear-gradient(135deg, #476247 0%, #6b7d6f 100%);
 }
 
 .profile-info-card h3 {
@@ -246,7 +246,7 @@
 }
 
 .stat-card:hover {
-    border-color: #667eea;
+    border-color: #5a7a5a;
     transform: translateY(-3px);
 }
 
@@ -259,7 +259,7 @@
     align-items: center;
     justify-content: center;
     font-size: 1.75rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #487048 0%, #7d987d 100%);
     color: white;
 }
 
@@ -306,7 +306,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #5a7a5a 0%, #8a9a8a 100%);
     color: white;
     font-size: 1.25rem;
 }
@@ -327,8 +327,8 @@
 }
 
 .profile-edit-form .form-control:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    border-color: #5a7a5a;
+    box-shadow: 0 0 0 4px rgba(90, 122, 90, 0.1);
 }
 
 .profile-edit-form .form-control:disabled,
@@ -340,14 +340,14 @@
 }
 
 .profile-edit-form .btn-save {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #476247 0%, #5a7a5a 100%);
     border: none;
     padding: 1rem 2.5rem;
     border-radius: 12px;
     font-weight: 600;
     font-size: 1rem;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 15px rgba(71, 98, 71, 0.3);
 }
 
 .profile-edit-form .btn-save:hover {

@@ -175,7 +175,13 @@ class InstructorDashboard {
                 }
                 
                 const courseCount = myCourses.length;
-                document.querySelector('[data-stat="courses"]').textContent = courseCount;
+                const coursesStat = document.querySelector('[data-stat="courses"]');
+                if (coursesStat) {
+                    coursesStat.textContent = courseCount;
+                    console.log('✅ Updated courses stat to:', courseCount);
+                } else {
+                    console.error('❌ Could not find element [data-stat="courses"]');
+                }
                 
                 console.log('📚 Found', courseCount, 'courses for instructor', this.currentInstructorId);
                 
@@ -198,6 +204,7 @@ class InstructorDashboard {
                 let totalStudents = 0;
                 let allGrades = [];
                 let pendingCount = 0;
+                let rejectedCount = 0;
                 
                 for (const course of myCourses) {
                     try {
@@ -235,35 +242,79 @@ class InstructorDashboard {
                             
                             console.log(`  ✅ ${uniqueStudents.size} unique students in ${courseCode}`);
                             
+                            let rejectedInCourse = 0;
+                            let pendingInCourse = 0;
+                            let statusCounts = {};
+                            
                             enrollments.forEach(enrollment => {
                                 const grade = enrollment.finalGrade || enrollment.grade || enrollment.Grade || enrollment.FinalGrade;
-                                const status = (enrollment.status || enrollment.Status || '').toLowerCase();
+                                const statusRaw = enrollment.status || enrollment.Status || '';
+                                const status = String(statusRaw).toLowerCase().trim();
+                                
+                                // Count all status types for debugging
+                                statusCounts[status] = (statusCounts[status] || 0) + 1;
                                 
                                 if (grade !== null && grade !== undefined && grade > 0) {
                                     allGrades.push(grade);
-                                } else if (status === 'pending') {
+                                }
+                                
+                                if (status === 'pending') {
                                     pendingCount++;
+                                    pendingInCourse++;
+                                }
+                                
+                                if (status === 'rejected') {
+                                    rejectedInCourse++;
                                 }
                             });
+                            
+                            console.log(`  📊 ${courseCode} statuses:`, statusCounts);
+                            if (rejectedInCourse > 0) {
+                                console.log(`  ❌ ${rejectedInCourse} REJECTED in ${courseCode}`);
+                            }
+                            rejectedCount += rejectedInCourse;
                         }
                     } catch (error) {
                         console.warn('⚠️ Could not load enrollments for course:', course);
                     }
                 }
                 
-                document.querySelector('[data-stat="students"]').textContent = totalStudents;
+                const studentsStat = document.querySelector('[data-stat="students"]');
+                if (studentsStat) {
+                    studentsStat.textContent = totalStudents;
+                    console.log('✅ Updated students stat to:', totalStudents);
+                } else {
+                    console.error('❌ Could not find element [data-stat="students"]');
+                }
                 console.log('👥 Total unique students across all courses:', totalStudents);
                 
-                if (allGrades.length > 0) {
-                    const avgGrade = (allGrades.reduce((sum, grade) => sum + grade, 0) / allGrades.length).toFixed(1);
-                    document.querySelector('[data-stat="avgGrade"]').textContent = avgGrade + '%';
-                    console.log('📈 Average grade:', avgGrade + '%');
-                } else {
-                    document.querySelector('[data-stat="avgGrade"]').textContent = '0%';
-                    console.log('⚠️ No grades to calculate average, showing default 0%');
+                // Calculate teaching credits (total credit hours from courses)
+                let totalTeachingHours = 0;
+                for (const course of myCourses) {
+                    const creditHours = course.creditHours || course.CreditHours || 0;
+                    totalTeachingHours += creditHours;
                 }
                 
-                document.querySelector('[data-stat="pending"]').textContent = pendingCount;
+                const teachingHoursElement = document.querySelector('[data-stat="teachingHours"]');
+                if (teachingHoursElement) {
+                    teachingHoursElement.textContent = totalTeachingHours;
+                    console.log('✅ Updated teaching hours stat to:', totalTeachingHours);
+                    // Change color if exceeding max hours
+                    if (totalTeachingHours > 12) {
+                        teachingHoursElement.style.color = '#ef4444';
+                    }
+                } else {
+                    console.error('❌ Could not find element [data-stat="teachingHours"]');
+                }
+                console.log('📚 Total teaching credit hours:', totalTeachingHours, '/ 12 max');
+                
+                const pendingStat = document.querySelector('[data-stat="pending"]');
+                if (pendingStat) {
+                    pendingStat.textContent = pendingCount;
+                    console.log('✅ Updated pending stat to:', pendingCount);
+                } else {
+                    console.error('❌ Could not find element [data-stat="pending"]');
+                }
                 console.log('⏳ Total pending reviews:', pendingCount);
                 
                 await this.createDashboardCharts(myCourses);

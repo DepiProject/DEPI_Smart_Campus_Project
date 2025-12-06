@@ -199,8 +199,7 @@ namespace University.API.Controllers
             }
         }
 
-        // ========== SOFT DELETE OPERATIONS ==========
-
+        // SOFT DELETE (Archive) Endpoints
         [HttpGet("all-including-deleted")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllIncludingDeleted()
@@ -215,7 +214,6 @@ namespace University.API.Controllers
         {
             if (id <= 0)
                 return BadRequest(new { Success = false, Message = "Invalid student ID" });
-
             try
             {
                 var restored = await _studentService.RestoreAsync(id);
@@ -257,7 +255,6 @@ namespace University.API.Controllers
         {
             if (id <= 0)
                 return BadRequest(new { Success = false, Message = "Invalid student ID" });
-
             try
             {
                 var result = await _studentService.CanPermanentlyDeleteAsync(id);
